@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Brand Growth Engine
 
-## Getting Started
+AI-native, multi-tenant marketing operating system.
 
-First, run the development server:
+## Project Overview
+The AI Brand Growth Engine automates the end-to-end marketing content lifecycle:
+Observe → Analyze → Strategize → Plan → Create → Approve → Publish → Measure → Learn → Optimize → Repeat.
 
+## Prerequisites
+- Node.js 20.x
+- npm
+- Docker (for local infrastructure)
+
+## Local Setup
+
+### Environment Variables
+Copy `.env.example` to `.env` and fill in the values:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Infrastructure (Docker)
+Start PostgreSQL (with pgvector) and Redis locally:
+```bash
+docker compose up -d
+```
+To stop: `docker compose down`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Database (Prisma)
+We use Prisma ORM with PostgreSQL.
+To push the schema or run migrations locally:
+```bash
+npx prisma generate
+npx prisma db push
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation
+```bash
+npm install
+```
 
-## Learn More
+### Development
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Testing
+- **Unit Tests (Vitest):** `npm run test`
+- **E2E Tests (Playwright):** `npm run test:e2e`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Code Quality
+- **Linting:** `npm run lint`
+- **Typecheck:** `npm run typecheck`
+- **Formatting:** `npm run format`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## CI/CD
+GitHub Actions is configured to run on `main` and all Pull Requests. It ensures formatting, linting, typechecking, and tests pass before allowing a merge.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Repository Structure
+- `src/app` - Next.js UI routing and pages
+- `src/components` - Reusable UI components
+- `src/components/providers` - Context providers (Query, Theme, etc)
+- `src/lib` - Utilities and shared code
+- `prisma/` - Database schemas and migrations
+- `tests/` - Unit and E2E test files
