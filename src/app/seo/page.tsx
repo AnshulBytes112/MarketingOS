@@ -15,7 +15,7 @@ const positionIcon = (p: number | null) =>
   p <= 30    ? <ArrowUp size={12} color="#f59e0b"/> :
                <ArrowDown size={12} color="#ef4444"/>;
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value?: number; color?: string; fill?: string }[]; label?: string }) => {
   if (active && payload?.length) return (
     <div style={{ background:"var(--bg-solid)", border:"1px solid var(--border)", borderRadius:"0.625rem", padding:"0.625rem 0.875rem", fontSize:"0.75rem" }}>
       <div style={{ color:"var(--text-muted)", marginBottom:4 }}>{label}</div>
