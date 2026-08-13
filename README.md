@@ -28,10 +28,10 @@ To stop: `docker compose down`
 
 ### Database (Prisma)
 We use Prisma ORM with PostgreSQL.
-To push the schema or run migrations locally:
+To apply schema changes and create migrations locally, use the canonical workflow:
 ```bash
 npx prisma generate
-npx prisma db push
+npx prisma migrate dev
 ```
 
 ### Installation
@@ -55,6 +55,8 @@ npm run dev
 
 ## CI/CD
 GitHub Actions is configured to run on `main` and all Pull Requests. It ensures formatting, linting, typechecking, and tests pass before allowing a merge.
+
+For branch protection in GitHub: go to Settings > Branches > Add branch protection rule for `main`. Check "Require status checks to pass before merging" and select the `test` job from the CI workflow.
 
 ## Repository Structure
 - `src/app` - Next.js UI routing and pages
