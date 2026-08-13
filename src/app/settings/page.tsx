@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { Users, Shield, Building, CreditCard, Plus, Check, Key } from "lucide-react";

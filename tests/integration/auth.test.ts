@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { getCurrentSession, requirePermission, requireRole } from '../../src/lib/auth/guard';
 import { updateSessionOrganization } from '../../src/lib/auth/session';

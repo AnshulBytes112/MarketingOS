@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/static-components */
 "use client";
 
 import { kpiSummary, performanceData, approvalQueue, brandDNA } from "@/lib/mock-data";

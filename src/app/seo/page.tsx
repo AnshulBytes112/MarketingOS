@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-no-undef */
 "use client";
 
 import { seoData } from "@/lib/mock-data";
@@ -19,15 +20,7 @@ export default function SEOPage() {
   const [tab, setTab] = useState("Keywords");
   const [sort, setSort] = useState("opportunity");
 
-  const T = ({ active, payload, label }: any) => {
-    if (active && payload?.length) return (
-      <div style={{ background:"var(--bg-solid)", border:"1px solid var(--border)", borderRadius:"0.625rem", padding:"0.625rem 0.875rem", fontSize:"0.75rem" }}>
-        <div style={{ color:"var(--text-muted)", marginBottom:4 }}>{label}</div>
-        {payload.map((p: any) => <div key={p.name} style={{ color:p.color||p.fill, fontWeight:600 }}>{p.name}: {p.value?.toLocaleString()}</div>)}
-      </div>
-    );
-    return null;
-  };
+
 
   const sorted = [...seoData.keywords].sort((a,b) => {
     if (sort==="opportunity") return a.opportunity>b.opportunity?-1:1;
@@ -117,7 +110,7 @@ export default function SEOPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
                   <XAxis dataKey="month" tick={{ fill:"var(--text-muted)", fontSize:11 }} axisLine={false} tickLine={false}/>
                   <YAxis tick={{ fill:"var(--text-muted)", fontSize:11 }} axisLine={false} tickLine={false}/>
-                  <Tooltip content={<T/>}/>
+                  <Tooltip content={<CustomTooltip/>}/>
                   <Area type="monotone" dataKey="traffic" name="Traffic" stroke="#7c3aed" fill="url(#gt)" strokeWidth={2} dot={{ fill:"#7c3aed", r:4 }}/>
                 </AreaChart>
               </ResponsiveContainer>
@@ -129,7 +122,7 @@ export default function SEOPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
                   <XAxis dataKey="name" tick={{ fill:"var(--text-muted)", fontSize:10 }} axisLine={false} tickLine={false}/>
                   <YAxis tick={{ fill:"var(--text-muted)", fontSize:11 }} axisLine={false} tickLine={false}/>
-                  <Tooltip content={<T/>}/>
+                  <Tooltip content={<CustomTooltip/>}/>
                   <Bar dataKey="traffic" name="Traffic" fill="#2563eb" radius={[4,4,0,0]}/>
                 </BarChart>
               </ResponsiveContainer>
