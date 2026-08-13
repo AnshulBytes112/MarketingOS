@@ -65,3 +65,26 @@ For branch protection in GitHub: go to Settings > Branches > Add branch protecti
 - `src/lib` - Utilities and shared code
 - `prisma/` - Database schemas and migrations
 - `tests/` - Unit and E2E test files
+
+## Tenant Isolation
+
+We use a **Centralized Repository-Layer Tenant Guard** (`src/lib/db/repository.ts`) rather than PostgreSQL Row-Level Security (RLS) for the MVP phase. 
+
+### Why Repository-Layer Isolation?
+- **Simpler for MVP**: It integrates naturally with Prisma's architecture.
+- **Easier Testing**: Mocking tenant boundaries is straightforward in unit tests.
+- **Natural Authorization Fit**: Fits well with our application-level role-based authorization model without requiring complex database-level connection state handling for each query.
+
+### The Tradeoff
+This approach means that data isolation depends entirely on our data-access layer. Direct, "raw" `prisma` client access could bypass these protections.
+
+### Rule: NO RAW PRISMA ACCESS FOR TENANT DATA
+**Raw Prisma access to organization-scoped models is PROHIBITED outside of `TenantRepository`.**
+All organization-scoped access must utilize `TenantRepository`, passing the requisite `OrganizationContext` which automatically enforces the `organizationId` filter across all reads and writes.
+
+### Organization-Scoped Table Rule
+Every organization-scoped table (e.g. `Brand`, `AuditLog`, `OrganizationMember`) **MUST**:
+1. Contain an `organizationId` column.
+2. Have a foreign key connecting to the `Organization` table.
+3. Have an index on the `organizationId` column.
+4. Set `organizationId` as NOT NULL (mandatory).
