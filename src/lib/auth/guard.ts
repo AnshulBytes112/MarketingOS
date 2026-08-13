@@ -1,0 +1,80 @@
+import { cookies } from 'next/headers';
+import { prisma } from '../db/index';
+import { Role } from '@prisma/client';
+import { hasPermission, Permission } from './rbac';
+
+export type AuthenticatedContext = {
+  userId: string;
+  organizationId: string;
+  role: Role;
+};
+
+export async function getCurrentSession(): Promise<AuthenticatedContext | null> {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get('abge_session')?.value;
+
+  if (!sessionToken) {
+    return null;
+  }
+
+  const session = await prisma.session.findUnique({
+    where: { sessionToken },
+    include: { user: true },
+  });
+
+  if (!session || session.expiresAt < new Date()) {
+    return null;
+  }
+
+  if (!session.activeOrganizationId) {
+    return null;
+  }
+
+  // Get user's role in the active organization
+  const membership = await prisma.organizationMember.findUnique({
+    where: {
+      organizationId_userId: {
+        organizationId: session.activeOrganizationId,
+        userId: session.userId,
+      },
+    },
+  });
+
+  if (!membership) {
+    return null;
+  }
+
+  return {
+    userId: session.userId,
+    organizationId: session.activeOrganizationId,
+    role: membership.role,
+  };
+}
+
+export async function requireAuth(): Promise<AuthenticatedContext> {
+  const session = await getCurrentSession();
+  if (!session) {
+    throw new Error('UNAUTHORIZED');
+  }
+  return session;
+}
+
+export async function requirePermission(permission: Permission): Promise<AuthenticatedContext> {
+  const session = await requireAuth();
+  
+  if (!hasPermission(session.role, permission)) {
+    throw new Error('FORBIDDEN');
+  }
+
+  return session;
+}
+
+export async function requireRole(roles: Role[]): Promise<AuthenticatedContext> {
+  const session = await requireAuth();
+  
+  if (!roles.includes(session.role)) {
+    throw new Error('FORBIDDEN');
+  }
+
+  return session;
+}
