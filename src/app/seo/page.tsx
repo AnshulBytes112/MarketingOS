@@ -1,4 +1,3 @@
-/* eslint-disable react/jsx-no-undef */
 "use client";
 
 import { seoData } from "@/lib/mock-data";
@@ -15,6 +14,16 @@ const positionIcon = (p: number | null) =>
   p <= 10    ? <ArrowUp size={12} color="#10b981"/> :
   p <= 30    ? <ArrowUp size={12} color="#f59e0b"/> :
                <ArrowDown size={12} color="#ef4444"/>;
+
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+  if (active && payload?.length) return (
+    <div style={{ background:"var(--bg-solid)", border:"1px solid var(--border)", borderRadius:"0.625rem", padding:"0.625rem 0.875rem", fontSize:"0.75rem" }}>
+      <div style={{ color:"var(--text-muted)", marginBottom:4 }}>{label}</div>
+      {payload.map((p) => <div key={p.name} style={{ color:p.color||p.fill, fontWeight:600 }}>{p.name}: {p.value?.toLocaleString()}</div>)}
+    </div>
+  );
+  return null;
+};
 
 export default function SEOPage() {
   const [tab, setTab] = useState("Keywords");
