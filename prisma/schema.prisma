@@ -17,18 +17,40 @@ enum Role {
   VIEWER
 }
 
-model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  SOFT_DELETED
+}
 
-  members     OrganizationMember[]
-  brands      Brand[]
-  auditLogs   AuditLog[]
-  sessions    Session[]
-  brandAssets BrandAsset[]
+enum PlanTier {
+  STARTER
+  GROWTH
+  SCALE
+}
+
+enum PlatformRole {
+  OWNER
+  SUPPORT
+}
+
+model Organization {
+  id             String             @id @default(cuid())
+  name           String
+  slug           String             @unique
+  status         OrganizationStatus @default(ACTIVE)
+  planTier       PlanTier           @default(STARTER)
+  limitOverrides Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  members               OrganizationMember[]
+  brands                Brand[]
+  auditLogs             AuditLog[]
+  sessions              Session[]
+  brandAssets           BrandAsset[]
+  featureFlags          FeatureFlag[]
+  impersonationSessions ImpersonationSession[]
 }
 
 model User {
@@ -39,9 +61,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships OrganizationMember[]
-  auditLogs   AuditLog[]
-  sessions    Session[]
+  memberships           OrganizationMember[]
+  auditLogs             AuditLog[]
+  sessions              Session[]
+  impersonationSessions ImpersonationSession[]
 }
 
 model Session {
@@ -122,4 +145,85 @@ model BrandAsset {
 
   @@index([organizationId])
   @@index([brandId])
+}
+
+model PlatformAdmin {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String?
+  totpSecret   String?
+  name         String?
+  role         PlatformRole @default(SUPPORT)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  sessions              PlatformSession[]
+  auditLogs             PlatformAuditLog[]
+  impersonationSessions ImpersonationSession[]
+}
+
+model PlatformSession {
+  id              String   @id @default(cuid())
+  platformAdminId String
+  sessionToken    String   @unique
+  ipAddress       String?
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  platformAdmin PlatformAdmin @relation(fields: [platformAdminId], references: [id], onDelete: Cascade)
+
+  @@index([platformAdminId])
+  @@index([sessionToken])
+}
+
+model ImpersonationSession {
+  id                   String    @id @default(cuid())
+  platformAdminId      String
+  targetUserId         String
+  targetOrganizationId String
+  sessionToken         String    @unique
+  readOnly             Boolean   @default(true)
+  expiresAt            DateTime
+  createdAt            DateTime  @default(now())
+  endedAt              DateTime?
+
+  platformAdmin      PlatformAdmin @relation(fields: [platformAdminId], references: [id], onDelete: Cascade)
+  targetUser         User          @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+  targetOrganization Organization  @relation(fields: [targetOrganizationId], references: [id], onDelete: Cascade)
+
+  @@index([platformAdminId])
+  @@index([targetUserId])
+  @@index([targetOrganizationId])
+  @@index([sessionToken])
+}
+
+model PlatformAuditLog {
+  id              String   @id @default(cuid())
+  platformAdminId String
+  action          String
+  entityType      String
+  entityId        String
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  platformAdmin PlatformAdmin @relation(fields: [platformAdminId], references: [id], onDelete: Cascade)
+
+  @@index([platformAdminId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model FeatureFlag {
+  id             String   @id @default(cuid())
+  organizationId String
+  flagName       String
+  enabled        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, flagName])
+  @@index([organizationId])
 }
