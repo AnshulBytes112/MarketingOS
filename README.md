@@ -88,3 +88,31 @@ Every organization-scoped table (e.g. `Brand`, `AuditLog`, `OrganizationMember`)
 2. Have a foreign key connecting to the `Organization` table.
 3. Have an index on the `organizationId` column.
 4. Set `organizationId` as NOT NULL (mandatory).
+## Task 0.5: Storage, Core App Shell & Observability
+
+### S3 Architecture & Signed Upload Flow
+This project supports S3-compatible object storage for storing BrandAsset entities.
+Uploads follow a secure, server-side signed upload flow:
+1. Client requests an upload URL via /api/assets/upload
+2. Server validates the session, permissions, and tenant isolation (ensuring the Brand belongs to the active Organization).
+3. Server generates a short-lived S3 signed URL and a BrandAsset record with the object key (organization/{orgId}/brands/{brandId}/assets/{assetId}).
+4. Client uploads the file directly to S3 without exposing credentials.
+
+**Environment Variables Required:**
+- S3_ENDPOINT
+- S3_REGION
+- S3_BUCKET
+- S3_ACCESS_KEY_ID
+- S3_SECRET_ACCESS_KEY
+
+### Application IA & Core Shell
+The application features a responsive sidebar and top bar. Navigation is organized into:
+- **Engines:** Overview, Brand, Competitors, Market, Strategy, Content, Campaigns, Publishing, Analytics, SEO, Copilot
+- **System:** Settings
+
+**Command Palette:** Press Cmd+K (macOS) or Ctrl+K (Windows) to instantly navigate anywhere within the platform.
+
+### Observability
+- **Structured Logging:** A centralized logger produces JSON-formatted logs including timestamp, level, message, requestId, organizationId, and userId. Sensitive values are redacted.
+- **Request ID:** A middleware automatically generates and propagates a x-request-id header across all incoming requests and outgoing responses.
+- **Loading & Error Architecture:** We use loading.tsx to display Skeleton loaders during async page transitions and error.tsx for robust error boundaries to prevent full app crashes.

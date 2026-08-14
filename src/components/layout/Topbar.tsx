@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 
 const titles: Record<string, { title: string; subtitle: string }> = {
-  "/dashboard":   { title: "Dashboard",             subtitle: "Executive overview of your brand performance" },
+  "/overview":    { title: "Dashboard Overview",    subtitle: "Executive overview of your brand performance" },
   "/brand":       { title: "Brand Intelligence",    subtitle: "Brand DNA profile and asset management" },
   "/competitors": { title: "Competitor Intelligence", subtitle: "Competitive landscape monitoring and gap analysis" },
   "/market":      { title: "Market Intelligence",   subtitle: "Social listening and trend detection" },
@@ -19,7 +19,13 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/settings":    { title: "Settings",              subtitle: "Organization, users, roles, and integrations" },
 };
 
-export function Topbar() {
+export function Topbar({
+  user,
+  organization
+}: {
+  user?: { name: string; role: string };
+  organization?: { id: string; name: string };
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { title, subtitle } = titles[pathname] ?? { title: "AI Brand Growth Engine", subtitle: "" };
@@ -48,6 +54,16 @@ export function Topbar() {
       <div style={{ flex: 1 }}>
         <div style={{ fontFamily: "var(--font-space)", fontWeight: 700, fontSize: "0.9375rem", color: "var(--text-primary)", lineHeight: 1.2 }}>{title}</div>
         <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 1 }}>{subtitle}</div>
+      </div>
+
+      {/* Org/Brand Switcher Placeholder */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "0.5rem",
+        padding: "0.4rem 0.75rem", background: "var(--surface-2)",
+        border: "1px solid var(--border)", borderRadius: "0.5rem",
+        fontSize: "0.8rem", fontWeight: 500, color: "var(--text-primary)"
+      }}>
+        {organization?.name || "Organization"}
       </div>
 
       {/* AI status pill */}
@@ -141,7 +157,7 @@ export function Topbar() {
         }}
       >
         <LogOut size={13} color="#ef4444" />
-        Log Out
+        Log Out {user ? `(${user.name.split(' ')[0]})` : ''}
       </button>
     </header>
   );

@@ -1,5 +1,5 @@
 import { prisma } from './index';
-import type { Prisma, Brand, OrganizationMember, AuditLog } from '@prisma/client';
+import type { Prisma, Brand, OrganizationMember, AuditLog, BrandAsset } from '@prisma/client';
 
 export type OrganizationContext = {
   organizationId: string;
@@ -92,6 +92,40 @@ export class TenantRepository {
 
   async createAuditLog(args: Omit<Prisma.AuditLogCreateArgs, 'data'> & { data: Omit<Prisma.AuditLogCreateInput, 'organization'> }): Promise<AuditLog> {
     return prisma.auditLog.create({
+      ...args,
+      data: {
+        ...args.data,
+        organization: {
+          connect: { id: this.organizationId },
+        },
+      },
+    });
+  }
+
+  // --- BRAND ASSET OPERATIONS ---
+
+  async findManyBrandAssets(args?: Omit<Prisma.BrandAssetFindManyArgs, 'where'> & { where?: Omit<Prisma.BrandAssetWhereInput, 'organizationId'> }): Promise<BrandAsset[]> {
+    return prisma.brandAsset.findMany({
+      ...args,
+      where: {
+        ...args?.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  async findUniqueBrandAsset(args: Omit<Prisma.BrandAssetFindUniqueArgs, 'where'> & { where: Omit<Prisma.BrandAssetWhereUniqueInput, 'organizationId'> }): Promise<BrandAsset | null> {
+    return prisma.brandAsset.findFirst({
+      ...args,
+      where: {
+        ...args.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  async createBrandAsset(args: Omit<Prisma.BrandAssetCreateArgs, 'data'> & { data: Omit<Prisma.BrandAssetCreateInput, 'organization'> }): Promise<BrandAsset> {
+    return prisma.brandAsset.create({
       ...args,
       data: {
         ...args.data,

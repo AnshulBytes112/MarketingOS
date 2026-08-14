@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 const nav = [
-  { label: "Dashboard",          href: "/dashboard",  icon: LayoutDashboard },
+  { label: "Dashboard",          href: "/overview",   icon: LayoutDashboard },
   { label: "Brand Intelligence",  href: "/brand",      icon: Brain },
   { label: "Competitor Intel",    href: "/competitors",icon: Users },
   { label: "Market Intelligence", href: "/market",     icon: TrendingUp },
@@ -23,7 +23,13 @@ const nav = [
   { label: "Settings",            href: "/settings",   icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ 
+  user,
+  organization
+}: {
+  user?: { name: string; role: string };
+  organization?: { id: string; name: string };
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -61,7 +67,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Brand badge */}
+        {/* Org badge */}
         <div style={{
           marginTop: "0.75rem",
           background: "rgba(124,58,237,0.08)",
@@ -76,8 +82,8 @@ export function Sidebar() {
               background: "linear-gradient(135deg,#7c3aed,#2563eb)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "0.5rem", fontWeight: 700, color: "white",
-            }}>NB</div>
-            <span style={{ fontSize: "0.75rem", color: "#7c3aed", fontWeight: 500 }}>NovaBrew</span>
+            }}>{organization?.name?.substring(0, 2).toUpperCase() || 'OG'}</div>
+            <span style={{ fontSize: "0.75rem", color: "#7c3aed", fontWeight: 500 }}>{organization?.name || 'Organization'}</span>
           </div>
           <ChevronRight size={12} color="#7c3aed" />
         </div>
@@ -127,10 +133,10 @@ export function Sidebar() {
             background: "linear-gradient(135deg,#7c3aed,#2563eb)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "0.7rem", fontWeight: 700, color: "white", flexShrink: 0,
-          }}>JD</div>
+          }}>{user?.name?.substring(0, 2).toUpperCase() || 'US'}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)" }}>John Doe</div>
-            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Admin</div>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name || 'User'}</div>
+            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>{user?.role || 'Role'}</div>
           </div>
           <button onClick={handleLogout} title="Log Out" style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", display: "flex" }}>
             <LogOut size={14} color="#ef4444" />

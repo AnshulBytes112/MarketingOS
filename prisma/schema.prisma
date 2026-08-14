@@ -24,10 +24,11 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members   OrganizationMember[]
-  brands    Brand[]
-  auditLogs AuditLog[]
-  sessions  Session[]
+  members     OrganizationMember[]
+  brands      Brand[]
+  auditLogs   AuditLog[]
+  sessions    Session[]
+  brandAssets BrandAsset[]
 }
 
 model User {
@@ -83,6 +84,7 @@ model Brand {
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets       BrandAsset[]
 
   @@index([organizationId])
 }
@@ -103,4 +105,21 @@ model AuditLog {
   @@index([organizationId])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+model BrandAsset {
+  id             String   @id @default(cuid())
+  organizationId String
+  brandId        String
+  type           String
+  url            String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([brandId])
 }
