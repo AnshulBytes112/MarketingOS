@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { getCurrentSession, requirePermission } from '../../src/lib/auth/guard';
-import { getCurrentPlatformSession, requirePlatformAuth } from '../../src/lib/auth/platform-guard';
+import { requirePermission, getCurrentSession } from '../../src/lib/auth/guard';
+import { requirePlatformAuth } from '../../src/lib/auth/platform-guard';
 import { prisma } from '../../src/lib/db/index';
 import { Role, PlatformRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';

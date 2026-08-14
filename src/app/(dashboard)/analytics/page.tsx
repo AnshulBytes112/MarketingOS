@@ -1,5 +1,4 @@
 import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Page() {
   return (

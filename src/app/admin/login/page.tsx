@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
         const data = await res.json();
         setError(data.error || 'Failed to authenticate');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);

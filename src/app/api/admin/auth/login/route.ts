@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('remote-addr') || null;
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('remote-addr') || undefined;
     await createPlatformSession(admin.id, ipAddress);
 
     return NextResponse.json({ success: true }, { status: 200 });

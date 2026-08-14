@@ -1,3 +1,4 @@
+// @ts-expect-error - otplib types are problematic
 import { authenticator } from 'otplib';
 import crypto from 'crypto';
 

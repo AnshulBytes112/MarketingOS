@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers';
 import { prisma } from '../db/index';
 import { PlatformRole, PlatformAdmin } from '@prisma/client';
 import { getPlatformSessionToken } from './platform-session';
