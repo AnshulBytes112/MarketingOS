@@ -23583,3 +23583,34 @@ Deleted:
 [NX v23.1.1 Daemon Server] - 2026-08-16T18:31:48.311Z - Time taken for 'createMetadata' 0.02719999999681022ms
 [NX v23.1.1 Daemon Server] - 2026-08-16T18:31:48.311Z - Time taken for 'serialize graph' 4.935899999996764ms
 [NX v23.1.1 Daemon Server] - 2026-08-16T18:31:48.311Z - Time taken for 'write cache' 24.62949999999546ms
+DEBUG nx::native::watch::watcher: idle-window emitting events count=1
+DEBUG nx::native::watch::watcher: idle-window emitting events count=1
+DEBUG nx::native::watch::watcher:   [update] .gitignore
+DEBUG nx::native::watch::watcher:   [update] .gitignore
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.914Z - [WATCHER]: .gitignore was modified
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.915Z - [WATCHER]: [watcher] routeWorkspaceChanges batch: 1 events: update:.gitignore
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.915Z - [WATCHER]: File changes detected:
+Created:
+(none)
+Updated:
+  - .gitignore
+Deleted:
+(none)
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.916Z - [SYNC]: clearing sync generators cache due to file changes
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.917Z - [REQUEST]: Updated workspace context based on watched changes, recomputing project graph...
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.917Z - [REQUEST]: .gitignore
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.917Z - [REQUEST]: 
+[plugin-client] restarting worker for "nx/js/dependencies-and-lockfile"
+DEBUG nx::native::watch::watcher: watching stopped origin=C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS
+[isolated-plugin] spawned worker for "nx/js/dependencies-and-lockfile" (pid: 10268, socket: \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin34276-38-227929.0925.sock)
+[plugin-client] restarting worker for "nx/core/package-json"
+[isolated-plugin] spawned worker for "nx/core/package-json" (pid: 14252, socket: \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin34276-39-227940.0113.sock)
+[plugin-client] restarting worker for "nx/core/project-json"
+[isolated-plugin] spawned worker for "nx/core/project-json" (pid: 33632, socket: \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin34276-40-227952.1905.sock)
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.956Z - [WATCHER]: Processing file changes in outputs
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.956Z - Time taken for 'hash changed files from watcher' 1.5714000000152737ms
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.961Z - [WATCHER]: Stopping the watcher for C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS (sources)
+DEBUG nx::native::watch::watcher: watching stopped origin=C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.962Z - [WATCHER]: Stopping the watcher for C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS (outputs)
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.966Z - [LATEST-NX]: Cleaning up latest Nx installation from C:\Users\SANJEE~1\AppData\Local\Temp\tmp-34276-BhkyB2j1t9x4
+[NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.971Z - Server stopped because: "Stopping the daemon the set of ignored files changed (native)"
