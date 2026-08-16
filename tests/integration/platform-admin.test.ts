@@ -158,4 +158,38 @@ describe('Platform Admin & Impersonation Integration', () => {
     // manage_org is a mutation-like permission
     await expect(requirePermission('manage_org')).rejects.toThrow('FORBIDDEN_READ_ONLY_IMPERSONATION');
   });
+  it('feature flag: missing flag follows default', async () => {
+    const { isFeatureEnabled } = await import('../../src/lib/feature-flags');
+    const isEnabled = await isFeatureEnabled(orgId, 'MISSING_FLAG', true);
+    expect(isEnabled).toBe(true);
+    
+    const isEnabledFalse = await isFeatureEnabled(orgId, 'MISSING_FLAG', false);
+    expect(isEnabledFalse).toBe(false);
+  });
+
+  it('feature flag: disabled evaluates false, enabled evaluates true', async () => {
+    const { setFeatureFlag, isFeatureEnabled } = await import('../../src/lib/feature-flags');
+    
+    await setFeatureFlag(orgId, 'TEST_FLAG', true);
+    let enabled = await isFeatureEnabled(orgId, 'TEST_FLAG');
+    expect(enabled).toBe(true);
+
+    await setFeatureFlag(orgId, 'TEST_FLAG', false);
+    enabled = await isFeatureEnabled(orgId, 'TEST_FLAG');
+    expect(enabled).toBe(false);
+  });
+
+  it('billing: entitlement checks server-side', async () => {
+    const { checkPlanEntitlement, requirePlanEntitlement } = await import('../../src/lib/billing');
+    
+    // Active Org is set to STARTER by default
+    const isStarter = await checkPlanEntitlement(orgId, 'STARTER');
+    expect(isStarter).toBe(true);
+    
+    const isGrowth = await checkPlanEntitlement(orgId, 'GROWTH');
+    expect(isGrowth).toBe(false);
+
+    await expect(requirePlanEntitlement(orgId, 'GROWTH')).rejects.toThrow('PAYMENT_REQUIRED');
+  });
+
 });

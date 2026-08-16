@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     let isTotpValid = false;
     try {
       const secret = decryptTotpSecret(admin.totpSecret);
-      isTotpValid = verifyTotpToken(data.totpCode, secret);
+      isTotpValid = await verifyTotpToken(data.totpCode, secret);
     } catch (e) {
       console.error('TOTP verification error', e);
     }

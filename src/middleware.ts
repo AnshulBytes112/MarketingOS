@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const protectedRoutes = ['/overview', '/brand', '/campaigns', '/content', '/analytics', '/settings', '/strategy', '/calendar', '/competitors', '/market', '/seo', '/copilot'];
 const authRoutes = ['/login', '/signup'];
-const adminRoutes = ['/admin/dashboard', '/admin/organizations'];
+
 
 export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('abge_session');
@@ -30,7 +30,7 @@ export function middleware(request: NextRequest) {
 
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
-  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
+  const isAdminRoute = pathname.startsWith('/admin') && pathname !== '/admin/login';
 
   let response = NextResponse.next();
 

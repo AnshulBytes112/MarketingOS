@@ -116,3 +116,10 @@ The application features a responsive sidebar and top bar. Navigation is organiz
 - **Structured Logging:** A centralized logger produces JSON-formatted logs including timestamp, level, message, requestId, organizationId, and userId. Sensitive values are redacted.
 - **Request ID:** A middleware automatically generates and propagates a x-request-id header across all incoming requests and outgoing responses.
 - **Loading & Error Architecture:** We use loading.tsx to display Skeleton loaders during async page transitions and error.tsx for robust error boundaries to prevent full app crashes.
+
+## Platform Admin Migration Reconciliation
+If you are developing against a database that previously had schema changes applied via `db push` (such as the initial Platform Admin schema changes), the migration history can be reconciled cleanly:
+1. We used `npx prisma migrate diff` against a shadow database to generate the exact missing SQL required for the Platform Admin models.
+2. We stored the SQL in `prisma/migrations/20260816000000_platform_admin_complete/migration.sql`.
+3. For existing databases that already contain the tables, we executed `npx prisma migrate resolve --applied 20260816000000_platform_admin_complete` to align the migration history without destroying data.
+4. Fresh databases (and production) can simply run `npx prisma migrate deploy` to create the schema from scratch.

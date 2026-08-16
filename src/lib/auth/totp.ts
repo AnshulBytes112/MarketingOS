@@ -1,5 +1,4 @@
-// @ts-expect-error - otplib types are problematic
-import { authenticator } from 'otplib';
+import { generateSecret, generateURI, verify } from 'otplib';
 import crypto from 'crypto';
 
 // The encryption key should be exactly 32 bytes for AES-256. 
@@ -16,15 +15,16 @@ function getEncryptionKey(): Buffer {
 }
 
 export function generateTotpSecret() {
-  return authenticator.generateSecret();
+  return generateSecret();
 }
 
 export function generateTotpUri(secret: string, email: string) {
-  return authenticator.keyuri(email, 'BhojAI Platform', secret);
+  return generateURI({ secret, issuer: 'BhojAI Platform', label: email });
 }
 
-export function verifyTotpToken(token: string, secret: string) {
-  return authenticator.verify({ token, secret });
+export async function verifyTotpToken(token: string, secret: string): Promise<boolean> {
+  const result = await verify({ token, secret });
+  return result.valid;
 }
 
 export function encryptTotpSecret(secret: string): string {

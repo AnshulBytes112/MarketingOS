@@ -24,7 +24,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/organizations" className={`block p-2 rounded hover:bg-gray-800 ${pathname.startsWith('/admin/organizations') ? 'bg-gray-800' : ''}`}>
             Organizations
           </Link>
-          {/* Add more links here */}
+          <Link href="/admin/users" className={`block p-2 rounded hover:bg-gray-800 ${pathname.startsWith('/admin/users') ? 'bg-gray-800' : ''}`}>
+            Users
+          </Link>
+          <Link href="/admin/billing" className={`block p-2 rounded hover:bg-gray-800 ${pathname.startsWith('/admin/billing') ? 'bg-gray-800' : ''}`}>
+            Billing
+          </Link>
+          <Link href="/admin/feature-flags" className={`block p-2 rounded hover:bg-gray-800 ${pathname.startsWith('/admin/feature-flags') ? 'bg-gray-800' : ''}`}>
+            Feature Flags
+          </Link>
+          <Link href="/admin/audit" className={`block p-2 rounded hover:bg-gray-800 ${pathname.startsWith('/admin/audit') ? 'bg-gray-800' : ''}`}>
+            Audit
+          </Link>
         </nav>
       </div>
       
