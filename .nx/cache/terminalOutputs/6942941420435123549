@@ -1,0 +1,3 @@
+[2m> [22meslint src
+
+Pages directory cannot be found at C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\packages\database\pages or C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\packages\database\src\pages. If using a custom path, please configure with the `no-html-link-for-pages` rule in your eslint config file.

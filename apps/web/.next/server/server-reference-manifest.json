@@ -1,0 +1,28 @@
+{
+  "node": {
+    "40a7da2ed1c9b7b6134b86e9b2db7cae0e5ff9145b": {
+      "workers": {
+        "app/admin/feature-flags/page": {
+          "moduleId": 83270,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "apps/web/src/app/admin/feature-flags/page.tsx",
+      "exportedName": "$$RSC_SERVER_ACTION_0"
+    },
+    "40c713604d824cc347a616af5beaa1c3b2171e7de1": {
+      "workers": {
+        "app/admin/feature-flags/page": {
+          "moduleId": 83270,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "apps/web/src/app/admin/feature-flags/page.tsx",
+      "exportedName": "$$RSC_SERVER_ACTION_1"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "8h7x6ir4ueyXXZkIYcr8fV2ndFSCHXOmYXlG1Kv0Xb8="
+}

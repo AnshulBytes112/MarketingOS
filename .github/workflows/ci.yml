@@ -25,16 +25,16 @@ jobs:
       run: npm ci
 
     - name: Generate Prisma Client
-      run: npx prisma generate
+      run: npx prisma generate --schema=packages/database/prisma/schema.prisma
       
     - name: Lint
-      run: npm run lint
+      run: npx nx run-many -t lint
       
     - name: Typecheck
-      run: npm run typecheck
+      run: npx nx run-many -t typecheck
       
     - name: Unit Tests
-      run: npm run test
+      run: npx nx run-many -t test
       
     - name: Build
-      run: npm run build
+      run: npx nx build web

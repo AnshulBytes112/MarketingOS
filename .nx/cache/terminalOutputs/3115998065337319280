@@ -1,0 +1,8 @@
+[2m> [22mtsc --noEmit
+
+src/guard.ts(2,24): error TS2307: Cannot find module '../db/index' or its corresponding type declarations.
+src/guard.ts(4,43): error TS2307: Cannot find module './rbac' or its corresponding type declarations.
+src/platform-guard.ts(1,24): error TS2307: Cannot find module '../db/index' or its corresponding type declarations.
+src/platform-session.ts(2,24): error TS2307: Cannot find module '../db/index' or its corresponding type declarations.
+src/session.ts(2,24): error TS2307: Cannot find module '../db/index' or its corresponding type declarations.
+Warning: command "tsc --noEmit" exited with non-zero status code

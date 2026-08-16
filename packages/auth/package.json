@@ -1,0 +1,13 @@
+{
+  "name": "@abge/auth",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "dependencies": {
+    "@abge/database": "*",
+    "@abge/tenant": "*",
+    "@abge/rbac": "*",
+    "bcryptjs": "^3.0.3",
+    "otplib": "^13.4.1"
+  }
+}

@@ -3,16 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "dev": "nx dev web",
+    "build": "nx build web",
+    "start": "nx start web",
+    "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test": "nx run-many -t test",
+    "test:e2e": "nx run-many -t test:e2e"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1110.0",
     "@aws-sdk/s3-request-presigner": "^3.1110.0",
@@ -58,6 +62,7 @@
     "eslint-config-next": "16.3.0",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^29.1.1",
+    "nx": "latest",
     "prettier": "^3.9.6",
     "prisma": "^7.9.1",
     "tailwindcss": "^4",

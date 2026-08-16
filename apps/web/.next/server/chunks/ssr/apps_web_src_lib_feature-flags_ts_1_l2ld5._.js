@@ -1,0 +1,3 @@
+module.exports=[56318,a=>a.a(async(b,c)=>{try{var d=a.i(58823),e=a.i(34612),f=b([d,e]);async function g(a,b,c){await e.prisma.featureFlag.upsert({where:{organizationId_flagName:{organizationId:a,flagName:b}},update:{enabled:c},create:{organizationId:a,flagName:b,enabled:c}})}[d,e]=f.then?(await f)():f,a.s(["setFeatureFlag",0,g]),c()}catch(a){c(a)}},!1)];
+
+//# sourceMappingURL=apps_web_src_lib_feature-flags_ts_1_l2ld5._.js.map

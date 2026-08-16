@@ -75,6 +75,34 @@ We use a **Centralized Repository-Layer Tenant Guard** (`src/lib/db/repository.t
 - **Easier Testing**: Mocking tenant boundaries is straightforward in unit tests.
 - **Natural Authorization Fit**: Fits well with our application-level role-based authorization model without requiring complex database-level connection state handling for each query.
 
+### Monorepo Architecture
+
+The repository is structured as an Nx Monorepo to separate concerns and enforce strict dependency boundaries:
+
+```text
+apps/
+  web/          # The primary Next.js Application (App Router, pages, API routes)
+
+packages/
+  ui/           # Reusable UI components (Shadcn, Tailwind utilities)
+  database/     # Canonical Prisma schema, migrations, and generated client
+  tenant/       # Tenant data-access architecture (TenantRepository)
+  rbac/         # Tenant role-based access control (Roles, Permissions)
+  auth/         # Authentication and session guards (TOTP, Platform sessions)
+```
+
+### Dependency Graph Rules
+The shared packages must strictly adhere to the following dependency direction:
+`apps/web` → `@abge/ui`, `@abge/auth`, `@abge/tenant`, `@abge/rbac`, `@abge/database`
+- Shared packages **MUST NOT** import from `apps/web`.
+- `Platform Admin` logic remains logically isolated from tenant RBAC.
+
+### Prisma Commands
+Because the database package has been extracted, Prisma commands should be run using the Nx task runner or by explicitly pointing to the schema:
+```bash
+npx prisma generate --schema=packages/database/prisma/schema.prisma
+```
+
 ### The Tradeoff
 This approach means that data isolation depends entirely on our data-access layer. Direct, "raw" `prisma` client access could bypass these protections.
 
