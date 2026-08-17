@@ -1,4 +1,0 @@
-[2m> [22mtsc --noEmit
-
-src/repository.ts(1,10): error TS2305: Module '"./index"' has no exported member 'prisma'.
-Warning: command "tsc --noEmit" exited with non-zero status code

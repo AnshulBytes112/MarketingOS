@@ -69,10 +69,10 @@ export default function StandaloneLandingPage() {
           <button onClick={toggle} className="btn-ghost" style={{ padding: "0.5rem 0.875rem", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
             <Globe size={15} /> {theme === "dark" ? "Light Mode" : "Dark Mode"}
           </button>
-          <Link href="/dashboard" className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: "0.375rem", textDecoration: "none", fontSize: "0.85rem" }}>
+          <Link href="/overview" className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: "0.375rem", textDecoration: "none", fontSize: "0.85rem" }}>
             <LogIn size={15} /> Log In
           </Link>
-          <Link href="/dashboard" className="btn-primary" style={{ display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", padding: "0.6rem 1.25rem", fontSize: "0.875rem", fontWeight: 600 }}>
+          <Link href="/overview" className="btn-primary" style={{ display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", padding: "0.6rem 1.25rem", fontSize: "0.875rem", fontWeight: 600 }}>
             Launch Dashboard OS <ArrowRight size={15} />
           </Link>
         </div>
@@ -105,7 +105,7 @@ export default function StandaloneLandingPage() {
         </p>
 
         <div style={{ display: "flex", justifyContent: "center", gap: "1rem", marginBottom: "4rem" }}>
-          <Link href="/dashboard" className="btn-primary" style={{ padding: "0.875rem 2.25rem", fontSize: "1.05rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.625rem", textDecoration: "none" }}>
+          <Link href="/overview" className="btn-primary" style={{ padding: "0.875rem 2.25rem", fontSize: "1.05rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.625rem", textDecoration: "none" }}>
             Launch Dashboard OS <ArrowRight size={18} />
           </Link>
           <a href="#showcase" className="btn-ghost" style={{ padding: "0.875rem 2.25rem", fontSize: "1.05rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.625rem", textDecoration: "none" }}>

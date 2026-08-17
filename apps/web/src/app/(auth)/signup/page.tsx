@@ -38,7 +38,7 @@ export default function SignupPage() {
       }
 
       toast.success("Account created successfully!");
-      router.push("/dashboard");
+      router.push("/overview");
       router.refresh();
     } catch (error: any) {
       toast.error(error.message);

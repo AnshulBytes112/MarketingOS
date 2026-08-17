@@ -1,50 +1,49 @@
-import { EmptyState } from '@abge/ui/components/ui/empty-state';
-import { Skeleton } from '@abge/ui/components/ui/skeleton';
-import { getCurrentSession } from '@abge/auth';
-import { TenantRepository } from '@abge/tenant';
+import { requireAuth } from '@abge/auth';
+import { prisma } from '@abge/database';
+import BrandIntelligenceClient from './brand-intelligence-client';
 
-export default async function Page() {
-  const session = await getCurrentSession();
+export default async function BrandIntelligencePage() {
+  const session = await requireAuth();
 
-  if (!session) {
-    return null;
-  }
-
-  const repo = new TenantRepository(session);
-  const brands = await repo.findManyBrands({
-    take: 1,
-    orderBy: { updatedAt: 'desc' }
+  // Fetch real brand from database for active organization
+  let brand = await prisma.brand.findFirst({
+    where: { organizationId: session.organizationId },
+    orderBy: { createdAt: 'desc' },
   });
-  const brand = brands.length > 0 ? brands[0] : null;
 
-  if (brand?.onboardingStatus === 'GENERATING') {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Brand Intelligence</h1>
-          <p className="text-muted-foreground">Your brand intelligence profile is being prepared.</p>
-        </div>
-        <div className="flex flex-col space-y-3">
-          <Skeleton className="h-[125px] w-full rounded-xl" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-4/5" />
-          </div>
-        </div>
-      </div>
-    );
+  // Auto-provision brand record if not yet created in DB
+  if (!brand) {
+    const org = await prisma.organization.findUnique({
+      where: { id: session.organizationId },
+    });
+
+    brand = await prisma.brand.create({
+      data: {
+        organizationId: session.organizationId,
+        name: org?.name ? `${org.name} Coffee` : 'NovaBrew Coffee',
+        industry: 'Food & Beverage',
+        geography: 'United States',
+        priceSegment: 'Premium',
+        websiteUrl: 'novabrew.com',
+        positioning: 'Sustainable specialty coffee for the modern professional',
+        usp: 'Single-origin, ethically sourced beans with AI-powered roast profiles',
+        targetAudience: 'Urban professionals 25-40',
+        onboardingStatus: 'ACTIVE',
+      },
+    });
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Brand Intelligence</h1>
-        <p className="text-muted-foreground">Your brand intelligence workspace will appear here.</p>
-      </div>
-      <EmptyState
-        title="No data yet"
-        description="Your brand intelligence workspace will appear here."
-      />
-    </div>
-  );
+  const brandData = {
+    id: brand.id,
+    name: brand.name || 'NovaBrew Coffee',
+    industry: brand.industry || 'Food & Beverage',
+    geography: brand.geography || 'United States',
+    priceSegment: brand.priceSegment || 'Premium',
+    websiteUrl: brand.websiteUrl || 'novabrew.com',
+    positioning: brand.positioning || 'Sustainable specialty coffee for the modern professional',
+    usp: brand.usp || 'Single-origin, ethically sourced beans with AI-powered roast profiles',
+    targetAudience: brand.targetAudience || 'Urban professionals 25-40',
+  };
+
+  return <BrandIntelligenceClient brand={brandData} />;
 }

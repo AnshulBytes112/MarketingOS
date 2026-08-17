@@ -23,5 +23,6 @@
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "sharedGlobals": []
   },
-  "plugins": []
+  "plugins": [],
+  "analytics": true
 }

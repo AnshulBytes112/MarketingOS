@@ -1,4 +1,0 @@
-[2m> [22mtsc --noEmit
-
-tsconfig.json(3,3): error TS5090: Non-relative paths are not allowed when 'baseUrl' is not set. Did you forget a leading './'?
-Warning: command "tsc --noEmit" exited with non-zero status code
