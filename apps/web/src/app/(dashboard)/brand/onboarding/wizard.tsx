@@ -9,7 +9,15 @@ import { Label } from '@abge/ui/components/ui/label';
 import { toast } from 'sonner';
 import { saveBrandBasics, submitBrandOnboarding } from './actions';
 
-export function OnboardingWizard({ initialDraft }: { initialDraft: any }) {
+interface OnboardingDraft {
+  id?: string;
+  onboardingStep?: number;
+  name?: string;
+  industry?: string;
+  websiteUrl?: string;
+}
+
+export function OnboardingWizard({ initialDraft }: { initialDraft: OnboardingDraft | null }) {
   const router = useRouter();
   const [step, setStep] = useState(initialDraft?.onboardingStep || 1);
   const [loading, setLoading] = useState(false);
@@ -33,8 +41,8 @@ export function OnboardingWizard({ initialDraft }: { initialDraft: any }) {
         // Assume steps 2-5 save logic goes here
         setStep(step + 1);
       }
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to save step');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save step');
     } finally {
       setLoading(false);
     }
@@ -52,8 +60,8 @@ export function OnboardingWizard({ initialDraft }: { initialDraft: any }) {
       toast.success('Brand submitted successfully');
       router.push('/brand');
       router.refresh();
-    } catch (e: any) {
-      toast.error(e.message || 'Submission failed');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Submission failed');
     } finally {
       setLoading(false);
     }

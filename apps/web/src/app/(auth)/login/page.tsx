@@ -161,7 +161,7 @@ function LoginForm() {
           </button>
 
           <p className="mt-6 text-center text-xs text-gray-400">
-            Don't have an account? <Link href="/signup" className="text-blue-500 hover:text-blue-400 transition-colors">Sign up</Link>
+            Don&apos;t have an account? <Link href="/signup" className="text-blue-500 hover:text-blue-400 transition-colors">Sign up</Link>
           </p>
         </div>
 

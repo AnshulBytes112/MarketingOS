@@ -68,8 +68,8 @@ export default function CreateOrganizationModal() {
         setOwnerPassword('password123');
         router.refresh();
       }, 1000);
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }

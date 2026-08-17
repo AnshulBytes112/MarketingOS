@@ -7,18 +7,10 @@ import {
   Upload,
   Globe,
   Building2,
-  MapPin,
-  Tag,
-  Calendar,
   Layers,
   ShieldAlert,
   Users,
-  CheckCircle2,
-  MessageSquare,
-  FileText,
-  Volume2,
   Target,
-  BarChart,
 } from 'lucide-react';
 
 interface BrandData {
@@ -105,7 +97,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         ].map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
+            onClick={() => setActiveTab(tab.key as 'dna' | 'voice' | 'audience' | 'assets' | 'guidelines')}
             className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
               activeTab === tab.key
                 ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30 shadow-sm'
@@ -305,7 +297,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                   Caption Style
                 </h4>
                 <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed italic">
-                  "Every cup begins with a choice. NovaBrew Yirgacheffe — single-origin, carefully sourced, thoughtfully roasted."
+                  &quot;Every cup begins with a choice. NovaBrew Yirgacheffe — single-origin, carefully sourced, thoughtfully roasted.&quot;
                 </div>
               </div>
 
@@ -314,7 +306,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                   LinkedIn Post
                 </h4>
                 <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
-                  "Specialty coffee isn't a luxury. It's a direct payment to the farmers who invested years perfecting their craft."
+                  &quot;Specialty coffee isn&apos;t a luxury. It&apos;s a direct payment to the farmers who invested years perfecting their craft.&quot;
                 </div>
               </div>
 
