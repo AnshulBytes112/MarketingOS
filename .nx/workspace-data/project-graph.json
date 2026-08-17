@@ -2027,6 +2027,15 @@
         "hash": "sha512-D4y1vNeZrIIJCN+uHaWVtH86B+aCrdMYYjicy9pXHvbGZeGYLLSd3wdVuC37FxVXlU1ARsk84eKWfWMXGYEqvA=="
       }
     },
+    "npm:@ioredis/commands": {
+      "type": "npm",
+      "name": "npm:@ioredis/commands",
+      "data": {
+        "version": "2.0.0",
+        "packageName": "@ioredis/commands",
+        "hash": "sha512-vrx0AE/T0h7cRZwfo1M39Cr+ZhZrkf0V8mQN75wucKCxCLD9l/VX6no3gFvrLqD1IlG/1LtzWovqEw3t0Vr9zg=="
+      }
+    },
     "npm:@jest/diff-sequences": {
       "type": "npm",
       "name": "npm:@jest/diff-sequences",
@@ -2124,6 +2133,60 @@
         "version": "0.4.1",
         "packageName": "json-schema-traverse",
         "hash": "sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg=="
+      }
+    },
+    "npm:@msgpackr-extract/msgpackr-extract-darwin-arm64": {
+      "type": "npm",
+      "name": "npm:@msgpackr-extract/msgpackr-extract-darwin-arm64",
+      "data": {
+        "version": "3.0.4",
+        "packageName": "@msgpackr-extract/msgpackr-extract-darwin-arm64",
+        "hash": "sha512-LCkGo6JDfaBhgST7UpPWgNgLINpcpabaHfyz5OBx75nUYxBsaEPxjnyNjWpeb/xBup/682QnBfRBy2/LvPutZQ=="
+      }
+    },
+    "npm:@msgpackr-extract/msgpackr-extract-darwin-x64": {
+      "type": "npm",
+      "name": "npm:@msgpackr-extract/msgpackr-extract-darwin-x64",
+      "data": {
+        "version": "3.0.4",
+        "packageName": "@msgpackr-extract/msgpackr-extract-darwin-x64",
+        "hash": "sha512-zExlW9zUJKZH/tOtVMttwjKa4Xm/3KcNjnE3dPN92uCktwavMxpgCA3MoJK/DOnTWsQgo224OaST27/mPNAf+w=="
+      }
+    },
+    "npm:@msgpackr-extract/msgpackr-extract-linux-arm": {
+      "type": "npm",
+      "name": "npm:@msgpackr-extract/msgpackr-extract-linux-arm",
+      "data": {
+        "version": "3.0.4",
+        "packageName": "@msgpackr-extract/msgpackr-extract-linux-arm",
+        "hash": "sha512-Tg3yX65f5GbtXLkrYEHE5oibZG9epyYWas7FogTTEJeDEF9JlXJzKgXaNhT3UXlTOeA+AfZpYZYZ0uPj7Cfquw=="
+      }
+    },
+    "npm:@msgpackr-extract/msgpackr-extract-linux-arm64": {
+      "type": "npm",
+      "name": "npm:@msgpackr-extract/msgpackr-extract-linux-arm64",
+      "data": {
+        "version": "3.0.4",
+        "packageName": "@msgpackr-extract/msgpackr-extract-linux-arm64",
+        "hash": "sha512-dgX0P/9wGPJeHFBG+ZmhgE6bmtMt7NP5CRBGyyktpopdk/mW4POnrpQsSLtKI1dwpc+pPLuXHDh6vvskyQE/sw=="
+      }
+    },
+    "npm:@msgpackr-extract/msgpackr-extract-linux-x64": {
+      "type": "npm",
+      "name": "npm:@msgpackr-extract/msgpackr-extract-linux-x64",
+      "data": {
+        "version": "3.0.4",
+        "packageName": "@msgpackr-extract/msgpackr-extract-linux-x64",
+        "hash": "sha512-8TNXMEjJc3QEy7R/x1INhgiU+XakDAFUzBhaz7+Rbrs8NH5UQeHQxxmzsSBJGyV6I1jW79undiQm8tOI+D+8FQ=="
+      }
+    },
+    "npm:@msgpackr-extract/msgpackr-extract-win32-x64": {
+      "type": "npm",
+      "name": "npm:@msgpackr-extract/msgpackr-extract-win32-x64",
+      "data": {
+        "version": "3.0.4",
+        "packageName": "@msgpackr-extract/msgpackr-extract-win32-x64",
+        "hash": "sha512-CmCXPQrkbwExx3j946/PtHWHbYJiCRBRDl4BlkRQcJB/YOwQxJRTpoo7aTsortjgoJ1x7opzTSxn7C+ASSLVjQ=="
       }
     },
     "npm:@napi-rs/wasm-runtime": {
@@ -4691,6 +4754,15 @@
         "hash": "sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ=="
       }
     },
+    "npm:bullmq": {
+      "type": "npm",
+      "name": "npm:bullmq",
+      "data": {
+        "version": "6.1.2",
+        "packageName": "bullmq",
+        "hash": "sha512-GSX8JfWN8CElAGDyt7Zmq59n1FfWZ0L7IjsThNUQq7X8mvVVDb9I5i2F+nFg4A00UbysJ5yejN0oWzmbUJPDFg=="
+      }
+    },
     "npm:bundle-name": {
       "type": "npm",
       "name": "npm:bundle-name",
@@ -4934,6 +5006,15 @@
         "hash": "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="
       }
     },
+    "npm:cluster-key-slot": {
+      "type": "npm",
+      "name": "npm:cluster-key-slot",
+      "data": {
+        "version": "1.1.1",
+        "packageName": "cluster-key-slot",
+        "hash": "sha512-rwHwUfXL40Chm1r08yrhU3qpUvdVlgkKNeyeGPOxnW8/SyVDvgRaed/Uz54AqWNaTCAThlj6QAs3TZcKI0xDEw=="
+      }
+    },
     "npm:cmdk": {
       "type": "npm",
       "name": "npm:cmdk",
@@ -5076,6 +5157,15 @@
         "version": "9.0.2",
         "packageName": "cosmiconfig",
         "hash": "sha512-gtTZxTDau1wL7Y7zifc2dd8jHSK/k6BTx/2Xp/BpdlAdnlYWFVt7qhJqgwi7637yRwRQ3qL4ZidbB4I8tA5VOg=="
+      }
+    },
+    "npm:cron-parser": {
+      "type": "npm",
+      "name": "npm:cron-parser",
+      "data": {
+        "version": "5.10.0",
+        "packageName": "cron-parser",
+        "hash": "sha512-izNAxJyRWUP8ljBoDSub5WyrVOUlT4SLGShswE7eoRBpp6QUsSycYxLBMJlbshgPBMcPT/nrfgjNY2918ayv2A=="
       }
     },
     "npm:cross-spawn": {
@@ -6797,6 +6887,15 @@
         "hash": "sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg=="
       }
     },
+    "npm:ioredis": {
+      "type": "npm",
+      "name": "npm:ioredis",
+      "data": {
+        "version": "6.0.0",
+        "packageName": "ioredis",
+        "hash": "sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w=="
+      }
+    },
     "npm:ip-address": {
       "type": "npm",
       "name": "npm:ip-address",
@@ -7742,6 +7841,15 @@
         "hash": "sha512-tUIr2jXLbWpCkdtH8XP7P7YppM9ueWgTky99lpWDY6z5REs6B+O6ZQ3U5tHkUUY59ANyOv/PBcs8E4Fe3KO3eA=="
       }
     },
+    "npm:luxon": {
+      "type": "npm",
+      "name": "npm:luxon",
+      "data": {
+        "version": "3.7.2",
+        "packageName": "luxon",
+        "hash": "sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew=="
+      }
+    },
     "npm:lz-string": {
       "type": "npm",
       "name": "npm:lz-string",
@@ -7895,6 +8003,24 @@
         "hash": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="
       }
     },
+    "npm:msgpackr": {
+      "type": "npm",
+      "name": "npm:msgpackr",
+      "data": {
+        "version": "2.0.5",
+        "packageName": "msgpackr",
+        "hash": "sha512-cef05H/dSYpLpqp3sj/qyZh5vhUYCalnaLO7j1yOmpsR0y/XwLVtK7r5gn+U/F7CTEfMowcGhlUQJDLcLf7jcA=="
+      }
+    },
+    "npm:msgpackr-extract": {
+      "type": "npm",
+      "name": "npm:msgpackr-extract",
+      "data": {
+        "version": "3.0.4",
+        "packageName": "msgpackr-extract",
+        "hash": "sha512-4kmO/MdyUIkLIvTPr8VHLil4AtoKIoniWPIEk5+CDy0xnWC84azhSFmuJ7PxZdsYtiP5kEeQsORAVIeMgxT+Hw=="
+      }
+    },
     "npm:mysql2": {
       "type": "npm",
       "name": "npm:mysql2",
@@ -7985,6 +8111,15 @@
         "hash": "sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ=="
       }
     },
+    "npm:node-abort-controller": {
+      "type": "npm",
+      "name": "npm:node-abort-controller",
+      "data": {
+        "version": "3.1.1",
+        "packageName": "node-abort-controller",
+        "hash": "sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ=="
+      }
+    },
     "npm:node-exports-info": {
       "type": "npm",
       "name": "npm:node-exports-info",
@@ -7992,6 +8127,15 @@
         "version": "1.6.2",
         "packageName": "node-exports-info",
         "hash": "sha512-kXs9Go0cah0qHVV2v389IXQLdLCeE1xfFtjOAF+iobu0OIoG1pje8At2vMHyaPMiPMnG/LWP50twML21eMcAag=="
+      }
+    },
+    "npm:node-gyp-build-optional-packages": {
+      "type": "npm",
+      "name": "npm:node-gyp-build-optional-packages",
+      "data": {
+        "version": "5.2.2",
+        "packageName": "node-gyp-build-optional-packages",
+        "hash": "sha512-s+w+rBWnpTMwSFbaE0UXsRlg7hU4FjekKU4eyAih5T8nJuNZT1nNsskXpxmeqSK9UzkBl6UgRlnKc8hz8IEqOw=="
       }
     },
     "npm:node-releases": {
@@ -8912,6 +9056,15 @@
         "hash": "sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg=="
       }
     },
+    "npm:redis-errors": {
+      "type": "npm",
+      "name": "npm:redis-errors",
+      "data": {
+        "version": "1.2.0",
+        "packageName": "redis-errors",
+        "hash": "sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w=="
+      }
+    },
     "npm:redux": {
       "type": "npm",
       "name": "npm:redux",
@@ -9414,6 +9567,15 @@
         "version": "0.0.2",
         "packageName": "stackback",
         "hash": "sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw=="
+      }
+    },
+    "npm:standard-as-callback": {
+      "type": "npm",
+      "name": "npm:standard-as-callback",
+      "data": {
+        "version": "2.1.0",
+        "packageName": "standard-as-callback",
+        "hash": "sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A=="
       }
     },
     "npm:statuses": {
@@ -15105,6 +15267,43 @@
         "type": "static"
       }
     ],
+    "npm:bullmq": [
+      {
+        "source": "npm:bullmq",
+        "target": "npm:ioredis",
+        "type": "static"
+      },
+      {
+        "source": "npm:bullmq",
+        "target": "npm:pg",
+        "type": "static"
+      },
+      {
+        "source": "npm:bullmq",
+        "target": "npm:cron-parser",
+        "type": "static"
+      },
+      {
+        "source": "npm:bullmq",
+        "target": "npm:msgpackr",
+        "type": "static"
+      },
+      {
+        "source": "npm:bullmq",
+        "target": "npm:node-abort-controller",
+        "type": "static"
+      },
+      {
+        "source": "npm:bullmq",
+        "target": "npm:semver@7.8.5",
+        "type": "static"
+      },
+      {
+        "source": "npm:bullmq",
+        "target": "npm:tslib",
+        "type": "static"
+      }
+    ],
     "npm:bundle-name": [
       {
         "source": "npm:bundle-name",
@@ -15428,6 +15627,13 @@
       {
         "source": "npm:cosmiconfig",
         "target": "npm:parse-json",
+        "type": "static"
+      }
+    ],
+    "npm:cron-parser": [
+      {
+        "source": "npm:cron-parser",
+        "target": "npm:luxon",
         "type": "static"
       }
     ],
@@ -17776,6 +17982,38 @@
         "type": "static"
       }
     ],
+    "npm:ioredis": [
+      {
+        "source": "npm:ioredis",
+        "target": "npm:@ioredis/commands",
+        "type": "static"
+      },
+      {
+        "source": "npm:ioredis",
+        "target": "npm:cluster-key-slot",
+        "type": "static"
+      },
+      {
+        "source": "npm:ioredis",
+        "target": "npm:debug",
+        "type": "static"
+      },
+      {
+        "source": "npm:ioredis",
+        "target": "npm:denque",
+        "type": "static"
+      },
+      {
+        "source": "npm:ioredis",
+        "target": "npm:redis-errors",
+        "type": "static"
+      },
+      {
+        "source": "npm:ioredis",
+        "target": "npm:standard-as-callback",
+        "type": "static"
+      }
+    ],
     "npm:is-array-buffer": [
       {
         "source": "npm:is-array-buffer",
@@ -18388,6 +18626,50 @@
         "type": "static"
       }
     ],
+    "npm:msgpackr": [
+      {
+        "source": "npm:msgpackr",
+        "target": "npm:msgpackr-extract",
+        "type": "static"
+      }
+    ],
+    "npm:msgpackr-extract": [
+      {
+        "source": "npm:msgpackr-extract",
+        "target": "npm:node-gyp-build-optional-packages",
+        "type": "static"
+      },
+      {
+        "source": "npm:msgpackr-extract",
+        "target": "npm:@msgpackr-extract/msgpackr-extract-darwin-arm64",
+        "type": "static"
+      },
+      {
+        "source": "npm:msgpackr-extract",
+        "target": "npm:@msgpackr-extract/msgpackr-extract-darwin-x64",
+        "type": "static"
+      },
+      {
+        "source": "npm:msgpackr-extract",
+        "target": "npm:@msgpackr-extract/msgpackr-extract-linux-arm",
+        "type": "static"
+      },
+      {
+        "source": "npm:msgpackr-extract",
+        "target": "npm:@msgpackr-extract/msgpackr-extract-linux-arm64",
+        "type": "static"
+      },
+      {
+        "source": "npm:msgpackr-extract",
+        "target": "npm:@msgpackr-extract/msgpackr-extract-linux-x64",
+        "type": "static"
+      },
+      {
+        "source": "npm:msgpackr-extract",
+        "target": "npm:@msgpackr-extract/msgpackr-extract-win32-x64",
+        "type": "static"
+      }
+    ],
     "npm:mysql2": [
       {
         "source": "npm:mysql2",
@@ -18582,6 +18864,13 @@
       {
         "source": "npm:node-exports-info",
         "target": "npm:semver",
+        "type": "static"
+      }
+    ],
+    "npm:node-gyp-build-optional-packages": [
+      {
+        "source": "npm:node-gyp-build-optional-packages",
+        "target": "npm:detect-libc",
         "type": "static"
       }
     ],
@@ -22739,5 +23028,5 @@
   },
   "version": "6.0",
   "errors": [],
-  "computedAt": 1786905108285
+  "computedAt": 1786991012310
 }

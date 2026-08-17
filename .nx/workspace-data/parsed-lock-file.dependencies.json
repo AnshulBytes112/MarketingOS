@@ -4555,6 +4555,41 @@
     "type": "static"
   },
   {
+    "source": "npm:bullmq",
+    "target": "npm:ioredis",
+    "type": "static"
+  },
+  {
+    "source": "npm:bullmq",
+    "target": "npm:pg",
+    "type": "static"
+  },
+  {
+    "source": "npm:bullmq",
+    "target": "npm:cron-parser",
+    "type": "static"
+  },
+  {
+    "source": "npm:bullmq",
+    "target": "npm:msgpackr",
+    "type": "static"
+  },
+  {
+    "source": "npm:bullmq",
+    "target": "npm:node-abort-controller",
+    "type": "static"
+  },
+  {
+    "source": "npm:bullmq",
+    "target": "npm:semver@7.8.5",
+    "type": "static"
+  },
+  {
+    "source": "npm:bullmq",
+    "target": "npm:tslib",
+    "type": "static"
+  },
+  {
     "source": "npm:bundle-name",
     "target": "npm:run-applescript",
     "type": "static"
@@ -4867,6 +4902,11 @@
   {
     "source": "npm:cosmiconfig",
     "target": "npm:parse-json",
+    "type": "static"
+  },
+  {
+    "source": "npm:cron-parser",
+    "target": "npm:luxon",
     "type": "static"
   },
   {
@@ -7040,6 +7080,36 @@
     "type": "static"
   },
   {
+    "source": "npm:ioredis",
+    "target": "npm:@ioredis/commands",
+    "type": "static"
+  },
+  {
+    "source": "npm:ioredis",
+    "target": "npm:cluster-key-slot",
+    "type": "static"
+  },
+  {
+    "source": "npm:ioredis",
+    "target": "npm:debug",
+    "type": "static"
+  },
+  {
+    "source": "npm:ioredis",
+    "target": "npm:denque",
+    "type": "static"
+  },
+  {
+    "source": "npm:ioredis",
+    "target": "npm:redis-errors",
+    "type": "static"
+  },
+  {
+    "source": "npm:ioredis",
+    "target": "npm:standard-as-callback",
+    "type": "static"
+  },
+  {
     "source": "npm:is-array-buffer",
     "target": "npm:call-bind",
     "type": "static"
@@ -7570,6 +7640,46 @@
     "type": "static"
   },
   {
+    "source": "npm:msgpackr",
+    "target": "npm:msgpackr-extract",
+    "type": "static"
+  },
+  {
+    "source": "npm:msgpackr-extract",
+    "target": "npm:node-gyp-build-optional-packages",
+    "type": "static"
+  },
+  {
+    "source": "npm:msgpackr-extract",
+    "target": "npm:@msgpackr-extract/msgpackr-extract-darwin-arm64",
+    "type": "static"
+  },
+  {
+    "source": "npm:msgpackr-extract",
+    "target": "npm:@msgpackr-extract/msgpackr-extract-darwin-x64",
+    "type": "static"
+  },
+  {
+    "source": "npm:msgpackr-extract",
+    "target": "npm:@msgpackr-extract/msgpackr-extract-linux-arm",
+    "type": "static"
+  },
+  {
+    "source": "npm:msgpackr-extract",
+    "target": "npm:@msgpackr-extract/msgpackr-extract-linux-arm64",
+    "type": "static"
+  },
+  {
+    "source": "npm:msgpackr-extract",
+    "target": "npm:@msgpackr-extract/msgpackr-extract-linux-x64",
+    "type": "static"
+  },
+  {
+    "source": "npm:msgpackr-extract",
+    "target": "npm:@msgpackr-extract/msgpackr-extract-win32-x64",
+    "type": "static"
+  },
+  {
     "source": "npm:mysql2",
     "target": "npm:aws-ssl-profiles",
     "type": "static"
@@ -7752,6 +7862,11 @@
   {
     "source": "npm:node-exports-info",
     "target": "npm:semver",
+    "type": "static"
+  },
+  {
+    "source": "npm:node-gyp-build-optional-packages",
+    "target": "npm:detect-libc",
     "type": "static"
   },
   {

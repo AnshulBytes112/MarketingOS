@@ -23614,3 +23614,146 @@ DEBUG nx::native::watch::watcher: watching stopped origin=C:\Users\ANSHUL\Social
 [NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.962Z - [WATCHER]: Stopping the watcher for C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS (outputs)
 [NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.966Z - [LATEST-NX]: Cleaning up latest Nx installation from C:\Users\SANJEE~1\AppData\Local\Temp\tmp-34276-BhkyB2j1t9x4
 [NX v23.1.1 Daemon Server] - 2026-08-16T18:33:34.971Z - Server stopped because: "Stopping the daemon the set of ignored files changed (native)"
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:21.385Z - [Client] Starting new daemon server in background
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:22.543Z - [Client] Waiting for server (max: 6000 attempts, 10ms interval)
+DEBUG nx::native::watch::watcher: watching started origin=C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.215Z - [WATCHER]: Subscribed to changes within: C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS (native)
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.223Z - New daemon starting from: C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\daemon\server\server.js
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.223Z - New daemon __dirname: C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\daemon\server
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.223Z - New daemon nxVersion: 23.1.1
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.225Z - New daemon getInstalledNxVersion(): 23.1.1
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.227Z - Time taken for 'workspace context init' 1.907799999999952ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.235Z - [Server] Starting outdated check interval (20ms)
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.241Z - Started listening on: \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\bb1bb51adc6ed5470ee5\d.sock
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:26.259Z - [Client] Server available
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:26.260Z - [Client] Daemon server started, pid=18216
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:26.264Z - [Messenger] Setting up socket listeners
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:26.267Z - [Messenger] listen() complete
+DEBUG nx::native::watch::watcher: watching started origin=C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.520Z - [LATEST-NX]: Pulling latest Nx...
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.557Z - [AI-AGENTS]: Starting agent configuration status computation
+[isolated-plugin] spawned worker for "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\js" (pid: 19392, socket: \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin18216-0-3981.5361.sock)
+[isolated-plugin] spawned worker for "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\package-json" (pid: 21660, socket: \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin18216-1-4190.206.sock)
+[isolated-plugin] spawned worker for "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\project-json\build-nodes\project-json" (pid: 9832, socket: \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin18216-2-4203.8837.sock)
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.800Z - Time taken for 'hash changed files from watcher' 0.10609999999996944ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.800Z - Time taken for 'loadSpecifiedNxPlugins' 279.1762999999996ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.817Z - Established a connection. Number of open connections: 1
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.818Z - Established a connection. Number of open connections: 2
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:26.821Z - Closed a connection. Number of open connections: 1
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:27.165Z - [Messenger] Sending message type: REQUEST_PROJECT_GRAPH
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:27.169Z - [Messenger] Message sent
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:27.174Z - Received raw message of length 6935
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:27.174Z - Received json message of type REQUEST_PROJECT_GRAPH
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:27.176Z - [REQUEST]: Client Request for Project Graph Received
+DEBUG nx::native::watch::watcher: force-flush END count=0 replies=1 elapsed=13.7281ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:27.192Z - Reusing in-memory cached project graph because no files changed.
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\package-json" (pid: 21660) listening on \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin18216-1-4190.206.sock
+[1m[33mTime taken for 'plugin worker 21660 code loading' 1153.1283ms[39m[22m
+[isolated-plugin] connected to worker for "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\package-json" (pid: 21660)
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\package-json" (pid: 21660) connected
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:28.084Z - Time taken for 'start-plugin-worker:C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\package-json' 1313.0560000000005ms
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\js" (pid: 19392) listening on \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin18216-0-3981.5361.sock
+[isolated-plugin] connected to worker for "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\project-json\build-nodes\project-json" (pid: 9832)
+[isolated-plugin] connected to worker for "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\js" (pid: 19392)
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\project-json\build-nodes\project-json" (pid: 9832) listening on \\.\pipe\nx\C:\Users\SANJEE~1\AppData\Local\Temp\plugin18216-2-4203.8837.sock
+[1m[33mTime taken for 'plugin worker 19392 code loading' 1173.9725999999998ms[39m[22m
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:28.099Z - Time taken for 'start-plugin-worker:C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\js' 1538.6491999999998ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:28.099Z - Time taken for 'start-plugin-worker:C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\project-json\build-nodes\project-json' 1315.0140999999994ms
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\js" (pid: 19392) connected
+[1m[33mTime taken for 'plugin worker 9832 code loading' 1173.1956ms[39m[22m
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\project-json\build-nodes\project-json" (pid: 9832) connected
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\project-json\build-nodes\project-json" (pid: 9832) loaded successfully
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:28.169Z - Time taken for 'Load Nx Plugin: C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\project-json\build-nodes\project-json' 1650.4074000000005ms
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\package-json" (pid: 21660) loaded successfully
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:28.246Z - Time taken for 'Load Nx Plugin: C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\package-json' 1730.2443000000003ms
+[plugin-worker] "C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\js" (pid: 19392) loaded successfully
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:28.427Z - [REQUEST]: Updated workspace context based on watched changes, recomputing project graph...
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:28.427Z - [REQUEST]: 
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:28.427Z - [REQUEST]: 
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:30.979Z - Streaming message to client: progress update for topic graph-construction
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:30.980Z - [Messenger] Received message, length: 47
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:30.982Z - Time taken for 'loadDefaultNxPlugins' 1914.2277000000004ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:30.982Z - Time taken for 'Load Nx Plugin: C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\node_modules\nx\dist\src\plugins\js' 1913.4746ms
+[1m[33mTime taken for 'nx/core/project-json:createNodes' 2.6627000000007683ms[39m[22m
+[isolated-plugin] shutting down worker for "nx/core/project-json" after createNodes
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.000Z - Streaming message to client: progress update for topic graph-construction
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:31.001Z - [Messenger] Received message, length: 153
+[1m[33mTime taken for 'nx/core/package-json:createNodes' 21.332300000000032ms[39m[22m
+[isolated-plugin] shutting down worker for "nx/core/package-json" after createNodes
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.015Z - Streaming message to client: progress update for topic graph-construction
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:31.015Z - [Messenger] Received message, length: 112
+[1m[33mTime taken for 'nx/js/dependencies-and-lockfile:createNodes' 40.89260000000013ms[39m[22m
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.221Z - Streaming message to client: progress update for topic graph-construction
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:31.221Z - [Messenger] Received message, length: 47
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.309Z - Streaming message to client: progress update for topic graph-construction
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.317Z - Time taken for 'build-project-configs' 272.66529999999875ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.317Z - Time taken for 'createNodes:merge' 27.64259999999922ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.317Z - Time taken for 'native-file-deps' 0.03679999999985739ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.317Z - Time taken for 'get-workspace-files' 7.8817999999992026ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:31.317Z - Time taken for 'read cache' 6.132600000000821ms
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:31.324Z - [Messenger] Received message, length: 47
+Fetching nx...
+[1m[33mTime taken for 'build typescript dependencies' 35.22220000000016ms[39m[22m
+[isolated-plugin] shutting down worker for "nx/js/dependencies-and-lockfile" after createDependencies
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.283Z - Streaming message to client: progress update for topic graph-construction
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:32.283Z - [Messenger] Received message, length: 47
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.300Z - [SYNC]: collect registered sync generators
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.327Z - Wrote project graph cache to C:\Users\ANSHUL\SocialMediaDigitalMarketingOS\SocialMediaDigitalMarketingOS\.nx\workspace-data\project-graph.json
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.328Z - Serializing response for REQUEST_PROJECT_GRAPH message in json mode
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.328Z - Responding to REQUEST_PROJECT_GRAPH message
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.328Z - [REQUEST]: Responding to the client. project-graph
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.329Z - Time taken for 'total for creating and serializing project graph' 5152.197000000001ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.330Z - Time taken for 'total execution time for createProjectGraph()' 1007.4901000000009ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.330Z - Time taken for 'createDependencies' 983.1203999999998ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.330Z - Time taken for 'nx/js/dependencies-and-lockfile:createDependencies' 982.1257999999998ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.330Z - Time taken for 'createMetadata' 0.0385999999998603ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.330Z - Time taken for 'serialize graph' 4.007599999999002ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.330Z - Time taken for 'write cache' 16.916199999999662ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.340Z - Done responding to the client project-graph
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.341Z - Handled json message REQUEST_PROJECT_GRAPH. Handling time: 5153. Response time: 13.
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:32.341Z - [Messenger] Received message, length: 479365
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:32.352Z - [Messenger] Sending message type: PRE_TASKS_EXECUTION
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:32.353Z - [Messenger] Message sent
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.358Z - Received raw message of length 774
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.359Z - Received json message of type PRE_TASKS_EXECUTION
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.362Z - Serializing response for PRE_TASKS_EXECUTION message in json mode
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.363Z - Responding to PRE_TASKS_EXECUTION message
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.363Z - [REQUEST]: Responding to the client. handleRunPreTasksExecution
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.364Z - Time taken for 'preTasksExecution' 2.6823999999996886ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.364Z - Done responding to the client handleRunPreTasksExecution
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:32.364Z - Handled json message PRE_TASKS_EXECUTION. Handling time: 3. Response time: 2.
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:32.363Z - [Messenger] Received message, length: 2
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:33.413Z - [Messenger] Sending message type: HASH_TASKS
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:33.415Z - [Messenger] Message sent
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.421Z - Received raw message of length 55114
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.424Z - Received json message of type HASH_TASKS
+DEBUG nx::native::watch::watcher: force-flush END count=0 replies=1 elapsed=20.9469ms
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.446Z - Reusing in-memory cached project graph because no files changed.
+DEBUG nx::native::tasks::hash_planner: get_plans_internal COMPLETED in 15.3461ms - processed 6 tasks (setup: 8.3439ms, parallel_planning: 6.9616ms, pool: 224 unique instructions)
+DEBUG nx::native::tasks::hashers::hash_workspace_files: Hashing workspace fileset: Adding "1143768606168929822" (".gitignore") to hash
+DEBUG nx::native::tasks::hashers::hash_workspace_files: Hashing workspace fileset: Adding "12184139264071820870" ("nx.json") to hash
+DEBUG nx::native::tasks::hashers::hash_workspace_files: Hashing workspace fileset: Hash Value: "15978259265122077149"
+DEBUG nx::native::tasks::task_hasher: hash_plans COMPLETED in 11.7786ms - processed 6 plans (setup: 485.7µs, hashing: 11.2851ms, assembly: 3.2968ms)
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.504Z - Serializing response for HASH_TASKS message in json mode
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.506Z - Responding to HASH_TASKS message
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.506Z - [REQUEST]: Responding to the client. handleHashTasks
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:33.507Z - [Messenger] Received message, length: 37716
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.514Z - Done responding to the client handleHashTasks
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.514Z - Handled json message HASH_TASKS. Handling time: 80. Response time: 10.
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:33.560Z - [Messenger] Sending message type: GET_ESTIMATED_TASK_TIMINGS
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:33.561Z - [Messenger] Message sent
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.575Z - Received raw message of length 292
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.575Z - Received json message of type GET_ESTIMATED_TASK_TIMINGS
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.589Z - Serializing response for GET_ESTIMATED_TASK_TIMINGS message in json mode
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.590Z - Responding to GET_ESTIMATED_TASK_TIMINGS message
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.590Z - [REQUEST]: Responding to the client. handleGetEstimatedTaskTimings
+[NX v23.1.1 Daemon Client] - 2026-08-17T18:23:33.590Z - [Messenger] Received message, length: 142
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.595Z - Done responding to the client handleGetEstimatedTaskTimings
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:33.596Z - Handled json message GET_ESTIMATED_TASK_TIMINGS. Handling time: 13. Response time: 7.
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:48.791Z - [LATEST-NX]: Successfully pulled latest Nx to C:\Users\SANJEE~1\AppData\Local\Temp\tmp-18216-0sLtRDuDEEll
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:48.797Z - [NX-CONSOLE]: Using local implementation (NX_USE_LOCAL=true or inner call)
+DEBUG nx::native::ide::preferences: Loaded console preferences: NxConsolePreferences { auto_install_console: Some(false), path: "C:\\Users\\SANJEEV KUMAR\\.nx\\ide.json" }
+DEBUG nx::native::ide::install: Detected editor: Unknown
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:48.810Z - [AI-AGENTS]: Failed to compute agent configuration status from latest Nx. Error: Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs. Received protocol 'c:'
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:48.810Z - [AI-AGENTS]: Agent configuration status computation completed: 0 fully configured, 0 outdated, 0 partially configured, 0 non-configured
+[NX v23.1.1 Daemon Server] - 2026-08-17T18:23:48.817Z - [NX-CONSOLE]: Console status check completed, shouldPrompt: false

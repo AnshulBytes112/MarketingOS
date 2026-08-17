@@ -23,6 +23,12 @@ enum OrganizationStatus {
   SOFT_DELETED
 }
 
+enum OnboardingStatus {
+  DRAFT
+  GENERATING
+  ACTIVE
+}
+
 enum PlanTier {
   STARTER
   GROWTH
@@ -46,6 +52,8 @@ model Organization {
 
   members               OrganizationMember[]
   brands                Brand[]
+  brandProducts         BrandProduct[]
+  brandCompetitors      BrandCompetitor[]
   auditLogs             AuditLog[]
   sessions              Session[]
   brandAssets           BrandAsset[]
@@ -100,15 +108,59 @@ model OrganizationMember {
 }
 
 model Brand {
+  id               String           @id @default(cuid())
+  organizationId   String
+  name             String
+  industry         String?
+  websiteUrl       String?
+  targetAudience   String?
+  geography        String?
+  priceSegment     String?
+  positioning      String?
+  usp              String?
+  onboardingStatus OnboardingStatus @default(DRAFT)
+  onboardingStep   Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets       BrandAsset[]
+  products     BrandProduct[]
+  competitors  BrandCompetitor[]
+
+  @@index([organizationId])
+}
+
+model BrandProduct {
   id             String   @id @default(cuid())
+  brandId        String
   organizationId String
   name           String
+  description    String?
+  type           String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  assets       BrandAsset[]
 
+  @@index([brandId])
+  @@index([organizationId])
+}
+
+model BrandCompetitor {
+  id             String   @id @default(cuid())
+  brandId        String
+  organizationId String
+  name           String
+  websiteUrl     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
   @@index([organizationId])
 }
 

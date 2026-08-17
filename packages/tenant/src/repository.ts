@@ -1,5 +1,5 @@
 import { prisma } from '@abge/database';
-import type { Prisma, Brand, OrganizationMember, AuditLog, BrandAsset } from '@prisma/client';
+import type { Prisma, Brand, OrganizationMember, AuditLog, BrandAsset, BrandProduct, BrandCompetitor } from '@prisma/client';
 
 export type OrganizationContext = {
   organizationId: string;
@@ -53,6 +53,105 @@ export class TenantRepository {
       },
     });
   }
+
+  async updateBrand(args: Omit<Prisma.BrandUpdateArgs, 'where'> & { where: Omit<Prisma.BrandWhereUniqueInput, 'organizationId'> }): Promise<Brand> {
+    return prisma.brand.update({
+      ...args,
+      where: {
+        ...args.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  // --- BRAND PRODUCT OPERATIONS ---
+
+  async findManyBrandProducts(args?: Omit<Prisma.BrandProductFindManyArgs, 'where'> & { where?: Omit<Prisma.BrandProductWhereInput, 'organizationId'> }): Promise<BrandProduct[]> {
+    return prisma.brandProduct.findMany({
+      ...args,
+      where: {
+        ...args?.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  async createBrandProduct(args: Omit<Prisma.BrandProductCreateArgs, 'data'> & { data: Omit<Prisma.BrandProductCreateInput, 'organization'> }): Promise<BrandProduct> {
+    return prisma.brandProduct.create({
+      ...args,
+      data: {
+        ...args.data,
+        organization: {
+          connect: { id: this.organizationId },
+        },
+      },
+    });
+  }
+
+  async updateBrandProduct(args: Omit<Prisma.BrandProductUpdateArgs, 'where'> & { where: Omit<Prisma.BrandProductWhereUniqueInput, 'organizationId'> }): Promise<BrandProduct> {
+    return prisma.brandProduct.update({
+      ...args,
+      where: {
+        ...args.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  async deleteBrandProduct(args: Omit<Prisma.BrandProductDeleteArgs, 'where'> & { where: Omit<Prisma.BrandProductWhereUniqueInput, 'organizationId'> }): Promise<BrandProduct> {
+    return prisma.brandProduct.delete({
+      ...args,
+      where: {
+        ...args.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  // --- BRAND COMPETITOR OPERATIONS ---
+
+  async findManyBrandCompetitors(args?: Omit<Prisma.BrandCompetitorFindManyArgs, 'where'> & { where?: Omit<Prisma.BrandCompetitorWhereInput, 'organizationId'> }): Promise<BrandCompetitor[]> {
+    return prisma.brandCompetitor.findMany({
+      ...args,
+      where: {
+        ...args?.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  async createBrandCompetitor(args: Omit<Prisma.BrandCompetitorCreateArgs, 'data'> & { data: Omit<Prisma.BrandCompetitorCreateInput, 'organization'> }): Promise<BrandCompetitor> {
+    return prisma.brandCompetitor.create({
+      ...args,
+      data: {
+        ...args.data,
+        organization: {
+          connect: { id: this.organizationId },
+        },
+      },
+    });
+  }
+
+  async updateBrandCompetitor(args: Omit<Prisma.BrandCompetitorUpdateArgs, 'where'> & { where: Omit<Prisma.BrandCompetitorWhereUniqueInput, 'organizationId'> }): Promise<BrandCompetitor> {
+    return prisma.brandCompetitor.update({
+      ...args,
+      where: {
+        ...args.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  async deleteBrandCompetitor(args: Omit<Prisma.BrandCompetitorDeleteArgs, 'where'> & { where: Omit<Prisma.BrandCompetitorWhereUniqueInput, 'organizationId'> }): Promise<BrandCompetitor> {
+    return prisma.brandCompetitor.delete({
+      ...args,
+      where: {
+        ...args.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
 
   // --- ORGANIZATION MEMBER OPERATIONS ---
 
@@ -132,6 +231,16 @@ export class TenantRepository {
         organization: {
           connect: { id: this.organizationId },
         },
+      },
+    });
+  }
+
+  async deleteBrandAsset(args: Omit<Prisma.BrandAssetDeleteArgs, 'where'> & { where: Omit<Prisma.BrandAssetWhereUniqueInput, 'organizationId'> }): Promise<BrandAsset> {
+    return prisma.brandAsset.delete({
+      ...args,
+      where: {
+        ...args.where,
+        organizationId: this.organizationId,
       },
     });
   }
