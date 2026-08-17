@@ -13,8 +13,8 @@ interface OnboardingDraft {
   id?: string;
   onboardingStep?: number;
   name?: string;
-  industry?: string;
-  websiteUrl?: string;
+  industry?: string | null;
+  websiteUrl?: string | null;
 }
 
 export function OnboardingWizard({ initialDraft }: { initialDraft: OnboardingDraft | null }) {
