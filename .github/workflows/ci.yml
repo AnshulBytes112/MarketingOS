@@ -55,10 +55,12 @@ jobs:
       run: npm ci
 
     - name: Generate Prisma Client
-      run: npx prisma generate --schema=packages/database/prisma/schema.prisma
+      run: npx prisma generate
+      working-directory: packages/database
 
     - name: Push Database Schema
-      run: npx prisma db push --schema=packages/database/prisma/schema.prisma
+      run: npx prisma db push
+      working-directory: packages/database
       
     - name: Lint
       run: npx nx run-many -t lint
