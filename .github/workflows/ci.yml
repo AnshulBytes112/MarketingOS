@@ -13,6 +13,36 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: ai_brand_growth
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5435/ai_brand_growth?schema=public
+      REDIS_URL: redis://localhost:6379
+      NEXTAUTH_SECRET: "generate-a-secret-in-production"
+
     steps:
     - uses: actions/checkout@v4
     - name: Setup Node.js
@@ -26,6 +56,9 @@ jobs:
 
     - name: Generate Prisma Client
       run: npx prisma generate --schema=packages/database/prisma/schema.prisma
+
+    - name: Push Database Schema
+      run: npx prisma db push --schema=packages/database/prisma/schema.prisma
       
     - name: Lint
       run: npx nx run-many -t lint
