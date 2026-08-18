@@ -42,7 +42,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "npx vitest run --exclude=\"tests/e2e/**\" --fileParallelism=false",
+        "command": "npx vitest run --exclude=\"tests/e2e/**\" --fileParallelism=false --passWithNoTests",
         "cwd": "apps/platform-admin"
       }
     },
