@@ -4,8 +4,9 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { TenantRepository } from '@abge/tenant';
 import { requireAuth, requirePermission } from '@abge/auth';
-import { brandAssetQueue } from '@/lib/queue';
+import { brandAssetQueue, enqueueBrandDnaGeneration } from '@/lib/queue';
 import { s3 } from '@/lib/s3';
+import { prisma } from '@abge/database';
 
 const paginationSchema = z.object({
   page: z.number().int().min(1).default(1),
@@ -88,4 +89,34 @@ export async function enqueueAssetExtraction(assetId: string, brandId: string) {
     attempts: 3,
     backoff: { type: 'exponential', delay: 1000 }
   });
+}
+
+export async function getBrandDna(brandId: string) {
+  const session = await requireAuth();
+  
+  // Since TenantRepository might not have findUniqueBrandDNAVersion yet, use Prisma directly safely:
+  const version = await prisma.brandDNAVersion.findFirst({
+    where: { 
+      brandId, 
+      organizationId: session.organizationId 
+    },
+    orderBy: { version: 'desc' },
+  });
+
+  return version;
+}
+
+export async function regenerateBrandDna(brandId: string) {
+  const session = await requirePermission('manage_brand_dna');
+
+  // Verify ownership
+  const brand = await prisma.brand.findFirst({
+    where: { id: brandId, organizationId: session.organizationId }
+  });
+
+  if (!brand) throw new Error('Brand not found');
+
+  await enqueueBrandDnaGeneration(session.organizationId, brandId);
+  revalidatePath('/brand');
+  return { success: true };
 }

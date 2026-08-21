@@ -29,6 +29,12 @@ enum OnboardingStatus {
   ACTIVE
 }
 
+enum BrandDNAStatus {
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
 enum PlanTier {
   STARTER
   GROWTH
@@ -59,6 +65,8 @@ model Organization {
   brandAssets           BrandAsset[]
   featureFlags          FeatureFlag[]
   impersonationSessions ImpersonationSession[]
+  dnaVersions           BrandDNAVersion[]
+  aiUsage               AIUsage[]
 }
 
 model User {
@@ -127,6 +135,8 @@ model Brand {
   assets       BrandAsset[]
   products     BrandProduct[]
   competitors  BrandCompetitor[]
+  dnaVersions  BrandDNAVersion[]
+  aiUsage      AIUsage[]
 
   @@index([organizationId])
 }
@@ -209,6 +219,59 @@ model BrandAsset {
 
   @@index([organizationId])
   @@index([brandId])
+}
+
+model BrandDNAVersion {
+  id                    String         @id @default(cuid())
+  organizationId        String
+  brandId               String
+  version               Int
+  status                BrandDNAStatus @default(GENERATING)
+  personality           String?
+  voice                 String?
+  tone                  String?
+  positioning           String?
+  visualIdentitySummary String?
+  audience              String?
+  contentPillars        Json?
+  language              String?
+  ctaPreferences        String?
+  avoidList             Json?
+  claims                Json?
+  constraints           Json?
+  confidenceScore       Int?
+  sources               Json?
+  createdAt             DateTime       @default(now())
+  completedAt           DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([brandId])
+}
+
+model AIUsage {
+  id             String   @id @default(cuid())
+  organizationId String
+  brandId        String
+  requestId      String
+  provider       String
+  model          String
+  inputTokens    Int
+  outputTokens   Int
+  totalTokens    Int
+  estimatedCost  Float?
+  latencyMs      Int
+  status         String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([requestId])
 }
 
 model PlatformAdmin {

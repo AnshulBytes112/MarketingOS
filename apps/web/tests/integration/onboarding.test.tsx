@@ -7,7 +7,7 @@ import {
   saveBrandCompetitors,
   submitBrandOnboarding,
   getIncompleteDraft
-} from '../../../src/app/(dashboard)/brand/onboarding/actions';
+} from '../../src/app/(dashboard)/brand/onboarding/actions';
 
 // Mock dependencies
 vi.mock('@abge/auth', () => ({

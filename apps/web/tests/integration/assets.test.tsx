@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getAssets, deleteAssetAction, enqueueAssetExtraction } from '../../../src/app/(dashboard)/brand/actions';
+import { getAssets, deleteAssetAction, enqueueAssetExtraction } from '../../src/app/(dashboard)/brand/actions';
 import { requireAuth, requirePermission } from '@abge/auth';
 import { TenantRepository } from '@abge/tenant';
 import { s3 } from '@/lib/s3';

@@ -19,7 +19,7 @@ import {
   File,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAssets, deleteAssetAction, getAssetPreviewUrl, enqueueAssetExtraction } from './actions';
+import { getAssets, deleteAssetAction, getAssetPreviewUrl, enqueueAssetExtraction, getBrandDna, regenerateBrandDna } from './actions';
 import { toast } from 'react-hot-toast';
 
 interface BrandData {
@@ -49,7 +49,29 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   const [page, setPage] = useState(1);
   const [assetTypeFilter, setAssetTypeFilter] = useState('');
   
-  const queryClient = useQueryClient();
+  const { data: brandDna, isLoading: isLoadingDna } = useQuery({
+    queryKey: ['brand-dna', brand.id],
+    queryFn: () => getBrandDna(brand.id),
+    refetchInterval: (query) => {
+      // Poll every 3 seconds if GENERATING
+      return query.state.data?.status === 'GENERATING' ? 3000 : false;
+    }
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: () => regenerateBrandDna(brand.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['brand-dna', brand.id] });
+      toast.success('Regeneration started');
+    },
+    onError: () => toast.error('Failed to start regeneration'),
+  });
+
+  const handleRegenerate = () => {
+    if (confirm('Are you sure you want to regenerate the Brand DNA? This will create a new version based on your latest inputs and assets.')) {
+      regenerateMutation.mutate();
+    }
+  };
 
   const { data: assetsData, isLoading: isLoadingAssets } = useQuery({
     queryKey: ['brand-assets', brand.id, page, assetTypeFilter],
@@ -214,9 +236,17 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
             <span>Upload Asset</span>
           </button>
 
-          <button className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-medium text-white transition-all flex items-center gap-2 shadow-lg shadow-purple-600/30">
-            <Sparkles className="w-4 h-4" />
-            <span>Regenerate DNA</span>
+          <button 
+            onClick={handleRegenerate}
+            disabled={brandDna?.status === 'GENERATING' || regenerateMutation.isPending}
+            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-medium text-white transition-all flex items-center gap-2 shadow-lg shadow-purple-600/30"
+          >
+            {brandDna?.status === 'GENERATING' || regenerateMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            <span>{brandDna?.status === 'GENERATING' ? 'Generating...' : 'Regenerate DNA'}</span>
           </button>
         </div>
       </div>
@@ -247,144 +277,163 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
       {/* TAB 1: BRAND DNA */}
       {activeTab === 'dna' && (
         <div className="space-y-6 animate-in fade-in">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Core Identity */}
-            <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-purple-400" />
-                <h3 className="text-base font-semibold text-white">Core Identity</h3>
-              </div>
-
-              <div className="space-y-3 pt-2 text-sm">
-                <div className="flex justify-between py-2 border-b border-white/5 text-xs">
-                  <span className="text-gray-400">Industry</span>
-                  <span className="font-medium text-white">{brand.industry}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/5 text-xs">
-                  <span className="text-gray-400">Geography</span>
-                  <span className="font-medium text-white">{brand.geography}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/5 text-xs">
-                  <span className="text-gray-400">Price Segment</span>
-                  <span className="font-medium text-white">{brand.priceSegment}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/5 text-xs">
-                  <span className="text-gray-400">Website</span>
-                  <span className="font-medium text-white">{brand.websiteUrl}</span>
-                </div>
-                <div className="flex justify-between py-2 text-xs">
-                  <span className="text-gray-400">Founded</span>
-                  <span className="font-medium text-white">2021</span>
-                </div>
-              </div>
+          {brandDna?.status === 'FAILED' && (
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-rose-300 text-sm flex justify-between items-center">
+              <span>Generation failed. Please try again.</span>
+              <button onClick={handleRegenerate} className="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-medium">Retry Generation</button>
             </div>
+          )}
 
-            {/* Hero Product Asset */}
-            <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-purple-400" />
-                  <h3 className="text-base font-semibold text-white">Hero Product Asset</h3>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold">
-                  Active Pack
-                </span>
-              </div>
-
-              <div className="relative rounded-xl overflow-hidden border border-white/10 bg-[#0B0A11]">
-                <Image
-                  src="/images/product_package.png"
-                  alt="Packaging Mockup"
-                  width={600}
-                  height={300}
-                  className="w-full h-44 object-cover"
-                />
-              </div>
-              <p className="text-xs text-gray-400">
-                NovaBrew Ethiopian Yirgacheffe Single-Origin Packaging Mockup
+          {(!brandDna || brandDna.status === 'GENERATING' || isLoadingDna) && brandDna?.status !== 'FAILED' ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-[#12111A]/90 border border-white/5 rounded-2xl">
+              <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
+              <h3 className="text-white font-medium mb-1">
+                {brandDna?.status === 'GENERATING' ? 'Analyzing your brand intelligence...' : 'Loading Brand DNA...'}
+              </h3>
+              <p className="text-gray-400 text-sm max-w-md text-center">
+                We are processing your inputs, products, competitors, and extracted documents to generate a tailored brand strategy.
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Positioning & USP */}
-            <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-purple-400" />
-                <h3 className="text-base font-semibold text-white">Positioning & USP</h3>
-              </div>
-
-              <div className="space-y-4 pt-2">
-                <div>
-                  <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    Positioning Statement
-                  </h4>
-                  <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
-                    {brand.positioning}
+          ) : brandDna?.status === 'COMPLETED' ? (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Core Identity */}
+                <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-purple-400" />
+                    <h3 className="text-base font-semibold text-white">Core Identity</h3>
                   </div>
-                </div>
 
-                <div>
-                  <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    Unique Value Proposition
-                  </h4>
-                  <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
-                    {brand.usp}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Content Pillars */}
-            <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Globe className="w-5 h-5 text-purple-400" />
-                <h3 className="text-base font-semibold text-white">Content Pillars</h3>
-              </div>
-
-              <div className="space-y-3.5 pt-2">
-                {contentPillars.map((pillar) => (
-                  <div key={pillar.name} className="space-y-1">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-gray-300">{pillar.name}</span>
-                      <span className={`font-semibold ${pillar.textColor}`}>{pillar.percentage}%</span>
+                  <div className="space-y-3 pt-2 text-sm">
+                    <div className="flex justify-between py-2 border-b border-white/5 text-xs">
+                      <span className="text-gray-400">Industry</span>
+                      <span className="font-medium text-white">{brand.industry}</span>
                     </div>
-                    <div className="w-full bg-[#1C1A2B] h-2 rounded-full overflow-hidden">
+                    <div className="flex justify-between py-2 border-b border-white/5 text-xs">
+                      <span className="text-gray-400">Geography</span>
+                      <span className="font-medium text-white">{brand.geography}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-white/5 text-xs">
+                      <span className="text-gray-400">Price Segment</span>
+                      <span className="font-medium text-white">{brand.priceSegment}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-white/5 text-xs">
+                      <span className="text-gray-400">Website</span>
+                      <span className="font-medium text-white">{brand.websiteUrl}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sources & Confidence */}
+                <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-5 h-5 text-purple-400" />
+                      <h3 className="text-base font-semibold text-white">Sources & Confidence</h3>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold">
+                      Confidence: {brandDna.confidenceScore || 0}%
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Ingested Sources</h4>
+                    {(brandDna.sources as string[] || []).map((source, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-gray-300 bg-white/5 px-3 py-1.5 rounded-md">
+                        <span className="text-emerald-400">✓</span> {source}
+                      </div>
+                    ))}
+                    {(!brandDna.sources || (brandDna.sources as string[]).length === 0) && (
+                      <p className="text-xs text-gray-500 italic">No sources recorded.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Positioning & USP */}
+                <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-5 h-5 text-purple-400" />
+                    <h3 className="text-base font-semibold text-white">Positioning & Tone</h3>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <div>
+                      <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        Positioning Statement
+                      </h4>
+                      <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
+                        {brandDna.positioning || 'N/A'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        Brand Tone
+                      </h4>
+                      <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
+                        {brandDna.tone || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Pillars */}
+                <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-purple-400" />
+                    <h3 className="text-base font-semibold text-white">Content Pillars</h3>
+                  </div>
+
+                  <div className="space-y-3.5 pt-2">
+                    {((brandDna.contentPillars as any[]) || []).map((pillar: any, i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-medium text-gray-300">{pillar.name}</span>
+                          <span className={`font-semibold ${pillar.textColor}`}>{pillar.percentage}%</span>
+                        </div>
+                        <div className="w-full bg-[#1C1A2B] h-2 rounded-full overflow-hidden">
+                          <div
+                            className={`${pillar.color} h-full rounded-full transition-all duration-500`}
+                            style={{ width: `${pillar.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {(!brandDna.contentPillars || (brandDna.contentPillars as any[]).length === 0) && (
+                      <p className="text-xs text-gray-500 italic">No content pillars defined.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Brand Guidelines & Avoid List */}
+              <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-rose-400" />
+                  <h3 className="text-base font-semibold text-white">Brand Guidelines & Avoid List</h3>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    Do Not Use
+                  </h4>
+                  <div className="space-y-2">
+                    {((brandDna.avoidList as string[]) || []).map((item, i) => (
                       <div
-                        className={`${pillar.color} h-full rounded-full transition-all duration-500`}
-                        style={{ width: `${pillar.percentage}%` }}
-                      />
-                    </div>
+                        key={i}
+                        className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/15 text-xs text-rose-300 flex items-center gap-2"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                        {item}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Brand Guidelines & Avoid List */}
-          <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-rose-400" />
-              <h3 className="text-base font-semibold text-white">Brand Guidelines & Avoid List</h3>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                Do Not Use
-              </h4>
-              <div className="space-y-2">
-                {avoidList.map((item) => (
-                  <div
-                    key={item}
-                    className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/15 text-xs text-rose-300 flex items-center gap-2"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            </>
+          ) : null}
         </div>
       )}
 
@@ -408,17 +457,10 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
             </div>
 
             <div className="space-y-3 pt-4 border-t border-white/5">
-              <h3 className="text-base font-semibold text-white">Tone Attributes</h3>
-              <div className="flex flex-wrap gap-2.5 pt-1">
-                {toneAttributes.map((attr) => (
-                  <span
-                    key={attr}
-                    className="px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium"
-                  >
-                    {attr}
-                  </span>
-                ))}
-              </div>
+              <h3 className="text-base font-semibold text-white">Voice Description</h3>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                {brandDna?.voice || 'Not generated yet.'}
+              </p>
             </div>
           </div>
 
@@ -429,28 +471,28 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
             <div className="space-y-4 pt-1">
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Caption Style
+                  Brand Personality
                 </h4>
                 <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed italic">
-                  &quot;Every cup begins with a choice. NovaBrew Yirgacheffe — single-origin, carefully sourced, thoughtfully roasted.&quot;
+                  {brandDna?.personality || 'Not generated yet.'}
                 </div>
               </div>
 
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  LinkedIn Post
+                  Language Elements
                 </h4>
                 <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
-                  &quot;Specialty coffee isn&apos;t a luxury. It&apos;s a direct payment to the farmers who invested years perfecting their craft.&quot;
+                  {brandDna?.language || 'Not generated yet.'}
                 </div>
               </div>
 
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  CTA Style
+                  CTA Preferences
                 </h4>
                 <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-purple-300 font-medium">
-                  Explore the origin →
+                  {brandDna?.ctaPreferences || 'Not generated yet.'}
                 </div>
               </div>
             </div>
@@ -471,35 +513,29 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
             <div className="space-y-4 pt-1">
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Primary Audience
+                  AI Analyzed Audience Profile
                 </h4>
                 <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200">
-                  {brand.targetAudience}
+                  {brandDna?.audience || 'Not generated yet.'}
                 </div>
               </div>
 
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Secondary Audience
-                </h4>
-                <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200">
-                  Coffee enthusiasts & sustainability advocates
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Psychographics
+                  Key Claims
                 </h4>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  {['Health-conscious', 'Experience-driven', 'Eco-aware', 'Tech-savvy'].map((psy) => (
+                  {((brandDna?.claims as string[]) || []).map((claim, i) => (
                     <span
-                      key={psy}
+                      key={i}
                       className="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium"
                     >
-                      {psy}
+                      {claim}
                     </span>
                   ))}
+                  {(!brandDna?.claims || (brandDna.claims as string[]).length === 0) && (
+                    <span className="text-xs text-gray-500 italic">No claims generated.</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -510,10 +546,10 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
             <h3 className="text-base font-semibold text-white">Audience Demographics</h3>
 
             <div className="space-y-4 pt-2">
-              {audienceDemographics.map((demo) => (
-                <div key={demo.range} className="space-y-1.5">
+              {((brandDna?.contentPillars as any[]) || []).map((demo: any, i) => (
+                <div key={i} className="space-y-1.5">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-gray-300">{demo.range}</span>
+                    <span className="font-medium text-gray-300">{demo.name}</span>
                     <span className={`font-semibold ${demo.textColor}`}>{demo.percentage}%</span>
                   </div>
                   <div className="w-full bg-[#1C1A2B] h-2 rounded-full overflow-hidden">
@@ -524,6 +560,9 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                   </div>
                 </div>
               ))}
+              {(!brandDna?.contentPillars || (brandDna.contentPillars as any[]).length === 0) && (
+                <p className="text-xs text-gray-500 italic">No content pillar breakdown available.</p>
+              )}
             </div>
           </div>
         </div>
@@ -658,21 +697,12 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-6 animate-in fade-in">
           <h3 className="text-base font-semibold text-white">Brand Guidelines</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="p-4 rounded-xl bg-[#181624]/70 border border-white/5 space-y-2">
-              <h4 className="text-xs font-semibold text-purple-400">Color Palette</h4>
-              <div className="flex gap-2 pt-2">
-                <div className="w-8 h-8 rounded-lg bg-[#9333ea] flex items-center justify-center text-[9px] font-mono text-white">#9333</div>
-                <div className="w-8 h-8 rounded-lg bg-[#3b82f6] flex items-center justify-center text-[9px] font-mono text-white">#3b82</div>
-                <div className="w-8 h-8 rounded-lg bg-[#10b981] flex items-center justify-center text-[9px] font-mono text-white">#10b9</div>
-                <div className="w-8 h-8 rounded-lg bg-[#0b0a11] border border-white/20 flex items-center justify-center text-[9px] font-mono text-white">#0b0a</div>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#181624]/70 border border-white/5 space-y-2">
-              <h4 className="text-xs font-semibold text-purple-400">Typography</h4>
-              <p className="text-xs text-gray-300">Primary Font: Inter / Space Grotesk</p>
-              <p className="text-xs text-gray-400">Heading Weights: 700 / 800 Bold</p>
+              <h4 className="text-xs font-semibold text-purple-400">Visual Identity Summary</h4>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                {brandDna?.visualIdentitySummary || 'Not generated yet.'}
+              </p>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { extractPdfText } from './extractor';
 import { PrismaClient } from '@prisma/client';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
+import { brandDnaWorker } from './brand-dna.worker';
 
 const prisma = new PrismaClient();
 const s3Client = new S3Client({
@@ -91,7 +92,7 @@ export const worker = new Worker('brand-asset', async (job) => {
 });
 
 worker.on('failed', (job, err) => {
-  console.error(`Job ${job?.id} failed:`, err.message);
+  console.error(`Asset Job ${job?.id} failed:`, err.message);
 });
 
-console.log('Worker is running...');
+console.log('Worker is running for brand-asset and brand-dna queues...');
