@@ -235,6 +235,16 @@ export class TenantRepository {
     });
   }
 
+  async updateBrandAsset(args: Omit<Prisma.BrandAssetUpdateArgs, 'where'> & { where: Omit<Prisma.BrandAssetWhereUniqueInput, 'organizationId'> }): Promise<BrandAsset> {
+    return prisma.brandAsset.update({
+      ...args,
+      where: {
+        ...args.where,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
   async deleteBrandAsset(args: Omit<Prisma.BrandAssetDeleteArgs, 'where'> & { where: Omit<Prisma.BrandAssetWhereUniqueInput, 'organizationId'> }): Promise<BrandAsset> {
     return prisma.brandAsset.delete({
       ...args,

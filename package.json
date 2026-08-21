@@ -49,12 +49,14 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@nx/node": "^23.1.1",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.21.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",

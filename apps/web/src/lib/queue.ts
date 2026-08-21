@@ -10,6 +10,10 @@ export const brandDnaQueue = new Queue('brand-dna', {
   connection: redisConnection,
 });
 
+export const brandAssetQueue = new Queue('brand-asset', {
+  connection: redisConnection,
+});
+
 export async function enqueueBrandDnaGeneration(organizationId: string, brandId: string) {
   return brandDnaQueue.add('brand-dna.generate', {
     organizationId,

@@ -1,0 +1,97 @@
+import { Worker } from 'bullmq';
+import { extractPdfText } from './extractor';
+import { PrismaClient } from '@prisma/client';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
+
+const prisma = new PrismaClient();
+const s3Client = new S3Client({
+  region: process.env.S3_REGION || 'us-east-1',
+  endpoint: process.env.S3_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
+  },
+  forcePathStyle: true,
+});
+
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+export const worker = new Worker('brand-asset', async (job) => {
+  const { organizationId, brandId, assetId } = job.data;
+  console.log(`Processing extraction for asset: ${assetId}`);
+
+  // Validate ownership
+  const asset = await prisma.brandAsset.findFirst({
+    where: { id: assetId, organizationId, brandId }
+  });
+
+  if (!asset) {
+    throw new Error('Asset not found or unauthorized');
+  }
+
+  // Set PROCESSING
+  await prisma.brandAsset.update({
+    where: { id: assetId },
+    data: { extractionStatus: 'PROCESSING' }
+  });
+
+  try {
+    // Download from S3
+    const command = new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET || '',
+      Key: asset.url
+    });
+
+    const response = await s3Client.send(command);
+    if (!response.Body) {
+      throw new Error('S3 object body is empty');
+    }
+
+    const buffer = await streamToBuffer(response.Body as Readable);
+
+    // Extract Text using real pdf-parse
+    const extractedText = await extractPdfText(buffer);
+
+    // Set COMPLETED
+    await prisma.brandAsset.update({
+      where: { id: assetId },
+      data: {
+        extractionStatus: 'COMPLETED',
+        extractedText
+      }
+    });
+
+    console.log(`Extraction complete for asset: ${assetId}`);
+
+  } catch (error: any) {
+    console.error(`Extraction failed for asset: ${assetId}`, error);
+    
+    // Set FAILED
+    await prisma.brandAsset.update({
+      where: { id: assetId },
+      data: {
+        extractionStatus: 'FAILED'
+      }
+    });
+    
+    throw error;
+  }
+}, {
+  connection: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+  }
+});
+
+worker.on('failed', (job, err) => {
+  console.error(`Job ${job?.id} failed:`, err.message);
+});
+
+console.log('Worker is running...');

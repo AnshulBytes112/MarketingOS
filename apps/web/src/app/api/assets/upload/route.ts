@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     });
 
     const body = await request.json();
-    const { brandId, filename, contentType } = body;
+    const { brandId, filename, contentType, replaceAssetId, fileSize } = body;
 
     if (!brandId || !filename || !contentType) {
       logger.warn('Missing required fields for upload', { brandId, filename, contentType });
@@ -45,16 +45,50 @@ export async function POST(request: Request) {
 
     const signedUrl = await s3.generateSignedUploadUrl(objectKey, contentType);
 
-    // Save initial metadata in the database
-    const asset = await tenantRepo.createBrandAsset({
-      data: {
-        id: assetId,
-        brand: { connect: { id: brandId } },
-        type: contentType,
-        url: objectKey, // Storing the key, can be resolved to full URL later
-        metadata: { filename },
-      },
-    });
+    let asset;
+    if (replaceAssetId) {
+      // Handle replace
+      asset = await tenantRepo.findUniqueBrandAsset({ where: { id: replaceAssetId } });
+      if (asset) {
+        if (asset.url) {
+          try {
+            await s3.deleteObject(asset.url);
+          } catch (err) {
+            logger.warn('Failed to delete old S3 object during replacement', { url: asset.url });
+          }
+        }
+        asset = await tenantRepo.updateBrandAsset({
+          where: { id: replaceAssetId },
+          data: {
+            url: objectKey,
+            type: contentType,
+            fileName: filename,
+            mimeType: contentType,
+            size: fileSize || null,
+            extractionStatus: 'PENDING',
+            extractedText: null,
+            metadata: { filename },
+          }
+        });
+      } else {
+        return NextResponse.json({ error: 'Asset to replace not found' }, { status: 404 });
+      }
+    } else {
+      // Save initial metadata in the database
+      asset = await tenantRepo.createBrandAsset({
+        data: {
+          id: assetId,
+          brand: { connect: { id: brandId } },
+          type: contentType,
+          url: objectKey,
+          fileName: filename,
+          mimeType: contentType,
+          size: fileSize || null,
+          extractionStatus: 'PENDING',
+          metadata: { filename },
+        },
+      });
+    }
 
     logger.info('Successfully generated signed URL and created BrandAsset', { assetId });
 

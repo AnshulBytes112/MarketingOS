@@ -11,7 +11,16 @@ import {
   ShieldAlert,
   Users,
   Target,
+  Trash2,
+  FileText,
+  FileImage,
+  RefreshCw,
+  Loader2,
+  File,
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getAssets, deleteAssetAction, getAssetPreviewUrl, enqueueAssetExtraction } from './actions';
+import { toast } from 'react-hot-toast';
 
 interface BrandData {
   id: string;
@@ -25,8 +34,116 @@ interface BrandData {
   targetAudience: string;
 }
 
+interface AssetData {
+  id: string;
+  type: string;
+  url: string;
+  fileName: string | null;
+  size: number | null;
+  extractionStatus: string | null;
+  createdAt: Date;
+}
+
 export default function BrandIntelligenceClient({ brand }: { brand: BrandData }) {
   const [activeTab, setActiveTab] = useState<'dna' | 'voice' | 'audience' | 'assets' | 'guidelines'>('dna');
+  const [page, setPage] = useState(1);
+  const [assetTypeFilter, setAssetTypeFilter] = useState('');
+  
+  const queryClient = useQueryClient();
+
+  const { data: assetsData, isLoading: isLoadingAssets } = useQuery({
+    queryKey: ['brand-assets', brand.id, page, assetTypeFilter],
+    queryFn: () => getAssets(brand.id, page, 10, assetTypeFilter || undefined),
+    enabled: activeTab === 'assets',
+  });
+
+  const deleteAssetMutation = useMutation({
+    mutationFn: (assetId: string) => deleteAssetAction(assetId),
+    onMutate: async (assetId) => {
+      await queryClient.cancelQueries({ queryKey: ['brand-assets', brand.id] });
+      const previousAssets = queryClient.getQueryData(['brand-assets', brand.id, page, assetTypeFilter]);
+      
+      queryClient.setQueryData(['brand-assets', brand.id, page, assetTypeFilter], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          assets: old.assets.filter((a: any) => a.id !== assetId),
+        };
+      });
+      return { previousAssets };
+    },
+    onError: (err, assetId, context) => {
+      queryClient.setQueryData(['brand-assets', brand.id, page, assetTypeFilter], context?.previousAssets);
+      toast.error('Failed to delete asset');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['brand-assets', brand.id] });
+    },
+  });
+
+  const handleUploadClick = () => {
+    document.getElementById('asset-upload-input')?.click();
+  };
+
+  const handleReplaceClick = (assetId: string) => {
+    const input = document.getElementById('asset-replace-input') as HTMLInputElement;
+    if (input) {
+      input.dataset.replaceId = assetId;
+      input.click();
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, replaceId?: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const toastId = toast.loading(replaceId ? 'Replacing asset...' : 'Uploading asset...');
+      
+      const res = await fetch('/api/assets/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandId: brand.id,
+          filename: file.name,
+          contentType: file.type,
+          fileSize: file.size,
+          ...(replaceId ? { replaceAssetId: replaceId } : {}),
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to get upload URL');
+      const { uploadUrl, asset } = await res.json();
+
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+
+      if (file.type === 'application/pdf') {
+        await enqueueAssetExtraction(asset.id, brand.id);
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['brand-assets', brand.id] });
+      toast.success(replaceId ? 'Asset replaced successfully' : 'Asset uploaded successfully', { id: toastId });
+      
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to upload asset');
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handlePreview = async (assetId: string) => {
+    try {
+      const res = await getAssetPreviewUrl(assetId);
+      window.open(res.url, '_blank');
+    } catch (err) {
+      toast.error('Failed to generate preview URL');
+    }
+  };
 
   // Content Pillars
   const contentPillars = [
@@ -74,7 +191,25 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white transition-all flex items-center gap-2">
+          <input 
+            type="file" 
+            id="asset-upload-input" 
+            className="hidden" 
+            onChange={(e) => handleFileChange(e)} 
+          />
+          <input 
+            type="file" 
+            id="asset-replace-input" 
+            className="hidden" 
+            onChange={(e) => {
+              const replaceId = (e.target as any).dataset.replaceId;
+              handleFileChange(e, replaceId);
+            }} 
+          />
+          <button 
+            onClick={handleUploadClick}
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white transition-all flex items-center gap-2"
+          >
             <Upload className="w-4 h-4 text-gray-400" />
             <span>Upload Asset</span>
           </button>
@@ -397,38 +532,124 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
       {/* TAB 4: ASSETS */}
       {activeTab === 'assets' && (
         <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-6 animate-in fade-in">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h3 className="text-base font-semibold text-white">Brand Assets Studio</h3>
-            <button className="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-2">
-              <Upload className="w-3.5 h-3.5" /> Upload Asset
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0B0A11] p-3 space-y-2">
-              <Image
-                src="/images/product_package.png"
-                alt="Product Packaging"
-                width={400}
-                height={250}
-                className="w-full h-36 object-cover rounded-lg"
-              />
-              <div className="text-xs font-medium text-white">Single-Origin Packaging</div>
-              <div className="text-[10px] text-gray-500">Packaging Mockup · 2026</div>
-            </div>
-
-            <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0B0A11] p-3 space-y-2">
-              <Image
-                src="/images/cold_brew.png"
-                alt="Cold Brew Campaign"
-                width={400}
-                height={250}
-                className="w-full h-36 object-cover rounded-lg"
-              />
-              <div className="text-xs font-medium text-white">Cold Brew Campaign Creative</div>
-              <div className="text-[10px] text-gray-500">Social Creative · 2026</div>
+            <div className="flex gap-2">
+              <select 
+                className="bg-[#0B0A11] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+                value={assetTypeFilter}
+                onChange={(e) => setAssetTypeFilter(e.target.value)}
+              >
+                <option value="">All Types</option>
+                <option value="image/png">Images</option>
+                <option value="application/pdf">PDF Documents</option>
+              </select>
+              <button 
+                onClick={handleUploadClick}
+                className="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-2"
+              >
+                <Upload className="w-3.5 h-3.5" /> Upload Asset
+              </button>
             </div>
           </div>
+
+          {isLoadingAssets ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+            </div>
+          ) : !assetsData?.assets?.length ? (
+            <div className="flex flex-col items-center justify-center py-12 border border-dashed border-white/10 rounded-xl">
+              <File className="w-8 h-8 text-gray-500 mb-2" />
+              <p className="text-gray-400 text-sm">No assets found.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {assetsData.assets.map((asset: AssetData) => (
+                <div key={asset.id} className="rounded-xl overflow-hidden border border-white/10 bg-[#0B0A11] p-3 space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="h-32 bg-[#1C1A2B] rounded-lg mb-2 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative" onClick={() => handlePreview(asset.id)}>
+                      {asset.type.startsWith('image/') ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                          <FileImage className="w-8 h-8 mb-1" />
+                          <span className="text-xs">Click to view image</span>
+                        </div>
+                      ) : (
+                        <div className="text-center text-gray-400">
+                          <FileText className="w-8 h-8 mx-auto mb-1" />
+                          <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-md">PDF</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs font-medium text-white truncate" title={asset.fileName || asset.id}>
+                      {asset.fileName || 'Unnamed Asset'}
+                    </div>
+                    <div className="text-[10px] text-gray-500 flex justify-between items-center mt-1">
+                      <span>{new Date(asset.createdAt).toLocaleDateString()}</span>
+                      {asset.size && <span>{(asset.size / 1024).toFixed(0)} KB</span>}
+                    </div>
+                    {asset.extractionStatus && (
+                      <div className={`mt-2 text-[10px] px-2 py-1 rounded inline-block ${
+                        asset.extractionStatus === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400' :
+                        asset.extractionStatus === 'FAILED' ? 'bg-rose-500/10 text-rose-400' :
+                        'bg-amber-500/10 text-amber-400'
+                      }`}>
+                        {asset.extractionStatus === 'PROCESSING' ? (
+                          <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Extracting Text...</span>
+                        ) : asset.extractionStatus === 'PENDING' ? (
+                          'Pending Extraction'
+                        ) : asset.extractionStatus === 'FAILED' ? (
+                          'Extraction Failed'
+                        ) : (
+                          'Text Extracted'
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-2 pt-2 border-t border-white/5">
+                    <button 
+                      onClick={() => handleReplaceClick(asset.id)}
+                      className="flex-1 px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-[10px] font-medium flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Replace
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this asset?')) {
+                          deleteAssetMutation.mutate(asset.id);
+                        }
+                      }}
+                      className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-medium flex items-center justify-center transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Pagination Controls */}
+          {assetsData?.metadata && assetsData.metadata.totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-4 pt-4 border-t border-white/5">
+              <button 
+                disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}
+                className="px-3 py-1 bg-white/5 rounded text-xs text-white disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-xs text-gray-400 flex items-center">
+                Page {page} of {assetsData.metadata.totalPages}
+              </span>
+              <button 
+                disabled={page >= assetsData.metadata.totalPages}
+                onClick={() => setPage(p => p + 1)}
+                className="px-3 py-1 bg-white/5 rounded text-xs text-white disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
 
