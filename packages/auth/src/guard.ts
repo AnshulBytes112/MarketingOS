@@ -94,6 +94,7 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
 }
 
 export async function requireAuth(): Promise<AuthenticatedContext> {
+  const session = await getCurrentSession();
   if (!session) {
     redirect('/login');
   }

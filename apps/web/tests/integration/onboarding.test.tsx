@@ -17,18 +17,18 @@ vi.mock('@abge/auth', () => ({
 
 vi.mock('@abge/tenant', () => {
   return {
-    TenantRepository: vi.fn().mockImplementation(() => ({
-      createBrand: vi.fn(),
-      updateBrand: vi.fn(),
-      findUniqueBrand: vi.fn(),
-      findManyBrands: vi.fn(),
-      findManyBrandProducts: vi.fn().mockResolvedValue([]),
-      deleteBrandProduct: vi.fn(),
-      createBrandProduct: vi.fn(),
-      findManyBrandCompetitors: vi.fn().mockResolvedValue([]),
-      deleteBrandCompetitor: vi.fn(),
-      createBrandCompetitor: vi.fn(),
-    })),
+    TenantRepository: class {
+      createBrand = vi.fn();
+      updateBrand = vi.fn();
+      findUniqueBrand = vi.fn();
+      findManyBrands = vi.fn();
+      findManyBrandProducts = vi.fn().mockResolvedValue([]);
+      deleteBrandProduct = vi.fn();
+      createBrandProduct = vi.fn();
+      findManyBrandCompetitors = vi.fn().mockResolvedValue([]);
+      deleteBrandCompetitor = vi.fn();
+      createBrandCompetitor = vi.fn();
+    }
   };
 });
 
