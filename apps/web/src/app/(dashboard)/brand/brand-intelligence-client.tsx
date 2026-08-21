@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAssets, deleteAssetAction, getAssetPreviewUrl, enqueueAssetExtraction, getBrandDna, regenerateBrandDna } from './actions';
-import { toast } from 'react-hot-toast';
+// import { toast } from 'react-hot-toast';
 
 interface BrandData {
   id: string;
@@ -49,6 +49,8 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   const [page, setPage] = useState(1);
   const [assetTypeFilter, setAssetTypeFilter] = useState('');
   
+  const queryClient = useQueryClient();
+  
   const { data: brandDna, isLoading: isLoadingDna } = useQuery({
     queryKey: ['brand-dna', brand.id],
     queryFn: () => getBrandDna(brand.id),
@@ -62,9 +64,9 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
     mutationFn: () => regenerateBrandDna(brand.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brand-dna', brand.id] });
-      toast.success('Regeneration started');
+      console.log('Regeneration started');
     },
-    onError: () => toast.error('Failed to start regeneration'),
+    onError: () => console.error('Failed to start regeneration'),
   });
 
   const handleRegenerate = () => {
@@ -96,7 +98,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
     },
     onError: (err, assetId, context) => {
       queryClient.setQueryData(['brand-assets', brand.id, page, assetTypeFilter], context?.previousAssets);
-      toast.error('Failed to delete asset');
+      console.error('Failed to delete asset');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['brand-assets', brand.id] });
@@ -120,7 +122,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
     if (!file) return;
 
     try {
-      const toastId = toast.loading(replaceId ? 'Replacing asset...' : 'Uploading asset...');
+      const toastId = 'loading';
       
       const res = await fetch('/api/assets/upload', {
         method: 'POST',
@@ -148,11 +150,11 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
       }
 
       await queryClient.invalidateQueries({ queryKey: ['brand-assets', brand.id] });
-      toast.success(replaceId ? 'Asset replaced successfully' : 'Asset uploaded successfully', { id: toastId });
+      console.log(replaceId ? 'Asset replaced successfully' : 'Asset uploaded successfully');
       
     } catch (err) {
       console.error(err);
-      toast.error('Failed to upload asset');
+      console.error('Failed to upload asset');
     } finally {
       if (e.target) e.target.value = '';
     }
@@ -163,7 +165,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
       const res = await getAssetPreviewUrl(assetId);
       window.open(res.url, '_blank');
     } catch (err) {
-      toast.error('Failed to generate preview URL');
+      console.error('Failed to generate preview URL');
     }
   };
 
@@ -338,12 +340,17 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
 
                   <div className="space-y-2 pt-2">
                     <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Ingested Sources</h4>
-                    {(brandDna.sources as string[] || []).map((source, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-gray-300 bg-white/5 px-3 py-1.5 rounded-md">
-                        <span className="text-emerald-400">✓</span> {source}
-                      </div>
-                    ))}
-                    {(!brandDna.sources || (brandDna.sources as string[]).length === 0) && (
+                    {((brandDna.sources as any[]) || []).map((source: any, i: number) => {
+                      const isStructured = typeof source === 'object' && source !== null;
+                      const label = isStructured ? source.label : source;
+                      
+                      return (
+                        <div key={i} className="flex items-center gap-2 text-xs text-gray-300 bg-white/5 px-3 py-1.5 rounded-md">
+                          <span className="text-emerald-400">✓</span> {label}
+                        </div>
+                      );
+                    })}
+                    {(!brandDna?.sources || (brandDna.sources as any[]).length === 0) && (
                       <p className="text-xs text-gray-500 italic">No sources recorded.</p>
                     )}
                   </div>

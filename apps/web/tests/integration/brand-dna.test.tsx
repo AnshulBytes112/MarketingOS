@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getBrandDna, regenerateBrandDna } from '../../src/app/(dashboard)/brand/actions';
 import { requireAuth, requirePermission } from '@abge/auth';
 import { prisma } from '@abge/database';
-import { brandDnaQueue } from '@/lib/queue';
+import { getBrandDnaQueue } from '@/lib/queue';
 
 vi.mock('@abge/auth', () => ({
   requireAuth: vi.fn(),
@@ -20,11 +20,15 @@ vi.mock('@abge/database', () => ({
   }
 }));
 
-vi.mock('@/lib/queue', () => ({
-  brandDnaQueue: {
-    add: vi.fn().mockResolvedValue({}),
-  }
-}));
+vi.mock('@/lib/queue', () => {
+  const addMock = vi.fn().mockResolvedValue({});
+  return {
+    getBrandDnaQueue: () => ({
+      add: addMock,
+    }),
+    enqueueBrandDnaGeneration: vi.fn().mockImplementation((orgId, brandId) => addMock('brand-dna.generate', { organizationId: orgId, brandId })),
+  };
+});
 
 describe('Brand DNA Server Actions', () => {
   const mockSession = { userId: 'user-1', organizationId: 'org-A' };
@@ -52,7 +56,7 @@ describe('Brand DNA Server Actions', () => {
       expect(prisma.brand.findFirst).toHaveBeenCalledWith({
         where: { id: 'brand-2', organizationId: 'org-A' }
       });
-      expect(brandDnaQueue.add).not.toHaveBeenCalled();
+      expect(getBrandDnaQueue().add).not.toHaveBeenCalled();
     });
   });
 
@@ -70,7 +74,7 @@ describe('Brand DNA Server Actions', () => {
       const result = await regenerateBrandDna('brand-1');
       
       expect(result.success).toBe(true);
-      expect(brandDnaQueue.add).toHaveBeenCalledWith(
+      expect(getBrandDnaQueue().add).toHaveBeenCalledWith(
         'brand-dna.generate',
         { organizationId: 'org-A', brandId: 'brand-1' },
         expect.any(Object)

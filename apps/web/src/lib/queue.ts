@@ -5,17 +5,24 @@ const redisConnection = {
   port: parseInt(process.env.REDIS_PORT || '6379'),
 };
 
-// Re-use connection to avoid exhausting Redis pool
-export const brandDnaQueue = new Queue('brand-dna', {
-  connection: redisConnection,
-});
+let _brandDnaQueue: Queue | null = null;
+export const getBrandDnaQueue = () => {
+  if (!_brandDnaQueue) {
+    _brandDnaQueue = new Queue('brand-dna', { connection: redisConnection });
+  }
+  return _brandDnaQueue;
+};
 
-export const brandAssetQueue = new Queue('brand-asset', {
-  connection: redisConnection,
-});
+let _brandAssetQueue: Queue | null = null;
+export const getBrandAssetQueue = () => {
+  if (!_brandAssetQueue) {
+    _brandAssetQueue = new Queue('brand-asset', { connection: redisConnection });
+  }
+  return _brandAssetQueue;
+};
 
 export async function enqueueBrandDnaGeneration(organizationId: string, brandId: string) {
-  return brandDnaQueue.add('brand-dna.generate', {
+  return getBrandDnaQueue().add('brand-dna.generate', {
     organizationId,
     brandId,
   }, {

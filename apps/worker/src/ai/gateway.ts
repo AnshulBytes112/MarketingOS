@@ -6,7 +6,7 @@ export interface AIUsageMetrics {
   outputTokens: number;
   totalTokens: number;
   latencyMs: number;
-  estimatedCost: number;
+  estimatedCost: number | null;
 }
 
 export interface ModelGatewayResponse<T> {
@@ -24,7 +24,7 @@ export class ModelGateway {
   }
 
   async generateStructured<T>(
-    model: string,
+    modelOverride: string | null,
     systemPrompt: string,
     userPrompt: string,
     schema: z.ZodType<T>,
@@ -36,11 +36,23 @@ export class ModelGateway {
     let attempts = 0;
     const maxAttempts = 3;
 
+    // Use environment variables or modelOverride
+    const provider = process.env.AI_PROVIDER;
+    const model = modelOverride || process.env.AI_MODEL || 'gpt-4o-mini';
+    
+    // Validate provider
+    if (provider && provider !== 'openai') {
+       throw new Error(`Unsupported AI_PROVIDER configured: ${provider}`);
+    }
+
+    const inputPriceRaw = process.env.AI_INPUT_PRICE_PER_1M_TOKENS;
+    const outputPriceRaw = process.env.AI_OUTPUT_PRICE_PER_1M_TOKENS;
+
     while (attempts < maxAttempts) {
       try {
         console.log(`[${requestId}] Generating structured output with model ${model} (Attempt ${attempts + 1}/${maxAttempts})`);
         
-        const response = await this.openai.beta.chat.completions.parse({
+        const response = await (this.openai.beta as any).chat.completions.parse({
           model,
           messages: [
             { role: 'system', content: systemPrompt },
@@ -73,12 +85,15 @@ export class ModelGateway {
         const outputTokens = usage?.completion_tokens || 0;
         const totalTokens = usage?.total_tokens || 0;
 
-        // Roughly estimate cost based on gpt-4o-mini rates ($0.15/1M input, $0.60/1M output)
-        // Adjust these if using standard gpt-4o ($5.00/1M input, $15.00/1M output)
-        const isMini = model.includes('mini');
-        const inputCostRate = isMini ? 0.15 / 1000000 : 5.0 / 1000000;
-        const outputCostRate = isMini ? 0.60 / 1000000 : 15.0 / 1000000;
-        const estimatedCost = (inputTokens * inputCostRate) + (outputTokens * outputCostRate);
+        let estimatedCost: number | null = null;
+
+        if (inputPriceRaw && outputPriceRaw) {
+          const inputPrice = parseFloat(inputPriceRaw);
+          const outputPrice = parseFloat(outputPriceRaw);
+          if (!isNaN(inputPrice) && !isNaN(outputPrice)) {
+            estimatedCost = (inputTokens * (inputPrice / 1000000)) + (outputTokens * (outputPrice / 1000000));
+          }
+        }
 
         return {
           data,

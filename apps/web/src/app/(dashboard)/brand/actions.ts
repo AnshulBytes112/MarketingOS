@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { TenantRepository } from '@abge/tenant';
 import { requireAuth, requirePermission } from '@abge/auth';
-import { brandAssetQueue, enqueueBrandDnaGeneration } from '@/lib/queue';
+import { getBrandAssetQueue, enqueueBrandDnaGeneration } from '@/lib/queue';
 import { s3 } from '@/lib/s3';
 import { prisma } from '@abge/database';
 
@@ -33,7 +33,7 @@ export async function getAssets(brandId: string, page: number = 1, pageSize: num
       take: pageSize,
     }),
     // Need a count method or just findMany to get length (if count is missing in TenantRepository)
-    repo.findManyBrandAssets({ where }).then(res => res.length)
+    repo.findManyBrandAssets({ where }).then(res => res?.length || 0)
   ]);
 
   return {
@@ -81,7 +81,7 @@ export async function getAssetPreviewUrl(assetId: string) {
 export async function enqueueAssetExtraction(assetId: string, brandId: string) {
   const session = await requirePermission('manage_brand_dna');
   
-  await brandAssetQueue.add('brand-asset.extract-text', {
+  await getBrandAssetQueue().add('brand-asset.extract-text', {
     organizationId: session.organizationId,
     brandId,
     assetId

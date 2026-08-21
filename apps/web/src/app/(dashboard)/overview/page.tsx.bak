@@ -24,27 +24,10 @@ export default async function OverviewPage() {
       where: { id: session.organizationId },
     });
 
-    try {
-      brand = await prisma.brand.create({
-        data: {
-          organizationId: session.organizationId,
-          name: org?.name ? `${org.name} Brand` : 'NovaBrew Coffee',
-          industry: 'Food & Beverage',
-          geography: 'United States',
-          priceSegment: 'Premium',
-          websiteUrl: 'novabrew.com',
-          positioning: 'Sustainable specialty coffee for the modern professional',
-          usp: 'Single-origin, ethically sourced beans with AI-powered roast profiles',
-          targetAudience: 'Urban professionals 25-40',
-          onboardingStatus: 'ACTIVE',
-        },
-      });
-    } catch (e) {
-      // Fallback for Next.js build phase if foreign key fails
-      brand = {
-        id: 'build-mock',
+    brand = await prisma.brand.create({
+      data: {
         organizationId: session.organizationId,
-        name: 'NovaBrew Coffee',
+        name: org?.name ? `${org.name} Brand` : 'NovaBrew Coffee',
         industry: 'Food & Beverage',
         geography: 'United States',
         priceSegment: 'Premium',
@@ -53,13 +36,11 @@ export default async function OverviewPage() {
         usp: 'Single-origin, ethically sourced beans with AI-powered roast profiles',
         targetAudience: 'Urban professionals 25-40',
         onboardingStatus: 'ACTIVE',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as any;
-    }
+      },
+    });
   }
 
-  const brandName = brand!.name || 'NovaBrew';
+  const brandName = brand.name || 'NovaBrew';
 
   // Sample pending approval items (wired dynamically with fallback)
   const approvalItems = [

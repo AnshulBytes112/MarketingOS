@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { ModelGateway } from '../../src/ai/gateway';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ModelGateway } from './gateway';
 import { z } from 'zod';
 
 vi.mock('openai', () => {
@@ -24,12 +24,27 @@ vi.mock('openai', () => {
 });
 
 describe('Model Gateway', () => {
-  it('correctly maps successful parsed output and calculates usage', async () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('correctly calculates cost from environment variables', async () => {
+    process.env.AI_INPUT_PRICE_PER_1M_TOKENS = '0.150';
+    process.env.AI_OUTPUT_PRICE_PER_1M_TOKENS = '0.600';
+    process.env.AI_MODEL = 'gpt-4o-mini';
+
     const gateway = new ModelGateway();
     const schema = z.object({ success: z.boolean() });
     
     const result = await gateway.generateStructured(
-      'gpt-4o-mini',
+      null,
       'sys',
       'user',
       schema,
@@ -41,8 +56,45 @@ describe('Model Gateway', () => {
     expect(result.data).toEqual({ success: true });
     expect(result.usage.inputTokens).toBe(10);
     expect(result.usage.outputTokens).toBe(20);
-    // 10 * 0.15/M + 20 * 0.60/M
-    const expectedCost = (10 * 0.15 / 1000000) + (20 * 0.60 / 1000000);
+    
+    // Cost formula test: (10 * 0.150 / 1M) + (20 * 0.600 / 1M)
+    const expectedCost = (10 * 0.150 / 1000000) + (20 * 0.600 / 1000000);
     expect(result.usage.estimatedCost).toBeCloseTo(expectedCost);
+  });
+
+  it('returns null for estimatedCost if env variables are missing', async () => {
+    delete process.env.AI_INPUT_PRICE_PER_1M_TOKENS;
+    delete process.env.AI_OUTPUT_PRICE_PER_1M_TOKENS;
+
+    const gateway = new ModelGateway();
+    const schema = z.object({ success: z.boolean() });
+    
+    const result = await gateway.generateStructured(
+      null,
+      'sys',
+      'user',
+      schema,
+      'TestSchema',
+      'desc',
+      'req-2'
+    );
+
+    expect(result.usage.estimatedCost).toBeNull();
+  });
+
+  it('throws an error if an unsupported AI_PROVIDER is passed', async () => {
+    process.env.AI_PROVIDER = 'anthropic';
+    const gateway = new ModelGateway();
+    const schema = z.object({ success: z.boolean() });
+
+    await expect(gateway.generateStructured(
+      null,
+      'sys',
+      'user',
+      schema,
+      'TestSchema',
+      'desc',
+      'req-3'
+    )).rejects.toThrow('Unsupported AI_PROVIDER configured: anthropic');
   });
 });

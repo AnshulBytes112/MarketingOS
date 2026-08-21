@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@abge/database';
 import { Role } from '@prisma/client';
 import { hasPermission, Permission } from '@abge/rbac';
+import { redirect } from 'next/navigation';
 
 export type AuthenticatedContext = {
   userId: string;
@@ -93,9 +94,8 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
 }
 
 export async function requireAuth(): Promise<AuthenticatedContext> {
-  const session = await getCurrentSession();
   if (!session) {
-    throw new Error('UNAUTHORIZED');
+    redirect('/login');
   }
   return session;
 }

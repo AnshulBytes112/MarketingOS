@@ -208,5 +208,5 @@ export async function getIncompleteDraft() {
         }
     });
 
-    return draft.length > 0 ? draft[0] : null;
+    return draft?.length > 0 ? draft[0] : null;
 }

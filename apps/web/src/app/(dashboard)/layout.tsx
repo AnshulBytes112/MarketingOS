@@ -3,6 +3,8 @@ import { requireAuth } from '@abge/auth';
 import { prisma } from '@abge/database';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAuth();
   
