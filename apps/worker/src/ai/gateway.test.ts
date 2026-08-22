@@ -29,6 +29,7 @@ describe('Model Gateway', () => {
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...originalEnv };
+    process.env.OPENAI_API_KEY = 'test-key';
   });
 
   afterEach(() => {

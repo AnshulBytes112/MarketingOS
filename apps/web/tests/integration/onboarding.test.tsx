@@ -15,12 +15,18 @@ vi.mock('@abge/auth', () => ({
   requirePermission: vi.fn(),
 }));
 
+const { mockCreateBrand, mockUpdateBrand, mockFindUniqueBrand } = vi.hoisted(() => ({
+  mockCreateBrand: vi.fn(),
+  mockUpdateBrand: vi.fn(),
+  mockFindUniqueBrand: vi.fn(),
+}));
+
 vi.mock('@abge/tenant', () => {
   return {
     TenantRepository: class {
-      createBrand = vi.fn();
-      updateBrand = vi.fn();
-      findUniqueBrand = vi.fn();
+      createBrand = mockCreateBrand;
+      updateBrand = mockUpdateBrand;
+      findUniqueBrand = mockFindUniqueBrand;
       findManyBrands = vi.fn();
       findManyBrandProducts = vi.fn().mockResolvedValue([]);
       deleteBrandProduct = vi.fn();
@@ -53,18 +59,19 @@ describe('Brand Onboarding Server Actions', () => {
     (requireAuth as any).mockResolvedValue(mockSession);
     (requirePermission as any).mockResolvedValue(mockSession);
     
-    // We instantiate to get the mock functions
-    mockRepo = new TenantRepository(mockSession);
+    mockCreateBrand.mockClear();
+    mockUpdateBrand.mockClear();
+    mockFindUniqueBrand.mockClear();
   });
 
   describe('saveBrandBasics', () => {
     it('creates a new draft if no brandId is provided', async () => {
-      mockRepo.createBrand.mockResolvedValue({ id: 'brand-1' });
+      mockCreateBrand.mockResolvedValue({ id: 'brand-1' });
       
       const res = await saveBrandBasics({ name: 'Acme', industry: 'Tech', websiteUrl: 'https://acme.com' });
       
       expect(requirePermission).toHaveBeenCalledWith('manage_brand_dna');
-      expect(mockRepo.createBrand).toHaveBeenCalledWith({
+      expect(mockCreateBrand).toHaveBeenCalledWith({
         data: expect.objectContaining({ name: 'Acme', onboardingStep: 2, onboardingStatus: 'DRAFT' })
       });
       expect(res).toBe('brand-1');
@@ -73,7 +80,7 @@ describe('Brand Onboarding Server Actions', () => {
 
   describe('submitBrandOnboarding', () => {
     it('validates required fields before submitting', async () => {
-      mockRepo.findUniqueBrand.mockResolvedValue({
+      mockFindUniqueBrand.mockResolvedValue({
         id: 'brand-1',
         name: 'Acme',
         // missing industry and others
@@ -83,7 +90,7 @@ describe('Brand Onboarding Server Actions', () => {
     });
 
     it('enqueues job and updates status on success', async () => {
-      mockRepo.findUniqueBrand.mockResolvedValue({
+      mockFindUniqueBrand.mockResolvedValue({
         id: 'brand-1',
         name: 'Acme',
         industry: 'Tech',
@@ -93,7 +100,7 @@ describe('Brand Onboarding Server Actions', () => {
 
       await submitBrandOnboarding('brand-1');
 
-      expect(mockRepo.updateBrand).toHaveBeenCalledWith({
+      expect(mockUpdateBrand).toHaveBeenCalledWith({
         where: { id: 'brand-1' },
         data: { onboardingStatus: 'GENERATING' }
       });

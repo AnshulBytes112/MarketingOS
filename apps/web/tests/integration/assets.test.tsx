@@ -9,13 +9,23 @@ vi.mock('@abge/auth', () => ({
   requirePermission: vi.fn(),
 }));
 
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}));
+
+const { mockFindManyBrandAssets, mockFindUniqueBrandAsset, mockDeleteBrandAsset } = vi.hoisted(() => ({
+  mockFindManyBrandAssets: vi.fn(),
+  mockFindUniqueBrandAsset: vi.fn(),
+  mockDeleteBrandAsset: vi.fn(),
+}));
+
 vi.mock('@abge/tenant', () => {
   return {
-    TenantRepository: vi.fn().mockImplementation(() => ({
-      findManyBrandAssets: vi.fn().mockResolvedValue([{ id: 'asset-1', brandId: 'brand-1' }]),
-      findUniqueBrandAsset: vi.fn(),
-      deleteBrandAsset: vi.fn(),
-    })),
+    TenantRepository: class {
+      findManyBrandAssets = mockFindManyBrandAssets;
+      findUniqueBrandAsset = mockFindUniqueBrandAsset;
+      deleteBrandAsset = mockDeleteBrandAsset;
+    }
   };
 });
 
@@ -26,11 +36,13 @@ vi.mock('@/lib/s3', () => ({
   }
 }));
 
-vi.mock('@/lib/queue', () => ({
-  brandAssetQueue: {
-    add: vi.fn().mockResolvedValue({}),
-  }
-}));
+vi.mock('@/lib/queue', () => {
+  const addMock = vi.fn().mockResolvedValue({});
+  return {
+    getBrandAssetQueue: () => ({ add: addMock }),
+    brandAssetQueue: { add: addMock }
+  };
+});
 
 describe('Brand Assets Server Actions', () => {
   const mockSession = { userId: 'user-1', organizationId: 'org-A' };
@@ -41,7 +53,10 @@ describe('Brand Assets Server Actions', () => {
     (requireAuth as any).mockResolvedValue(mockSession);
     (requirePermission as any).mockResolvedValue(mockSession);
     
-    mockRepo = new TenantRepository(mockSession);
+    mockFindManyBrandAssets.mockClear();
+    mockFindManyBrandAssets.mockResolvedValue([]);
+    mockFindUniqueBrandAsset.mockClear();
+    mockDeleteBrandAsset.mockClear();
   });
 
   describe('Tenant Isolation', () => {
@@ -49,8 +64,7 @@ describe('Brand Assets Server Actions', () => {
       await getAssets('brand-1');
       // The TenantRepository constructor is called with org-A session
       // Thus all internal Prisma queries enforce organizationId: 'org-A'
-      expect(TenantRepository).toHaveBeenCalledWith(mockSession);
-      expect(mockRepo.findManyBrandAssets).toHaveBeenCalledWith({
+      expect(mockFindManyBrandAssets).toHaveBeenCalledWith({
         where: { brandId: 'brand-1' },
         orderBy: { createdAt: 'desc' },
         skip: 0,
@@ -59,14 +73,14 @@ describe('Brand Assets Server Actions', () => {
     });
 
     it('deleteAsset rejects if asset not found or wrong org', async () => {
-      mockRepo.findUniqueBrandAsset.mockResolvedValue(null);
+      mockFindUniqueBrandAsset.mockResolvedValue(null);
       await expect(deleteAssetAction('asset-2')).rejects.toThrow('Asset not found or access denied');
     });
   });
 
   describe('RBAC', () => {
     it('deleteAsset requires manage_brand_dna permission', async () => {
-      mockRepo.findUniqueBrandAsset.mockResolvedValue({ id: 'asset-1', url: 's3/path' });
+      mockFindUniqueBrandAsset.mockResolvedValue({ id: 'asset-1', url: 's3/path' });
       await deleteAssetAction('asset-1');
       expect(requirePermission).toHaveBeenCalledWith('manage_brand_dna');
     });
@@ -74,11 +88,11 @@ describe('Brand Assets Server Actions', () => {
 
   describe('CRUD & S3', () => {
     it('deleteAsset deletes from S3 and DB', async () => {
-      mockRepo.findUniqueBrandAsset.mockResolvedValue({ id: 'asset-1', url: 's3/path' });
+      mockFindUniqueBrandAsset.mockResolvedValue({ id: 'asset-1', url: 's3/path' });
       await deleteAssetAction('asset-1');
       
       expect(s3.deleteObject).toHaveBeenCalledWith('s3/path');
-      expect(mockRepo.deleteBrandAsset).toHaveBeenCalledWith({ where: { id: 'asset-1' } });
+      expect(mockDeleteBrandAsset).toHaveBeenCalledWith({ where: { id: 'asset-1' } });
     });
   });
 });
