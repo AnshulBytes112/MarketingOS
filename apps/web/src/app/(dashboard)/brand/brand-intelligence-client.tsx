@@ -19,7 +19,8 @@ import {
   File,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAssets, deleteAssetAction, getAssetPreviewUrl, enqueueAssetExtraction, getBrandDna, regenerateBrandDna } from './actions';
+import { getAssets, deleteAssetAction, getAssetPreviewUrl, enqueueAssetExtraction, getBrandDna, getBrandDnaVersions, regenerateBrandDna, publishBrandDnaVersionAction, restoreBrandDnaVersionAction } from './actions';
+import { EditableField } from './editable-field';
 // import { toast } from 'react-hot-toast';
 
 interface BrandData {
@@ -45,7 +46,7 @@ interface AssetData {
 }
 
 export default function BrandIntelligenceClient({ brand }: { brand: BrandData }) {
-  const [activeTab, setActiveTab] = useState<'dna' | 'voice' | 'audience' | 'assets' | 'guidelines'>('dna');
+  const [activeTab, setActiveTab] = useState<'dna' | 'voice' | 'audience' | 'assets' | 'guidelines' | 'history'>('dna');
   const [page, setPage] = useState(1);
   const [assetTypeFilter, setAssetTypeFilter] = useState('');
   
@@ -60,10 +61,26 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
     }
   });
 
+  const { data: versionsData } = useQuery({
+    queryKey: ['brand-dna-versions', brand.id],
+    queryFn: () => getBrandDnaVersions(brand.id),
+    refetchInterval: (query) => {
+      // Poll every 3 seconds if any version is currently GENERATING
+      const hasGenerating = query.state.data?.some((v: any) => v.status === 'GENERATING');
+      return hasGenerating ? 3000 : false;
+    }
+  });
+
+  const latestVersion = versionsData?.[0];
+  const latestDraft = latestVersion && latestVersion.status === 'COMPLETED' && latestVersion.publicationStatus === 'DRAFT'
+    ? latestVersion
+    : null;
+
   const regenerateMutation = useMutation({
     mutationFn: () => regenerateBrandDna(brand.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brand-dna', brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', brand.id] });
       console.log('Regeneration started');
     },
     onError: () => console.error('Failed to start regeneration'),
@@ -74,6 +91,24 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
       regenerateMutation.mutate();
     }
   };
+
+  const publishMutation = useMutation({
+    mutationFn: (versionId: string) => publishBrandDnaVersionAction(brand.id, versionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['brand-dna', brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', brand.id] });
+    },
+    onError: () => console.error('Failed to publish version'),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (versionId: string) => restoreBrandDnaVersionAction(brand.id, versionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['brand-dna', brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', brand.id] });
+    },
+    onError: () => console.error('Failed to restore version'),
+  });
 
   const { data: assetsData, isLoading: isLoadingAssets } = useQuery({
     queryKey: ['brand-assets', brand.id, page, assetTypeFilter],
@@ -136,7 +171,10 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to get upload URL');
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Failed to get upload URL: ${res.status} ${errText}`);
+      }
       const { uploadUrl, asset } = await res.json();
 
       await fetch(uploadUrl, {
@@ -169,26 +207,11 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
     }
   };
 
-  // Content Pillars
-  const contentPillars = [
-    { name: 'Education', percentage: 30, color: 'bg-purple-500', textColor: 'text-purple-400' },
-    { name: 'Product', percentage: 25, color: 'bg-blue-500', textColor: 'text-blue-400' },
-    { name: 'Sustainability', percentage: 20, color: 'bg-emerald-500', textColor: 'text-emerald-400' },
-    { name: 'Culture', percentage: 15, color: 'bg-amber-500', textColor: 'text-amber-400' },
-    { name: 'Community', percentage: 10, color: 'bg-rose-500', textColor: 'text-rose-400' },
-  ];
 
-  // Avoid List
-  const avoidList = [
-    'Excessive emojis',
-    'Aggressive sales language',
-    'Unverified health claims',
-    'Slang',
-  ];
 
   // Voice & Tone data
-  const personalityTags = ['Authentic', 'Innovative', 'Sustainable', 'Sophisticated', 'Approachable'];
-  const toneAttributes = ['Warm', 'Expert', 'Conversational', 'Inspiring'];
+  const rawPersonality = brandDna?.personality || 'Authentic, Innovative, Sustainable, Sophisticated, Approachable';
+  const personalityTags = rawPersonality.split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
 
   // Audience demographics
   const audienceDemographics = [
@@ -253,6 +276,39 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         </div>
       </div>
 
+      {/* Draft Alert Banner */}
+      {latestDraft && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-white">Unpublished Brand DNA Draft (v{latestDraft.version})</h4>
+              <p className="text-xs text-gray-400 mt-0.5">
+                A new draft version of your Brand DNA has been generated. Review and publish it to apply it.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab('history')}
+              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-medium text-white transition-all"
+            >
+              Compare Changes
+            </button>
+            <button
+              onClick={() => publishMutation.mutate(latestDraft.id)}
+              disabled={publishMutation.isPending}
+              className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-xs font-medium text-white transition-all shadow-lg shadow-amber-600/20 flex items-center gap-1.5"
+            >
+              {publishMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Publish Draft
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tabs Navigation */}
       <div className="flex items-center gap-1 bg-[#12111A]/60 border border-white/5 p-1.5 rounded-xl w-fit">
         {[
@@ -261,10 +317,11 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
           { key: 'audience', label: 'Audience' },
           { key: 'assets', label: 'Assets' },
           { key: 'guidelines', label: 'Guidelines' },
+          { key: 'history', label: 'History & Diff' },
         ].map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as 'dna' | 'voice' | 'audience' | 'assets' | 'guidelines')}
+            onClick={() => setActiveTab(tab.key as any)}
             className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
               activeTab === tab.key
                 ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30 shadow-sm'
@@ -286,7 +343,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
             </div>
           )}
 
-          {(!brandDna || brandDna.status === 'GENERATING' || isLoadingDna) && brandDna?.status !== 'FAILED' ? (
+          {isLoadingDna || brandDna?.status === 'GENERATING' ? (
             <div className="flex flex-col items-center justify-center py-20 bg-[#12111A]/90 border border-white/5 rounded-2xl">
               <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
               <h3 className="text-white font-medium mb-1">
@@ -296,7 +353,23 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                 We are processing your inputs, products, competitors, and extracted documents to generate a tailored brand strategy.
               </p>
             </div>
-          ) : brandDna?.status === 'COMPLETED' ? (
+          ) : !brandDna ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-[#12111A]/90 border border-white/5 rounded-2xl">
+              <Sparkles className="w-10 h-10 text-purple-500 mb-4" />
+              <h3 className="text-white font-medium mb-1">No Brand DNA Generated Yet</h3>
+              <p className="text-gray-400 text-sm max-w-md text-center mb-6">
+                Upload your assets, competitors, and brand documents, then click Generate to create your AI-powered brand strategy.
+              </p>
+              <button 
+                onClick={handleRegenerate}
+                disabled={regenerateMutation.isPending}
+                className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-medium shadow-lg shadow-purple-600/30 flex items-center gap-2"
+              >
+                {regenerateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                Generate First Brand DNA
+              </button>
+            </div>
+          ) : brandDna.status === 'COMPLETED' ? (
             <>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Core Identity */}
@@ -370,18 +443,30 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                       <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                         Positioning Statement
                       </h4>
-                      <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
-                        {brandDna.positioning || 'N/A'}
-                      </div>
+                      <EditableField
+                        versionId={brandDna?.id || ''}
+                        brandId={brand.id}
+                        field="positioning"
+                        value={brandDna?.positioning}
+                        type="textarea"
+                        className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5"
+                        renderValue={(val) => <div className="text-xs text-gray-200 leading-relaxed">{val || 'N/A'}</div>}
+                      />
                     </div>
 
                     <div>
                       <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                         Brand Tone
                       </h4>
-                      <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
-                        {brandDna.tone || 'N/A'}
-                      </div>
+                      <EditableField
+                        versionId={brandDna?.id || ''}
+                        brandId={brand.id}
+                        field="tone"
+                        value={brandDna?.tone}
+                        type="textarea"
+                        className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5"
+                        renderValue={(val) => <div className="text-xs text-gray-200 leading-relaxed">{val || 'N/A'}</div>}
+                      />
                     </div>
                   </div>
                 </div>
@@ -393,25 +478,34 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                     <h3 className="text-base font-semibold text-white">Content Pillars</h3>
                   </div>
 
-                  <div className="space-y-3.5 pt-2">
-                    {((brandDna.contentPillars as any[]) || []).map((pillar: any, i) => (
-                      <div key={i} className="space-y-1">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-medium text-gray-300">{pillar.name}</span>
-                          <span className={`font-semibold ${pillar.textColor}`}>{pillar.percentage}%</span>
-                        </div>
-                        <div className="w-full bg-[#1C1A2B] h-2 rounded-full overflow-hidden">
-                          <div
-                            className={`${pillar.color} h-full rounded-full transition-all duration-500`}
-                            style={{ width: `${pillar.percentage}%` }}
-                          />
-                        </div>
+                  <EditableField
+                    versionId={brandDna?.id || ''}
+                    brandId={brand.id}
+                    field="contentPillars"
+                    value={brandDna?.contentPillars}
+                    type="json"
+                    renderValue={(pillars) => (
+                      <div className="space-y-3.5 pt-2">
+                        {((pillars as any[]) || []).map((pillar: any, i) => (
+                          <div key={i} className="space-y-1">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="font-medium text-gray-300">{pillar.name}</span>
+                              <span className={`font-semibold ${pillar.textColor}`}>{pillar.percentage}%</span>
+                            </div>
+                            <div className="w-full bg-[#1C1A2B] h-2 rounded-full overflow-hidden">
+                              <div
+                                className={`${pillar.color} h-full rounded-full transition-all duration-500`}
+                                style={{ width: `${pillar.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        {(!pillars || (pillars as any[]).length === 0) && (
+                          <p className="text-xs text-gray-500 italic">No content pillars defined.</p>
+                        )}
                       </div>
-                    ))}
-                    {(!brandDna.contentPillars || (brandDna.contentPillars as any[]).length === 0) && (
-                      <p className="text-xs text-gray-500 italic">No content pillars defined.</p>
                     )}
-                  </div>
+                  />
                 </div>
               </div>
 
@@ -426,17 +520,26 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                   <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                     Do Not Use
                   </h4>
-                  <div className="space-y-2">
-                    {((brandDna.avoidList as string[]) || []).map((item, i) => (
-                      <div
-                        key={i}
-                        className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/15 text-xs text-rose-300 flex items-center gap-2"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                        {item}
+                  <EditableField
+                    versionId={brandDna?.id || ''}
+                    brandId={brand.id}
+                    field="avoidList"
+                    value={brandDna?.avoidList}
+                    type="array"
+                    renderValue={(items) => (
+                      <div className="space-y-2">
+                        {((items as string[]) || []).map((item, i) => (
+                          <div
+                            key={i}
+                            className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/15 text-xs text-rose-300 flex items-center gap-2"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                            {item}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  />
                 </div>
               </div>
             </>
@@ -465,9 +568,14 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
 
             <div className="space-y-3 pt-4 border-t border-white/5">
               <h3 className="text-base font-semibold text-white">Voice Description</h3>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                {brandDna?.voice || 'Not generated yet.'}
-              </p>
+              <EditableField
+                versionId={brandDna?.id || ''}
+                brandId={brand.id}
+                field="voice"
+                value={brandDna?.voice}
+                type="textarea"
+                renderValue={(val) => <p className="text-xs text-gray-300 leading-relaxed">{val || 'Not generated yet.'}</p>}
+              />
             </div>
           </div>
 
@@ -480,27 +588,45 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                   Brand Personality
                 </h4>
-                <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed italic">
-                  {brandDna?.personality || 'Not generated yet.'}
-                </div>
+                <EditableField
+                  versionId={brandDna?.id || ''}
+                  brandId={brand.id}
+                  field="personality"
+                  value={brandDna?.personality}
+                  type="textarea"
+                  className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5"
+                  renderValue={(val) => <div className="text-xs text-gray-200 leading-relaxed italic">{val || 'Not generated yet.'}</div>}
+                />
               </div>
 
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                   Language Elements
                 </h4>
-                <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200 leading-relaxed">
-                  {brandDna?.language || 'Not generated yet.'}
-                </div>
+                <EditableField
+                  versionId={brandDna?.id || ''}
+                  brandId={brand.id}
+                  field="language"
+                  value={brandDna?.language}
+                  type="textarea"
+                  className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5"
+                  renderValue={(val) => <div className="text-xs text-gray-200 leading-relaxed">{val || 'Not generated yet.'}</div>}
+                />
               </div>
 
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                   CTA Preferences
                 </h4>
-                <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-purple-300 font-medium">
-                  {brandDna?.ctaPreferences || 'Not generated yet.'}
-                </div>
+                <EditableField
+                  versionId={brandDna?.id || ''}
+                  brandId={brand.id}
+                  field="ctaPreferences"
+                  value={brandDna?.ctaPreferences}
+                  type="textarea"
+                  className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5"
+                  renderValue={(val) => <div className="text-xs text-purple-300 font-medium">{val || 'Not generated yet.'}</div>}
+                />
               </div>
             </div>
           </div>
@@ -522,28 +648,43 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                   AI Analyzed Audience Profile
                 </h4>
-                <div className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5 text-xs text-gray-200">
-                  {brandDna?.audience || 'Not generated yet.'}
-                </div>
+                <EditableField
+                  versionId={brandDna?.id || ''}
+                  brandId={brand.id}
+                  field="audience"
+                  value={brandDna?.audience}
+                  type="textarea"
+                  className="p-3.5 rounded-xl bg-[#181624]/70 border border-white/5"
+                  renderValue={(val) => <div className="text-xs text-gray-200">{val || 'Not generated yet.'}</div>}
+                />
               </div>
 
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                   Key Claims
                 </h4>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {((brandDna?.claims as string[]) || []).map((claim, i) => (
-                    <span
-                      key={i}
-                      className="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium"
-                    >
-                      {claim}
-                    </span>
-                  ))}
-                  {(!brandDna?.claims || (brandDna.claims as string[]).length === 0) && (
-                    <span className="text-xs text-gray-500 italic">No claims generated.</span>
+                <EditableField
+                  versionId={brandDna?.id || ''}
+                  brandId={brand.id}
+                  field="claims"
+                  value={brandDna?.claims}
+                  type="array"
+                  renderValue={(items) => (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {((items as string[]) || []).map((claim, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium"
+                        >
+                          {claim}
+                        </span>
+                      ))}
+                      {(!items || (items as string[]).length === 0) && (
+                        <span className="text-xs text-gray-500 italic">No claims generated.</span>
+                      )}
+                    </div>
                   )}
-                </div>
+                />
               </div>
             </div>
           </div>
@@ -553,10 +694,10 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
             <h3 className="text-base font-semibold text-white">Audience Demographics</h3>
 
             <div className="space-y-4 pt-2">
-              {((brandDna?.contentPillars as any[]) || []).map((demo: any, i) => (
+              {audienceDemographics.map((demo: any, i) => (
                 <div key={i} className="space-y-1.5">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-gray-300">{demo.name}</span>
+                    <span className="font-medium text-gray-300">{demo.range}</span>
                     <span className={`font-semibold ${demo.textColor}`}>{demo.percentage}%</span>
                   </div>
                   <div className="w-full bg-[#1C1A2B] h-2 rounded-full overflow-hidden">
@@ -567,7 +708,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                   </div>
                 </div>
               ))}
-              {(!brandDna?.contentPillars || (brandDna.contentPillars as any[]).length === 0) && (
+              {audienceDemographics.length === 0 && (
                 <p className="text-xs text-gray-500 italic">No content pillar breakdown available.</p>
               )}
             </div>
@@ -707,10 +848,138 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
           <div className="grid grid-cols-1 gap-4">
             <div className="p-4 rounded-xl bg-[#181624]/70 border border-white/5 space-y-2">
               <h4 className="text-xs font-semibold text-purple-400">Visual Identity Summary</h4>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                {brandDna?.visualIdentitySummary || 'Not generated yet.'}
-              </p>
+              <EditableField
+                versionId={brandDna?.id || ''}
+                brandId={brand.id}
+                field="visualIdentitySummary"
+                value={brandDna?.visualIdentitySummary}
+                type="textarea"
+                renderValue={(val) => <p className="text-xs text-gray-300 leading-relaxed">{val || 'Not generated yet.'}</p>}
+              />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: HISTORY & DIFF */}
+      {activeTab === 'history' && (
+        <div className="space-y-6 animate-in fade-in">
+          <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-6">
+            <h3 className="text-base font-semibold text-white">Version History & Real-Time Diff</h3>
+            
+            {!versionsData || versionsData.length === 0 ? (
+              <p className="text-sm text-gray-400">No version history available.</p>
+            ) : (
+              <div className="space-y-8">
+                {versionsData.map((version: any, index: number) => {
+                  const previousVersion = versionsData[index + 1];
+                  const isCurrent = index === 0;
+
+                  return (
+                    <div key={version.id} className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${isCurrent ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30' : 'bg-white/5 text-gray-400'}`}>
+                            v{version.version}
+                          </span>
+                          <span className="text-sm text-gray-300">
+                            {new Date(version.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 flex flex-col items-end gap-1">
+                          <div className="flex items-center gap-2">
+                            <span>Status:</span> 
+                            <span className={version.status === 'COMPLETED' ? 'text-emerald-400' : 'text-amber-400'}>{version.status}</span>
+                            {version.publicationStatus === 'ACTIVE' && (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold ml-2">ACTIVE</span>
+                            )}
+                            {version.publicationStatus === 'SUPERSEDED' && (
+                              <span className="px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 font-bold ml-2">SUPERSEDED</span>
+                            )}
+                            {version.publicationStatus === 'DRAFT' && (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold ml-2">DRAFT</span>
+                            )}
+                          </div>
+                          
+                          <div className="text-[10px] text-gray-400">
+                            Source: {version.source} {version.restoredFromVersionId && `(from ${version.restoredFromVersionId})`}
+                          </div>
+
+                          <div className="flex gap-2 mt-1">
+                            {version.status === 'COMPLETED' && version.publicationStatus !== 'ACTIVE' && (
+                              <button 
+                                onClick={() => publishMutation.mutate(version.id)}
+                                disabled={publishMutation.isPending}
+                                className="px-3 py-1 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 transition-colors"
+                              >
+                                Publish
+                              </button>
+                            )}
+                            {version.publicationStatus === 'SUPERSEDED' && (
+                              <button 
+                                onClick={() => {
+                                  if (confirm('Restore this version? It will become the new ACTIVE version.')) {
+                                    restoreMutation.mutate(version.id);
+                                  }
+                                }}
+                                disabled={restoreMutation.isPending}
+                                className="px-3 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 transition-colors"
+                              >
+                                Restore
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Manual Edits Log */}
+                      {version.edits && version.edits.length > 0 && (
+                        <div className="bg-[#0B0A11] rounded-xl border border-white/5 p-4 space-y-3">
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Manual Edits on v{version.version}</h4>
+                          <div className="space-y-2">
+                            {version.edits.map((edit: any) => (
+                              <div key={edit.id} className="grid grid-cols-3 gap-4 text-xs">
+                                <div className="text-gray-300 font-medium">{edit.field}</div>
+                                <div className="text-rose-300/80 line-through truncate" title={edit.previousValue}>{edit.previousValue || 'null'}</div>
+                                <div className="text-emerald-400 truncate" title={edit.newValue}>{edit.newValue || 'null'}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Structural Diff vs Previous */}
+                      {previousVersion && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-rose-500/5 border border-rose-500/10 rounded-xl p-4">
+                            <h4 className="text-xs font-semibold text-rose-400 mb-2">Previous (v{previousVersion.version})</h4>
+                            <pre className="text-[10px] text-gray-400 whitespace-pre-wrap overflow-auto max-h-60">
+                              {JSON.stringify({
+                                positioning: previousVersion.positioning,
+                                tone: previousVersion.tone,
+                                audience: previousVersion.audience,
+                                avoidList: previousVersion.avoidList,
+                              }, null, 2)}
+                            </pre>
+                          </div>
+                          <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4">
+                            <h4 className="text-xs font-semibold text-emerald-400 mb-2">Generated (v{version.version})</h4>
+                            <pre className="text-[10px] text-gray-300 whitespace-pre-wrap overflow-auto max-h-60">
+                              {JSON.stringify({
+                                positioning: version.positioning,
+                                tone: version.tone,
+                                audience: version.audience,
+                                avoidList: version.avoidList,
+                              }, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

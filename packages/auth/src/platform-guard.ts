@@ -1,6 +1,7 @@
 import { prisma } from '@abge/database';
 import { PlatformRole, PlatformAdmin } from '@prisma/client';
 import { getPlatformSessionToken } from './platform-session';
+import { redirect } from 'next/navigation';
 
 export type PlatformAuthenticatedContext = {
   platformAdminId: string;
@@ -34,7 +35,7 @@ export async function getCurrentPlatformSession(): Promise<PlatformAuthenticated
 export async function requirePlatformAuth(): Promise<PlatformAuthenticatedContext> {
   const session = await getCurrentPlatformSession();
   if (!session) {
-    throw new Error('UNAUTHORIZED_PLATFORM');
+    redirect('/login');
   }
   return session;
 }

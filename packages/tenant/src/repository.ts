@@ -254,4 +254,157 @@ export class TenantRepository {
       },
     });
   }
+
+  // --- BRAND DNA OPERATIONS ---
+
+  async getActiveBrandDna(brandId: string) {
+    return prisma.brandDNAVersion.findFirst({
+      where: {
+        brandId,
+        organizationId: this.organizationId,
+        publicationStatus: 'ACTIVE',
+      },
+    });
+  }
+
+  async publishBrandDnaVersion(brandId: string, versionId: string, userId: string) {
+    return prisma.$transaction(async (tx) => {
+      // 1. Verify the version belongs to this org and brand, and is COMPLETED or DRAFT
+      const version = await tx.brandDNAVersion.findFirst({
+        where: {
+          id: versionId,
+          brandId,
+          organizationId: this.organizationId,
+        },
+      });
+
+      if (!version) {
+        throw new Error('Version not found or unauthorized');
+      }
+
+      if (version.status !== 'COMPLETED') {
+        throw new Error('Only COMPLETED versions can be published');
+      }
+
+      // 2. Mark any currently ACTIVE version as SUPERSEDED
+      await tx.brandDNAVersion.updateMany({
+        where: {
+          brandId,
+          organizationId: this.organizationId,
+          publicationStatus: 'ACTIVE',
+        },
+        data: {
+          publicationStatus: 'SUPERSEDED',
+        },
+      });
+
+      // 3. Mark the target version as ACTIVE
+      const updated = await tx.brandDNAVersion.update({
+        where: { id: versionId },
+        data: {
+          publicationStatus: 'ACTIVE',
+        },
+      });
+
+      // 4. Create Audit Log
+      await tx.auditLog.create({
+        data: {
+          organizationId: this.organizationId,
+          userId,
+          action: 'BRAND_DNA_VERSION_PUBLISHED',
+          entityType: 'BrandDNAVersion',
+          entityId: versionId,
+          metadata: {
+            brandId,
+            version: updated.version,
+          },
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  async restoreBrandDnaVersion(brandId: string, versionId: string, userId: string) {
+    return prisma.$transaction(async (tx) => {
+      // 1. Fetch the source version
+      const sourceVersion = await tx.brandDNAVersion.findFirst({
+        where: {
+          id: versionId,
+          brandId,
+          organizationId: this.organizationId,
+        },
+      });
+
+      if (!sourceVersion) {
+        throw new Error('Source version not found or unauthorized');
+      }
+
+      // 2. Get the next version number
+      const highestVersion = await tx.brandDNAVersion.findFirst({
+        where: { brandId, organizationId: this.organizationId },
+        orderBy: { version: 'desc' },
+      });
+      const nextVersionNum = (highestVersion?.version || 0) + 1;
+
+      // 3. Mark current ACTIVE as SUPERSEDED
+      await tx.brandDNAVersion.updateMany({
+        where: {
+          brandId,
+          organizationId: this.organizationId,
+          publicationStatus: 'ACTIVE',
+        },
+        data: {
+          publicationStatus: 'SUPERSEDED',
+        },
+      });
+
+      // 4. Create NEW version by copying source
+      const newVersion = await tx.brandDNAVersion.create({
+        data: {
+          organizationId: this.organizationId,
+          brandId,
+          version: nextVersionNum,
+          status: 'COMPLETED',
+          publicationStatus: 'ACTIVE',
+          source: 'RESTORED',
+          restoredFromVersionId: sourceVersion.id,
+          personality: sourceVersion.personality,
+          voice: sourceVersion.voice,
+          tone: sourceVersion.tone,
+          positioning: sourceVersion.positioning,
+          visualIdentitySummary: sourceVersion.visualIdentitySummary,
+          audience: sourceVersion.audience,
+          contentPillars: sourceVersion.contentPillars ?? undefined,
+          language: sourceVersion.language,
+          ctaPreferences: sourceVersion.ctaPreferences,
+          avoidList: sourceVersion.avoidList ?? undefined,
+          claims: sourceVersion.claims ?? undefined,
+          constraints: sourceVersion.constraints ?? undefined,
+          confidenceScore: sourceVersion.confidenceScore,
+          sources: sourceVersion.sources ?? undefined,
+          createdById: userId,
+          completedAt: new Date(),
+        },
+      });
+
+      // 5. Audit log
+      await tx.auditLog.create({
+        data: {
+          organizationId: this.organizationId,
+          userId,
+          action: 'BRAND_DNA_VERSION_RESTORED',
+          entityType: 'BrandDNAVersion',
+          entityId: newVersion.id,
+          metadata: {
+            brandId,
+            restoredFromVersionId: sourceVersion.id,
+            newlyCreatedVersionId: newVersion.id,
+          },
+        },
+      });
+
+      return newVersion;
+    });
+  }
 }

@@ -1,5 +1,6 @@
 import { requireAuth } from '@abge/auth';
 import { prisma } from '@abge/database';
+import { TenantRepository } from '@abge/tenant';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -70,17 +71,24 @@ export default async function OverviewPage() {
     },
   ];
 
+  const tenantRepo = new TenantRepository({ organizationId: session.organizationId });
+  const brandDna = await tenantRepo.getActiveBrandDna(brand.id);
+
   // Content Pillars data
-  const contentPillars = [
-    { name: 'Education', percentage: 30, color: 'bg-purple-500', textColor: 'text-purple-400' },
-    { name: 'Product', percentage: 25, color: 'bg-blue-500', textColor: 'text-blue-400' },
-    { name: 'Sustainability', percentage: 20, color: 'bg-emerald-500', textColor: 'text-emerald-400' },
-    { name: 'Culture', percentage: 15, color: 'bg-amber-500', textColor: 'text-amber-400' },
-    { name: 'Community', percentage: 10, color: 'bg-rose-500', textColor: 'text-rose-400' },
-  ];
+  let contentPillars = brandDna?.contentPillars as any[] || [];
+  if (contentPillars.length === 0) {
+    contentPillars = [
+      { name: 'Education', percentage: 30, color: 'bg-purple-500', textColor: 'text-purple-400' },
+      { name: 'Product', percentage: 25, color: 'bg-blue-500', textColor: 'text-blue-400' },
+      { name: 'Sustainability', percentage: 20, color: 'bg-emerald-500', textColor: 'text-emerald-400' },
+      { name: 'Culture', percentage: 15, color: 'bg-amber-500', textColor: 'text-amber-400' },
+      { name: 'Community', percentage: 10, color: 'bg-rose-500', textColor: 'text-rose-400' },
+    ];
+  }
 
   // Personality Tags
-  const personalityTags = ['Authentic', 'Innovative', 'Sustainable', 'Sophisticated', 'Approachable'];
+  const personalityString = brandDna?.personality || 'Authentic, Innovative, Sustainable, Sophisticated, Approachable';
+  const personalityTags = personalityString.split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
 
   return (
     <div className="space-y-6 pb-12">

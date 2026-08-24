@@ -35,6 +35,12 @@ enum BrandDNAStatus {
   FAILED
 }
 
+enum BrandDNAPublicationStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+}
+
 enum PlanTier {
   STARTER
   GROWTH
@@ -66,6 +72,7 @@ model Organization {
   featureFlags          FeatureFlag[]
   impersonationSessions ImpersonationSession[]
   dnaVersions           BrandDNAVersion[]
+  dnaEdits              BrandDNAEdit[]
   aiUsage               AIUsage[]
 }
 
@@ -81,6 +88,8 @@ model User {
   auditLogs             AuditLog[]
   sessions              Session[]
   impersonationSessions ImpersonationSession[]
+  dnaVersionsCreated    BrandDNAVersion[] @relation("DNAVersionCreator")
+  dnaEdits              BrandDNAEdit[]
 }
 
 model Session {
@@ -136,6 +145,7 @@ model Brand {
   products     BrandProduct[]
   competitors  BrandCompetitor[]
   dnaVersions  BrandDNAVersion[]
+  dnaEdits     BrandDNAEdit[]
   aiUsage      AIUsage[]
 
   @@index([organizationId])
@@ -227,6 +237,9 @@ model BrandDNAVersion {
   brandId               String
   version               Int
   status                BrandDNAStatus @default(GENERATING)
+  publicationStatus     BrandDNAPublicationStatus @default(DRAFT)
+  source                String         @default("AI_GENERATION")
+  restoredFromVersionId String?
   personality           String?
   voice                 String?
   tone                  String?
@@ -243,12 +256,37 @@ model BrandDNAVersion {
   sources               Json?
   createdAt             DateTime       @default(now())
   completedAt           DateTime?
+  createdById           String?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdBy    User?          @relation("DNAVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  edits        BrandDNAEdit[]
 
   @@index([organizationId])
   @@index([brandId])
+}
+
+model BrandDNAEdit {
+  id                String          @id @default(cuid())
+  organizationId    String
+  brandId           String
+  brandDNAVersionId String
+  userId            String
+  field             String
+  previousValue     String? // Stored as JSON string
+  newValue          String? // Stored as JSON string
+  source            String          @default("MANUAL_EDIT")
+  requestId         String?
+  createdAt         DateTime        @default(now())
+
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand             Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandDNAVersion   BrandDNAVersion @relation(fields: [brandDNAVersionId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([brandDNAVersionId])
 }
 
 model AIUsage {

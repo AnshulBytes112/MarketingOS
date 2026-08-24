@@ -9,12 +9,12 @@ export const BrandDNASourceSchema = z.object({
 export const BrandDNASourcesSchema = z.array(BrandDNASourceSchema);
 
 export const BrandDNASchema = z.object({
-  personality: z.string().describe("Brand personality description"),
-  voice: z.string().describe("Brand voice description"),
-  tone: z.string().describe("Brand tone description"),
-  positioning: z.string().describe("Positioning statement"),
-  visualIdentitySummary: z.string().describe("Summary of visual identity"),
-  audience: z.string().describe("Primary and secondary audience"),
+  personality: z.string().describe("Brand personality description (single paragraph or comma-separated string)"),
+  voice: z.string().describe("Brand voice description (single string)"),
+  tone: z.string().describe("Brand tone description (single string)"),
+  positioning: z.string().describe("Positioning statement (single string)"),
+  visualIdentitySummary: z.string().describe("Summary of visual identity (single string)"),
+  audience: z.string().describe("Primary and secondary audience (single string)"),
   contentPillars: z.array(z.object({
     name: z.string(),
     percentage: z.number(),

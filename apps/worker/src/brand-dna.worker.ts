@@ -1,11 +1,10 @@
 import { Worker } from 'bullmq';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@abge/database';
 import { ModelGateway } from './ai/gateway';
 import { BrandDNASchema } from './brand-dna.schema';
 import { calculateBrandEvidenceConfidence } from './confidence';
 import { randomUUID } from 'crypto';
 
-const prisma = new PrismaClient();
 const gateway = new ModelGateway();
 
 const BrandDNAStatus = {
@@ -15,9 +14,9 @@ const BrandDNAStatus = {
 } as const;
 
 export const brandDnaWorker = new Worker('brand-dna', async (job) => {
-  const { organizationId, brandId } = job.data;
+  const { organizationId, brandId, userId } = job.data;
   const requestId = randomUUID();
-  console.log(`[${requestId}] Processing Brand DNA for brand: ${brandId}`);
+  console.log(`[${requestId}] Processing Brand DNA for brand: ${brandId} by user: ${userId || 'SYSTEM'}`);
 
   // Fetch all necessary data
   const [brand, products, competitors, assets, previousVersions] = await Promise.all([
@@ -62,11 +61,30 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       status: BrandDNAStatus.GENERATING,
       confidenceScore,
       sources,
+      createdById: userId || null,
     }
   });
 
   try {
-    const systemPrompt = `You are an expert Brand Strategist AI. Generate a comprehensive Brand DNA based on the provided inputs. Ensure the output strictly adheres to the requested JSON schema.`;
+    const systemPrompt = `You are an expert Brand Strategist AI. Generate a comprehensive Brand DNA based on the provided inputs. Ensure the output strictly adheres to the requested JSON format.
+    
+    You MUST output valid JSON with EXACTLY these keys:
+    {
+      "personality": "string (comma separated tags)",
+      "voice": "string",
+      "tone": "string",
+      "positioning": "string",
+      "visualIdentitySummary": "string",
+      "audience": "string",
+      "contentPillars": [
+        { "name": "string", "percentage": 30, "color": "bg-purple-500", "textColor": "text-purple-400" }
+      ],
+      "language": "string",
+      "ctaPreferences": "string",
+      "avoidList": ["string"],
+      "claims": ["string"],
+      "constraints": ["string"]
+    }`;
     const userPrompt = `
       Brand Name: ${brand.name}
       Industry: ${brand.industry || 'Unknown'}
@@ -109,12 +127,17 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       }
     });
 
+    const isFirstVersion = newVersionNumber === 1;
+
     // Save success
     await prisma.brandDNAVersion.update({
       where: { id: versionRecord.id },
       data: {
         status: BrandDNAStatus.COMPLETED,
+        publicationStatus: isFirstVersion ? 'ACTIVE' : 'DRAFT',
         completedAt: new Date(),
+        confidenceScore,
+        sources,
         personality: result.data.personality,
         voice: result.data.voice,
         tone: result.data.tone,
@@ -135,6 +158,24 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       where: { id: brandId },
       data: { onboardingStatus: 'ACTIVE' }
     });
+
+    // Create AuditLog if user triggered
+    if (userId) {
+      await prisma.auditLog.create({
+        data: {
+          organizationId,
+          userId,
+          action: 'BRAND_DNA_REGENERATED',
+          entityType: 'BrandDNAVersion',
+          entityId: versionRecord.id,
+          metadata: {
+            source: 'REGENERATED',
+            requestId,
+            version: newVersionNumber
+          }
+        }
+      });
+    }
 
     console.log(`[${requestId}] Brand DNA generation complete for brand: ${brandId}`);
 
@@ -164,4 +205,12 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
 
 brandDnaWorker.on('failed', (job, err) => {
   console.error(`Job ${job?.id} failed:`, err.message);
+});
+
+brandDnaWorker.on('error', err => {
+  console.error(`Worker error:`, err);
+});
+
+brandDnaWorker.on('ready', () => {
+  console.log('brandDnaWorker is READY and listening for jobs on brand-dna queue!');
 });

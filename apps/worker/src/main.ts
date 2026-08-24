@@ -1,11 +1,12 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { Worker } from 'bullmq';
 import { extractPdfText } from './extractor';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@abge/database';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 import { brandDnaWorker } from './brand-dna.worker';
-
-const prisma = new PrismaClient();
 const s3Client = new S3Client({
   region: process.env.S3_REGION || 'us-east-1',
   endpoint: process.env.S3_ENDPOINT,
@@ -96,3 +97,4 @@ worker.on('failed', (job, err) => {
 });
 
 console.log('Worker is running for brand-asset and brand-dna queues...');
+console.log('Registered brandDnaWorker:', !!brandDnaWorker);

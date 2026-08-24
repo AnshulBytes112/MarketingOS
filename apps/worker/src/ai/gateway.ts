@@ -20,6 +20,7 @@ export class ModelGateway {
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.AI_BASE_URL,
     });
   }
 
@@ -34,11 +35,11 @@ export class ModelGateway {
   ): Promise<ModelGatewayResponse<T>> {
     const startTime = Date.now();
     let attempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 5;
 
     // Use environment variables or modelOverride
     const provider = process.env.AI_PROVIDER;
-    const model = modelOverride || process.env.AI_MODEL || 'gpt-4o-mini';
+    const model = process.env.AI_MODEL || 'gpt-4o-mini';
     
     // Validate provider
     if (provider && provider !== 'openai') {
@@ -52,21 +53,12 @@ export class ModelGateway {
       try {
         console.log(`[${requestId}] Generating structured output with model ${model} (Attempt ${attempts + 1}/${maxAttempts})`);
         
-        const response = await (this.openai.beta as any).chat.completions.parse({
+        const response = await this.openai.chat.completions.create({
           model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
-          ],
-          response_format: {
-            type: 'json_schema',
-            json_schema: {
-              name: schemaName,
-              description: schemaDescription,
-              schema: Object.assign({}, require('zod-to-json-schema').zodToJsonSchema(schema), { additionalProperties: false }) as any,
-              strict: true
-            }
-          }
+          ]
         });
 
         const message = response.choices[0]?.message;
@@ -74,10 +66,28 @@ export class ModelGateway {
           throw new Error(message?.refusal || 'No valid message returned');
         }
 
-        const data = message.parsed as T;
-        if (!data) {
+        let rawContent = message.content || '{}';
+
+        // Try to find markdown json block
+        const match = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+        if (match) {
+          rawContent = match[1].trim();
+        } else {
+          // Fallback: extract substring from first { to last }
+          const firstBrace = rawContent.indexOf('{');
+          const lastBrace = rawContent.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            rawContent = rawContent.substring(firstBrace, lastBrace + 1);
+          }
+        }
+
+        const rawData = JSON.parse(rawContent);
+        if (!rawData) {
           throw new Error('Failed to parse structured output natively');
         }
+        
+        // Strictly validate and coerce using the provided Zod schema
+        const data = schema.parse(rawData);
 
         const latencyMs = Date.now() - startTime;
         const usage = response.usage;

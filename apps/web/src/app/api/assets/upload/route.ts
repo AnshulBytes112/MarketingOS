@@ -18,9 +18,12 @@ export async function POST(request: Request) {
     });
 
     const body = await request.json();
-    const { brandId, filename, contentType, replaceAssetId, fileSize } = body;
+    let { brandId, filename, contentType, replaceAssetId, fileSize } = body;
+    if (!contentType) {
+      contentType = 'application/octet-stream';
+    }
 
-    if (!brandId || !filename || !contentType) {
+    if (!brandId || !filename) {
       logger.warn('Missing required fields for upload', { brandId, filename, contentType });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }

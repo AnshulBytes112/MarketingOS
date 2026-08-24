@@ -6,11 +6,11 @@ import { generateTotpSecret, encryptTotpSecret } from '../packages/auth/src/totp
 dotenv.config()
 
 async function main() {
-  const email = 'admin@aibrandos.com'
-  const rawPassword = 'superpassword123'
+  const email = process.env.SUPER_ADMIN_EMAIL || 'admin@aibrandos.com'
+  const rawPassword = process.env.SUPER_ADMIN_PASSWORD || 'superpassword123'
   const passwordHash = await bcrypt.hash(rawPassword, 10)
   
-  const rawTotpSecret = generateTotpSecret()
+  const rawTotpSecret = process.env.SUPER_ADMIN_STATIC_TOTP || 'QRAQFEXGCLBYB3AHBX4AHVXPKVTJPLEN'
   const encryptedSecret = encryptTotpSecret(rawTotpSecret)
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })

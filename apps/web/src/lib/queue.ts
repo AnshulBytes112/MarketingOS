@@ -21,10 +21,11 @@ export const getBrandAssetQueue = () => {
   return _brandAssetQueue;
 };
 
-export async function enqueueBrandDnaGeneration(organizationId: string, brandId: string) {
+export async function enqueueBrandDnaGeneration(organizationId: string, brandId: string, userId?: string) {
   return getBrandDnaQueue().add('brand-dna.generate', {
     organizationId,
     brandId,
+    userId,
   }, {
     attempts: 3,
     backoff: {

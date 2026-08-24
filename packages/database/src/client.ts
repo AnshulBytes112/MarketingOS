@@ -6,7 +6,13 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-const connectionString = process.env.DATABASE_URL
+import * as dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') }); // fallback
+
+const connectionString = process.env.DATABASE_URL || '';
+console.log('DB URL loaded:', !!connectionString);
 const pool = new Pool({ connectionString })
 const adapter = new PrismaPg(pool)
 
