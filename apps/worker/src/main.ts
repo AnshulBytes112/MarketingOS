@@ -98,11 +98,15 @@ worker.on('failed', (job, err) => {
 
 import { competitorIngestionWorker } from './competitor-ingestion.worker';
 import { schedulerWorker, initializeScheduler } from './scheduler';
+import { strategyWorker } from './strategy.worker';
+import { contentPlanWorker } from './content-plan.worker';
 
-console.log('Worker is running for brand-asset, brand-dna, competitor-ingestion queues...');
+console.log('Worker is running for brand-asset, brand-dna, competitor-ingestion, strategy, content-plan queues...');
 console.log('Registered brandDnaWorker:', !!brandDnaWorker);
 console.log('Registered competitorIngestionWorker:', !!competitorIngestionWorker);
 console.log('Registered schedulerWorker:', !!schedulerWorker);
+console.log('Registered strategyWorker:', !!strategyWorker);
+console.log('Registered contentPlanWorker:', !!contentPlanWorker);
 
 initializeScheduler().then(() => {
   console.log('Scheduler initialization complete.');

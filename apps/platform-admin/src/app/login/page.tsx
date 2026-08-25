@@ -9,7 +9,6 @@ function AdminLoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [totpCode, setTotpCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +23,7 @@ function AdminLoginForm() {
       const res = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, totpCode }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (res.ok) {
@@ -120,27 +119,10 @@ function AdminLoginForm() {
               </div>
             </div>
 
-            <div className="space-y-1.5 pt-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-gray-300">Two-Factor Authentication</label>
-                <Link href="#" className="text-xs text-blue-500 hover:text-blue-400 transition-colors">
-                  Forgot password?
-                </Link>
-              </div>
-              <p className="text-[10px] text-gray-500 pb-1">Enter the 6-digit code from your authenticator app</p>
-              <div className="relative">
-                <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="000000"
-                  required
-                  maxLength={6}
-                  value={totpCode}
-                  onChange={(e) => setTotpCode(e.target.value)}
-                  disabled={isLoading}
-                  className="w-full bg-[#0B0A11]/50 border border-white/10 rounded-lg py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all tracking-[0.2em]"
-                />
-              </div>
+            <div className="flex justify-end pt-2">
+              <Link href="#" className="text-xs text-blue-500 hover:text-blue-400 transition-colors">
+                Forgot password?
+              </Link>
             </div>
 
             <div className="flex items-center space-x-2 pt-2 pb-2">

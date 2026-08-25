@@ -97,7 +97,7 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       Competitors: ${competitors.map((c: any) => c.name).join(', ')}
       
       Extracted Documents Context:
-      ${extractedTextData}
+      ${extractedTextData.length > 20000 ? extractedTextData.substring(0, 20000) + '...[TRUNCATED]' : extractedTextData}
     `;
 
     const result = await gateway.generateStructured(

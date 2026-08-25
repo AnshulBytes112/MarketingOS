@@ -393,7 +393,7 @@ export async function applyRecommendation(recommendationId: string, brandId: str
   if (!result.success) {
     return {
       success: false,
-      code: 'ERROR',
+      code: result.code,
       error: result.error || 'Failed to apply recommendation to Strategy.',
     };
   }

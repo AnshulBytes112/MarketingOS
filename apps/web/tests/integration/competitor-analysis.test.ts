@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { prisma } from '@abge/database';
 import { Role } from '@prisma/client';
 import * as headers from 'next/headers';
@@ -219,6 +219,28 @@ describe('Competitor Analysis & Ingestion Integration Suite', () => {
   };
 
   describe('1. Ingestion Providers & Scrapers', () => {
+    beforeEach(() => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/about') || urlStr.includes('/blog')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () => Promise.resolve('<html><head><title>Mock Subpage</title><meta name="description" content="Subpage Description"></head><body>Mock</body></html>'),
+          } as any);
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve('<html><head><title>Mock Title</title><meta name="description" content="Mock Description"></head><body><a href="/about">About Us</a><a href="/blog">Blog</a></body></html>'),
+        } as any);
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('GenericWebsiteProvider should report AVAILABLE and scrape successfully', async () => {
       const provider = new GenericWebsiteProvider();
       expect(provider.getState()).toBe('AVAILABLE');
@@ -370,6 +392,7 @@ describe('Competitor Analysis & Ingestion Integration Suite', () => {
   describe('6. Strategy Boundary Integration', () => {
     it('applyRecommendation fails cleanly when Strategy is not implemented', async () => {
       mockCookies(sessionToken);
+      (globalThis as any).__mockStrategyAvailable = false;
 
       // Find open recommendation
       const rec = await prisma.aIRecommendation.findFirst({
@@ -387,6 +410,8 @@ describe('Competitor Analysis & Ingestion Integration Suite', () => {
         where: { id: rec!.id }
       });
       expect(updatedRec?.status).toBe('OPEN');
+
+      delete (globalThis as any).__mockStrategyAvailable;
     });
 
     it('applyRecommendation succeeds and transitions status when Strategy availability is mocked', async () => {

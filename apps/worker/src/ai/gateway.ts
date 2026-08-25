@@ -20,7 +20,7 @@ export class ModelGateway {
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.AI_BASE_URL,
+      baseURL: process.env.AI_BASE_URL || undefined,
     });
   }
 
@@ -42,8 +42,12 @@ export class ModelGateway {
     const model = process.env.AI_MODEL || 'gpt-4o-mini';
     
     // Validate provider
-    if (provider && provider !== 'openai') {
-       throw new Error(`Unsupported AI_PROVIDER configured: ${provider}`);
+    if (provider !== 'openai' && provider !== 'gemini') {
+       throw new Error(`Unsupported AI_PROVIDER configured: ${provider}. Must be 'openai' or 'gemini'`);
+    }
+
+    if (provider === 'gemini' && (!process.env.AI_BASE_URL || !process.env.AI_BASE_URL.includes('generativelanguage.googleapis.com'))) {
+       throw new Error(`Invalid AI_BASE_URL for Gemini. Must include 'generativelanguage.googleapis.com' when AI_PROVIDER is 'gemini'.`);
     }
 
     const inputPriceRaw = process.env.AI_INPUT_PRICE_PER_1M_TOKENS;
@@ -53,13 +57,20 @@ export class ModelGateway {
       try {
         console.log(`[${requestId}] Generating structured output with model ${model} (Attempt ${attempts + 1}/${maxAttempts})`);
         
-        const response = await this.openai.chat.completions.create({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ]
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s hard timeout per attempt
+        let response;
+        try {
+          response = await this.openai.chat.completions.create({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ]
+          }, { signal: controller.signal });
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
         const message = response.choices[0]?.message;
         if (!message || message.refusal) {
@@ -94,6 +105,30 @@ export class ModelGateway {
             rawData = { [shapeKeys[0]]: rawData };
           }
         }
+
+        // If the AI wrapped the response in a single top-level key (e.g. { strategy: {...} })
+        // and that single value is an object (not an array), unwrap it automatically.
+        // This handles models that hallucinate a wrapper like { "strategy": { goal: ... } }.
+        if (
+          !Array.isArray(rawData) &&
+          typeof rawData === 'object' &&
+          rawData !== null &&
+          schema &&
+          'shape' in (schema as any)
+        ) {
+          const schemaKeys = new Set(Object.keys((schema as any).shape));
+          const dataKeys = Object.keys(rawData);
+          const topLevelMatchCount = dataKeys.filter(k => schemaKeys.has(k)).length;
+          // If NONE of the top-level keys match the schema, but there is exactly one key whose value is an object,
+          // assume it is a wrapper and unwrap it.
+          if (topLevelMatchCount === 0 && dataKeys.length === 1) {
+            const wrappedValue = rawData[dataKeys[0]];
+            if (typeof wrappedValue === 'object' && wrappedValue !== null && !Array.isArray(wrappedValue)) {
+              console.log(`[${requestId}] AI returned wrapped object under key "${dataKeys[0]}". Unwrapping automatically.`);
+              rawData = wrappedValue;
+            }
+          }
+        }
         
         // Strictly validate and coerce using the provided Zod schema
         const data = schema.parse(rawData);
@@ -125,16 +160,29 @@ export class ModelGateway {
           }
         };
 
-      } catch (error) {
+      } catch (error: any) {
         attempts++;
-        console.error(`[${requestId}] Generation attempt ${attempts} failed:`, error);
+        console.error(`[${requestId}] Generation attempt ${attempts} failed:`, error.message);
         
+        // Check for permanent client errors (400, 401, 403, 404)
+        const status = error.status || error.statusCode || error.code;
+        if (status === 400 || status === 401 || status === 403 || status === 404 || status === '404') {
+          console.error(`[${requestId}] Permanent error encountered (${status}). Halting retries.`);
+          throw error;
+        }
+
         if (attempts >= maxAttempts) {
           throw error; // Let the caller handle the final failure
         }
         
-        // Exponential backoff: 1s, 2s, 4s...
-        const delay = Math.pow(2, attempts - 1) * 1000;
+        let delay = Math.pow(2, attempts) * 1000;
+        if (status === 429 || status === '429') {
+          console.log(`[${requestId}] Rate limit (429) hit. Backing off for 60s...`);
+          delay = 60000;
+        } else {
+          console.log(`[${requestId}] Retrying in ${delay}ms...`);
+        }
+        
         await new Promise(res => setTimeout(res, delay));
       }
     }

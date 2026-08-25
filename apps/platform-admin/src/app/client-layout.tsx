@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { LogOut } from 'lucide-react';
+import { adminLogout } from './actions';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,6 +38,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <Link href="/audit" className={`block p-2 rounded hover:bg-gray-800 ${pathname.startsWith('/audit') ? 'bg-gray-800' : ''}`}>
             Audit
           </Link>
+          
+          <form action={adminLogout} className="pt-4 border-t border-gray-800">
+            <button type="submit" className="w-full flex items-center gap-2 p-2 rounded hover:bg-gray-800 text-red-400 hover:text-red-300 transition-colors">
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
+          </form>
         </nav>
       </div>
       

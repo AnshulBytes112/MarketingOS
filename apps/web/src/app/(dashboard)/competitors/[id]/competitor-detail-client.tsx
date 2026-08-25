@@ -10,6 +10,7 @@ import {
   getCompetitorDetails, syncCompetitorNow, manuallyIngestPost, 
   generateCompetitorAnalysis, applyRecommendation 
 } from './actions';
+import { toast } from 'sonner';
 
 // Custom platform icon SVGs matching the rest of the UI
 const PlatformIcon = ({ platform, className = "w-4 h-4" }: { platform: string, className?: string }) => {
@@ -143,13 +144,32 @@ export default function CompetitorDetailClient({ competitorId, brandId, userRole
   const applyMutation = useMutation({
     mutationFn: (recommendationId: string) => applyRecommendation(recommendationId, brandId),
     onSuccess: (res) => {
-      if (!res.success && res.code === 'STRATEGY_NOT_AVAILABLE') {
-        setStrategyNotice('Strategy integration is not yet available. The strategy domain consumer is pending implementation.');
+      if (!res.success) {
+        let msg = '';
+        if (res.code === 'STRATEGY_NOT_AVAILABLE') {
+          msg = 'Strategy integration is not yet available. The strategy domain consumer is pending implementation.';
+        } else if (res.code === 'NO_ACTIVE_STRATEGY') {
+          msg = 'No active strategy exists for this brand. Please generate a strategy first.';
+        } else if (res.error === 'STRATEGY_LOCKED') {
+          msg = 'Cannot apply recommendation: The active strategy is approved and locked.';
+        } else {
+          msg = res.error || 'Failed to apply recommendation to Strategy.';
+        }
+        setStrategyNotice(msg);
+        toast.error(msg);
         setTimeout(() => setStrategyNotice(null), 8000);
       } else {
+        setStrategyNotice(null);
+        toast.success('Recommendation successfully applied to Strategy!');
         queryClient.invalidateQueries({ queryKey: ['competitor-details', competitorId] });
       }
     },
+    onError: (err: any) => {
+      const msg = err.message || 'Error occurred while applying recommendation.';
+      setStrategyNotice(msg);
+      toast.error(msg);
+      setTimeout(() => setStrategyNotice(null), 8000);
+    }
   });
 
   const handleManualSubmit = (e: React.FormEvent) => {

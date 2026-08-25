@@ -43,126 +43,15 @@ export class InstagramProvider implements CompetitorIngestionProvider {
   }
 
   getState(): ProviderState {
-    return 'AVAILABLE';
+    return 'AUTH_REQUIRED';
   }
 
   async fetchAccount(handle: string): Promise<IngestedAccount> {
-    const cleanHandle = handle.replace(/@/g, '').trim();
-    const url = `https://www.instagram.com/${cleanHandle}/`;
-    
-    try {
-      const html = await fetchHtml(url);
-      
-      // Parse Open Graph Description for stats
-      const ogDescMatch = html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i) ||
-                          html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i);
-      
-      let followers = null;
-      let following = null;
-      let posts = null;
-      let bio = 'Instagram Profile';
-
-      if (ogDescMatch) {
-        const descText = ogDescMatch[1];
-        // Example: "18M Followers, 49 Following, 1,500 Posts"
-        const followersMatch = descText.match(/([\d.,]+[KMB]?)\s*Followers/i);
-        const followingMatch = descText.match(/([\d.,]+[KMB]?)\s*Following/i);
-        const postsMatch = descText.match(/([\d.,]+[KMB]?)\s*Posts/i);
-
-        if (followersMatch) followers = parseSocialNumber(followersMatch[1]);
-        if (followingMatch) following = parseSocialNumber(followingMatch[1]);
-        if (postsMatch) posts = parseSocialNumber(postsMatch[1]);
-      }
-
-      // Parse Open Graph Title for Display Name
-      const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
-                           html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
-      
-      let displayName = cleanHandle;
-      if (ogTitleMatch) {
-        const titleText = ogTitleMatch[1];
-        const nameMatch = titleText.match(/^([^(]+)/);
-        if (nameMatch) displayName = nameMatch[1].trim();
-      }
-
-      return {
-        platform: 'instagram',
-        handle: cleanHandle,
-        displayName,
-        bio,
-        followerCount: followers,
-        followingCount: following,
-        postCount: posts,
-        profileUrl: url,
-      };
-    } catch (e: any) {
-      console.warn(`[InstagramProvider] Web scrape failed: ${e.message}. Using fallback generator.`);
-      return {
-        platform: 'instagram',
-        handle: cleanHandle,
-        displayName: cleanHandle,
-        bio: `${cleanHandle} Instagram profile (Scraped offline)`,
-        followerCount: 250000,
-        followingCount: 150,
-        postCount: 420,
-        profileUrl: url,
-      };
-    }
+    throw new Error('Authentication required');
   }
 
   async fetchRecentPosts(handle: string): Promise<IngestedPost[]> {
-    const cleanHandle = handle.replace(/@/g, '').trim();
-    const url = `https://www.instagram.com/${cleanHandle}/`;
-    const posts: IngestedPost[] = [];
-
-    try {
-      const html = await fetchHtml(url);
-      
-      const scriptRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-      let match;
-      while ((match = scriptRegex.exec(html)) !== null) {
-        try {
-          const data = JSON.parse(match[1]);
-          const items = Array.isArray(data) ? data : [data];
-          for (const item of items) {
-            if (item['@type'] === 'SocialMediaPosting' || item.mainEntityOfPage) {
-              posts.push({
-                externalPostId: item.identifier || `ig-${Buffer.from(item.url || '').toString('base64').substring(0, 12)}`,
-                url: item.url || `https://www.instagram.com/p/${item.identifier}/`,
-                publishedAt: item.datePublished ? new Date(item.datePublished) : new Date(),
-                captionText: item.articleBody || item.text || 'Instagram Post',
-                mediaType: 'image',
-                likeCount: item.interactionStatistic?.userInteractionCount || 0,
-                commentCount: 0,
-                shareCount: 0,
-                viewCount: 0,
-              });
-            }
-          }
-        } catch {}
-      }
-    } catch (e: any) {
-      console.warn(`[InstagramProvider] Posts scrape failed: ${e.message}`);
-    }
-
-    if (posts.length === 0) {
-      const topics = ['Our new morning blend is here!', 'Sustainable sourcing starts with local farms.', 'Behind the scenes at our roasting facility.', 'Sip, smile, repeat.'];
-      topics.forEach((topic, i) => {
-        posts.push({
-          externalPostId: `ig-fallback-${cleanHandle}-${i}`,
-          url: `https://www.instagram.com/${cleanHandle}/p/mock-${i}`,
-          publishedAt: new Date(Date.now() - i * 86400000),
-          captionText: topic,
-          mediaType: 'image',
-          likeCount: Math.round(1500 + Math.random() * 5000),
-          commentCount: Math.round(50 + Math.random() * 200),
-          shareCount: Math.round(10 + Math.random() * 50),
-          viewCount: Math.round(10000 + Math.random() * 30000),
-        });
-      });
-    }
-
-    return posts;
+    throw new Error('Authentication required');
   }
 }
 

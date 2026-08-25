@@ -42,3 +42,50 @@ export const getCompetitorIngestionQueue = () => {
   }
   return _competitorIngestionQueue;
 };
+
+let _strategyQueue: Queue | null = null;
+export const getStrategyQueue = () => {
+  if (!_strategyQueue) {
+    _strategyQueue = new Queue('strategy', { connection: redisConnection });
+  }
+  return _strategyQueue;
+};
+
+export async function enqueueStrategyGeneration(params: {
+  organizationId: string;
+  brandId: string;
+  strategyId: string;
+  userId?: string;
+  source?: string;
+}) {
+  return getStrategyQueue().add('strategy.generate', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000,
+    },
+  });
+}
+
+let _contentPlanQueue: Queue | null = null;
+export const getContentPlanQueue = () => {
+  if (!_contentPlanQueue) {
+    _contentPlanQueue = new Queue('content-plan', { connection: redisConnection });
+  }
+  return _contentPlanQueue;
+};
+
+export async function enqueueContentPlanGeneration(params: {
+  organizationId: string;
+  brandId: string;
+  strategyId: string;
+  userId?: string;
+}) {
+  return getContentPlanQueue().add('content-plan.generate', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000,
+    },
+  });
+}

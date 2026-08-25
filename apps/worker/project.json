@@ -15,6 +15,12 @@
       "options": {
         "command": "npx vitest run apps/worker/src"
       }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsx apps/worker/src/main.ts"
+      }
     }
   }
 }
