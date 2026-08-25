@@ -537,6 +537,8 @@ model Strategy {
   campaignOpportunities Json?
   reasoning             Json?
   sources               Json?
+  dataLimitations       Json?
+  experiments           Json?
 
   approvalStatus        StrategyApprovalStatus    @default(PENDING)
   approvedAt            DateTime?

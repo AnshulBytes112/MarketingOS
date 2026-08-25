@@ -36,6 +36,8 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
   const queryClient = useQueryClient();
   const router = useRouter();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [dismissedPlanIds, setDismissedPlanIds] = useState<string[]>([]);
+  const [hasJustGeneratedCalendar, setHasJustGeneratedCalendar] = useState(false);
 
   // 1. Fetch active strategy
   const { data: activeStrategy, isLoading: isLoadingActive } = useQuery({
@@ -70,7 +72,8 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
   });
 
   // Redirect to calendar if generation completed
-  if (latestContentPlan && latestContentPlan.status === 'COMPLETED') {
+  if (hasJustGeneratedCalendar && latestContentPlan && latestContentPlan.status === 'COMPLETED') {
+    setHasJustGeneratedCalendar(false);
     setTimeout(() => {
       router.push('/calendar');
     }, 1000);
@@ -133,6 +136,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
     mutationFn: () => generateContentCalendar(activeStrategy?.id || ''),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['latest-content-plan', brandId] });
+      setHasJustGeneratedCalendar(true);
       setErrorMsg(null);
     },
     onError: (err: any) => {
@@ -144,7 +148,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
     generateCalendarMutation.mutate();
   };
 
-  const isPlanGenerating = latestContentPlan?.status === 'GENERATING';
+  const isPlanGenerating = (latestContentPlan?.status === 'GENERATING') || generateCalendarMutation.isPending;
   const isGenerating = generatingStrategy?.status === 'GENERATING' || regenerateMutation.isPending;
   const isViewer = userRole === 'VIEWER';
 
@@ -171,6 +175,8 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
   const campaigns = (activeStrategy?.campaignOpportunities as any[]) || [];
   const reasoning = (activeStrategy?.reasoning as any[]) || [];
   const sources = (activeStrategy?.sources as any[]) || [];
+  const dataLimitations = (activeStrategy?.dataLimitations as any) || null;
+  const experiments = (activeStrategy?.experiments as any[]) || [];
 
   return (
     <div className="space-y-6 pb-12">
@@ -212,10 +218,10 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
           {activeStrategy?.approvalStatus === 'APPROVED' && (
             <button
               onClick={handleGenerateCalendar}
-              disabled={isPlanGenerating || generateCalendarMutation.isPending}
+              disabled={isPlanGenerating}
               className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-medium text-white transition-all flex items-center gap-2 shadow-lg shadow-purple-600/30"
             >
-              {isPlanGenerating || generateCalendarMutation.isPending ? (
+              {isPlanGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Sparkles className="w-4 h-4" />
@@ -224,10 +230,9 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
             </button>
           )}
 
-          {/* Regenerate Button */}
           <button
             onClick={handleRegenerate}
-            disabled={isGenerating || isViewer || activeStrategy?.approvalStatus === 'APPROVED'}
+            disabled={isGenerating || isViewer}
             className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-medium text-white transition-all flex items-center gap-2 shadow-lg shadow-purple-600/30"
           >
             {isGenerating ? (
@@ -243,25 +248,25 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
       {/* Error state */}
       {errorMsg && (
         <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 text-rose-300 text-sm flex justify-between items-center">
-          <span>{errorMsg === 'GENERATION_ALREADY_IN_PROGRESS' ? 'A strategy generation job is already running for this brand.' : errorMsg}</span>
+          <span>{errorMsg === 'CALENDAR_GENERATION_ALREADY_IN_PROGRESS' ? 'A calendar generation job is already running.' : (errorMsg === 'GENERATION_ALREADY_IN_PROGRESS' ? 'A strategy generation job is already running for this brand.' : errorMsg)}</span>
           <button onClick={() => setErrorMsg(null)} className="text-xs font-semibold text-rose-400 hover:text-rose-300">Dismiss</button>
         </div>
       )}
 
       {/* Calendar Generation Failed Alert */}
-      {latestContentPlan && latestContentPlan.status === 'FAILED' && (
+      {latestContentPlan && latestContentPlan.status === 'FAILED' && !dismissedPlanIds.includes(latestContentPlan.id) && (
         <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-rose-400" />
             <div>
               <h4 className="text-sm font-semibold text-white">Content Calendar Generation Failed</h4>
               <p className="text-xs text-gray-400 mt-0.5">
-                The AI failed to compile constraints or model outputs to generate the content plan.
+                The AI failed to compile constraints or model outputs to generate the content plan. You may have exceeded your AI quota. Please try again later.
               </p>
             </div>
           </div>
           <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['latest-content-plan', brandId] })}
+            onClick={() => setDismissedPlanIds(prev => [...prev, latestContentPlan.id])}
             className="px-3 py-1 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-medium"
           >
             Dismiss
@@ -341,6 +346,48 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Data Limitations Banner */}
+          {dataLimitations && (
+            <div className="bg-[#12111A]/90 border border-yellow-500/20 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="bg-yellow-500/10 p-2 rounded-xl mt-0.5">
+                <AlertCircle className="w-5 h-5 text-yellow-400" />
+              </div>
+              <div className="space-y-2 flex-1">
+                <h3 className="text-sm font-semibold text-yellow-400">Strategy Data Limitations</h3>
+                <p className="text-xs text-gray-300 leading-relaxed max-w-3xl">
+                  This strategy was generated with incomplete context. Outcomes rely on the AI's best extrapolations based on the data provided below.
+                </p>
+                <div className="flex flex-wrap gap-4 pt-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Historical:</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${dataLimitations.historicalPerformance === 'UNAVAILABLE' ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                      {dataLimitations.historicalPerformance}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Competitor:</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${dataLimitations.competitorData === 'UNAVAILABLE' ? 'bg-rose-500/10 text-rose-400' : dataLimitations.competitorData === 'WEBSITE_ONLY' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                      {dataLimitations.competitorData}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Audience:</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${dataLimitations.audienceData === 'UNAVAILABLE' ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                      {dataLimitations.audienceData}
+                    </span>
+                  </div>
+                </div>
+                {dataLimitations.notes && dataLimitations.notes.length > 0 && (
+                  <ul className="list-disc pl-4 pt-2 text-[11px] text-gray-400 space-y-1">
+                    {dataLimitations.notes.map((note: string, idx: number) => (
+                      <li key={idx}>{note}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Goal & Audience row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Goal Card */}
@@ -351,17 +398,24 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
               </div>
               <div className="space-y-3 pt-2">
                 <div>
-                  <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Primary Goal</h4>
-                  <p className="text-xs text-gray-200 bg-white/5 p-3 rounded-xl leading-relaxed">{goal?.primaryGoal || 'N/A'}</p>
+                  <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Target & Timeframe</h4>
+                  <div className="flex gap-2">
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-md font-bold">{goal?.target || 'N/A'}</span>
+                    <span className="px-2 py-1 bg-gray-500/20 text-gray-300 text-xs rounded-md font-medium">{goal?.timeframe || 'N/A'}</span>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Business Outcome</h4>
+                  <p className="text-xs text-emerald-300 font-medium">{goal?.businessOutcome || 'N/A'}</p>
                 </div>
                 <div>
                   <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Measurable Objective</h4>
                   <p className="text-xs text-gray-200 bg-white/5 p-3 rounded-xl leading-relaxed">{goal?.measurableObjective || 'N/A'}</p>
                 </div>
                 <div>
-                  <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Success Metrics</h4>
+                  <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Leading Indicators</h4>
                   <div className="flex flex-wrap gap-2">
-                    {((goal?.successMetrics as string[]) || []).map((m, i) => (
+                    {((goal?.leadingIndicators as string[]) || []).map((m, i) => (
                       <span key={i} className="px-3 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs rounded-full font-medium">
                         {m}
                       </span>
@@ -382,24 +436,15 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                   <div>
                     <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Primary Segment</h4>
                     <p className="text-xs text-white font-medium">{audience?.primarySegment || 'N/A'}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{audience?.demographics}</p>
                   </div>
                   <div>
-                    <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Secondary Segments</h4>
-                    <p className="text-xs text-gray-300">
-                      {((audience?.secondarySegments as string[]) || []).join(', ') || 'N/A'}
-                    </p>
+                    <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Job To Be Done</h4>
+                    <p className="text-xs text-purple-300 italic">"{audience?.jobToBeDone || 'N/A'}"</p>
                   </div>
                 </div>
 
                 <div className="border-t border-white/5 pt-3 space-y-2">
-                  <div>
-                    <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Segment Needs</h4>
-                    <ul className="list-disc pl-4 text-xs text-gray-300 space-y-1">
-                      {((audience?.segmentNeeds as string[]) || []).map((n, i) => (
-                        <li key={i}>{n}</li>
-                      ))}
-                    </ul>
-                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                     <div>
                       <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Pain Points</h4>
@@ -434,14 +479,22 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 {contentPillars.map((p: any, i: number) => (
                   <div key={i} className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-start gap-2">
                       <span className="font-semibold text-white text-xs">{p.name}</span>
-                      <span className="text-[10px] bg-purple-500/10 border border-purple-500/20 text-purple-300 px-2 py-0.5 rounded-md font-semibold">
-                        Weight: {p.recommendedWeight}%
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${p.priority === 'HIGH' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : p.priority === 'LOW' ? 'bg-gray-500/10 text-gray-400 border border-gray-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}>
+                          {p.priority || 'MEDIUM'}
+                        </span>
+                        <span className="text-[10px] bg-purple-500/10 border border-purple-500/20 text-purple-300 px-2 py-0.5 rounded-md font-semibold">
+                          {p.recommendedWeight}%
+                        </span>
+                      </div>
                     </div>
                     <p className="text-[11px] text-gray-300 leading-relaxed">{p.description}</p>
-                    <p className="text-[10px] text-gray-400 italic">Objective: {p.objective}</p>
+                    <div className="pt-2 border-t border-white/5 mt-2 space-y-1">
+                      <p className="text-[10px] text-emerald-400 italic">Outcome: {p.expectedOutcome}</p>
+                      <p className="text-[10px] text-gray-400">Stages: {((p.targetFunnelStages as string[]) || []).join(', ')}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -457,13 +510,16 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                 {contentMix.map((mix: any, i: number) => (
                   <div key={i} className="space-y-1">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-gray-300">{mix.category}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-300">{mix.category}</span>
+                        <span className="text-[9px] bg-white/10 text-gray-400 px-1 rounded">{mix.funnelStage}</span>
+                      </div>
                       <span className="font-semibold text-purple-400">{mix.percentage}%</span>
                     </div>
                     <div className="w-full bg-[#1C1A2B] h-2 rounded-full overflow-hidden">
                       <div className="bg-purple-600 h-full rounded-full" style={{ width: `${mix.percentage}%` }} />
                     </div>
-                    <p className="text-[10px] text-gray-400 italic leading-snug">{mix.rationale}</p>
+                    <p className="text-[10px] text-emerald-400 italic leading-snug">{mix.expectedOutcome}</p>
                   </div>
                 ))}
               </div>
@@ -494,6 +550,10 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                         <p className="text-xs text-gray-200 mt-0.5 leading-relaxed">{stageData?.objective || 'N/A'}</p>
                       </div>
                       <div>
+                        <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Audience Intent</h4>
+                        <p className="text-xs text-purple-300 mt-0.5 leading-relaxed italic">"{stageData?.audienceIntent || 'N/A'}"</p>
+                      </div>
+                      <div>
                         <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Recommended Formats</h4>
                         <div className="flex flex-wrap gap-1">
                           {((stageData?.contentTypes as string[]) || []).map((t, i) => (
@@ -502,6 +562,10 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                             </span>
                           ))}
                         </div>
+                      </div>
+                      <div className="pt-2 border-t border-white/5 mt-2">
+                        <p className="text-[10px] text-gray-400"><span className="font-semibold text-emerald-400">Next Action: </span>{stageData?.desiredNextAction}</p>
+                        <p className="text-[10px] text-gray-400"><span className="font-semibold text-rose-400">CTA: </span>{stageData?.recommendedCTA}</p>
                       </div>
                     </div>
                   </div>
@@ -532,7 +596,11 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                   {platforms.map((p: any, i: number) => (
                     <tr key={i} className="hover:bg-white/5 transition-colors">
                       <td className="py-4 px-4 font-bold text-white">{p.platform}</td>
-                      <td className="py-4 px-4 text-gray-300 max-w-xs truncate" title={p.objective}>{p.objective}</td>
+                      <td className="py-4 px-4">
+                        <p className="text-gray-300 max-w-xs truncate" title={p.objective}>{p.objective}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">Role: {p.role}</p>
+                        <p className="text-[10px] text-emerald-400 mt-0.5">KPI: {p.primaryKPI}</p>
+                      </td>
                       <td className="py-4 px-4 text-gray-300">{p.audienceFit}</td>
                       <td className="py-4 px-4">
                         <div className="flex flex-wrap gap-1">
@@ -607,14 +675,27 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                     </span>
                   </div>
                   <p className="text-xs text-gray-300 leading-relaxed">{c.objective}</p>
-                  <div className="text-[11px] text-gray-400">
-                    <span className="font-semibold">Audience: </span>{c.audience}
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="text-[11px] text-gray-400">
+                      <span className="font-semibold text-gray-300">Audience: </span>{c.audience}
+                    </div>
+                    <div className="text-[11px] text-gray-400">
+                      <span className="font-semibold text-gray-300">Duration: </span>{c.duration}
+                    </div>
                   </div>
                   <div className="text-[11px] text-gray-400 flex flex-wrap gap-2 pt-1">
-                    <span className="font-semibold">Platforms:</span>
+                    <span className="font-semibold text-gray-300">Platforms:</span>
                     {((c.suggestedPlatforms as string[]) || []).map((p, idx) => (
                       <span key={idx} className="bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white">{p}</span>
                     ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2 border-t border-white/5 pt-2">
+                    <div className="text-[10px] text-emerald-400">
+                      <span className="font-semibold">Metric: </span>{c.successMetric}
+                    </div>
+                    <div className="text-[10px] text-rose-400">
+                      <span className="font-semibold">CTA: </span>{c.cta}
+                    </div>
                   </div>
                   <div className="text-[11px] text-gray-400 leading-relaxed pt-2 border-t border-white/5 italic">
                     <span className="font-semibold not-italic">Rationale: </span>{c.rationale}
@@ -623,6 +704,40 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
               ))}
             </div>
           </div>
+
+          {/* Proposed Experiments */}
+          {experiments && experiments.length > 0 && (
+            <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                <h3 className="text-base font-semibold text-white">Proposed Experiments & Tests</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                {experiments.map((exp: any, i: number) => (
+                  <div key={i} className="p-5 bg-white/5 border border-white/5 rounded-xl space-y-3 relative overflow-hidden group hover:border-purple-500/30 transition-all">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl group-hover:bg-purple-500/10 transition-colors" />
+                    <div className="flex justify-between items-start gap-2 relative">
+                      <span className="font-bold text-white text-sm">{exp.hypothesis}</span>
+                      <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-semibold whitespace-nowrap">
+                        {exp.testVariable}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
+                      <div className="text-gray-400">
+                        <span className="font-semibold text-emerald-400">Metric: </span>{exp.metricToMeasure}
+                      </div>
+                      <div className="text-gray-400">
+                        <span className="font-semibold text-gray-300">Duration: </span>{exp.duration}
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-gray-400 leading-relaxed pt-2 border-t border-white/5 italic">
+                      <span className="font-semibold not-italic">Expected Insight: </span>{exp.expectedInsight}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* AI Reasoning & Sources */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -644,8 +759,12 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                     </div>
                     <p className="text-xs text-white leading-relaxed"><span className="font-semibold text-gray-400">Observation: </span>{r.observation}</p>
                     <p className="text-xs text-rose-300 leading-relaxed"><span className="font-semibold text-gray-400">Evidence: </span>{r.evidence}</p>
+                    <p className="text-xs text-yellow-300 leading-relaxed"><span className="font-semibold text-gray-400">Implication: </span>{r.implication}</p>
                     <p className="text-xs text-gray-300 leading-relaxed"><span className="font-semibold text-gray-400">Reasoning: </span>{r.reasoning}</p>
-                    <p className="text-xs text-emerald-300 leading-relaxed"><span className="font-semibold text-gray-400">Recommendation: </span>{r.recommendation}</p>
+                    <div className="pt-2 border-t border-white/5 mt-2 space-y-1">
+                      <p className="text-xs text-emerald-300 leading-relaxed"><span className="font-semibold text-gray-400">Decision: </span>{r.decision}</p>
+                      <p className="text-xs text-emerald-400/80 leading-relaxed italic"><span className="font-semibold text-gray-400 not-italic">Recommendation: </span>{r.recommendation}</p>
+                    </div>
                   </div>
                 ))}
               </div>

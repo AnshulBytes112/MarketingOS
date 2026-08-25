@@ -1,6 +1,63 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
 
+function zodToCleanJsonSchema(schema: any): any {
+  if (!schema || !schema._def) {
+    return {};
+  }
+  const type = schema._def.type;
+  let jsonSchema: any = {};
+  if (schema.description) {
+    jsonSchema.description = schema.description;
+  }
+
+  if (type === 'string') {
+    jsonSchema.type = 'string';
+  } else if (type === 'number') {
+    jsonSchema.type = 'number';
+  } else if (type === 'boolean') {
+    jsonSchema.type = 'boolean';
+  } else if (type === 'enum') {
+    jsonSchema.type = 'string';
+    if (schema._def.values) {
+      jsonSchema.enum = schema._def.values;
+    }
+  } else if (type === 'object') {
+    jsonSchema.type = 'object';
+    jsonSchema.properties = {};
+    jsonSchema.required = [];
+    const shape = schema.shape || schema._def.shape || {};
+    for (const key of Object.keys(shape)) {
+      const fieldSchema = shape[key];
+      jsonSchema.properties[key] = zodToCleanJsonSchema(fieldSchema);
+      
+      const isOptional = fieldSchema._def.type === 'optional' || 
+                         fieldSchema._def.typeName === 'ZodOptional' ||
+                         fieldSchema.safeParse === undefined;
+      if (!isOptional) {
+        jsonSchema.required.push(key);
+      }
+    }
+    if (jsonSchema.required.length === 0) {
+      delete jsonSchema.required;
+    }
+  } else if (type === 'array') {
+    jsonSchema.type = 'array';
+    const element = schema.element || schema._def.element;
+    if (element) {
+      jsonSchema.items = zodToCleanJsonSchema(element);
+    }
+  } else if (type === 'optional') {
+    const innerSchema = schema._def.innerType || (schema.unwrap ? schema.unwrap() : null);
+    if (innerSchema) {
+      jsonSchema = zodToCleanJsonSchema(innerSchema);
+    }
+  } else {
+    jsonSchema.type = 'string';
+  }
+  return jsonSchema;
+}
+
 export interface AIUsageMetrics {
   inputTokens: number;
   outputTokens: number;
@@ -37,6 +94,10 @@ export class ModelGateway {
     let attempts = 0;
     const maxAttempts = 5;
 
+    // Auto-inject clean flat JSON Schema into the system prompt to prevent hallucinations
+    const jsonSchema = zodToCleanJsonSchema(schema);
+    const enrichedSystemPrompt = `${systemPrompt}\n\nCRITICAL INSTRUCTION:\nYou must respond with a SINGLE valid JSON object that exactly matches the following JSON Schema. Do not wrap it in markdown block quotes if possible, but if you do, ensure it is only valid JSON inside.\n\nJSON SCHEMA:\n${JSON.stringify(jsonSchema, null, 2)}`;
+
     // Use environment variables or modelOverride
     const provider = process.env.AI_PROVIDER;
     const model = process.env.AI_MODEL || 'gpt-4o-mini';
@@ -64,7 +125,7 @@ export class ModelGateway {
           response = await this.openai.chat.completions.create({
             model,
             messages: [
-              { role: 'system', content: systemPrompt },
+              { role: 'system', content: enrichedSystemPrompt },
               { role: 'user', content: userPrompt }
             ]
           }, { signal: controller.signal });
@@ -83,16 +144,36 @@ export class ModelGateway {
         const match = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
         if (match) {
           rawContent = match[1].trim();
-        } else {
-          // Fallback: extract substring from first { to last }
-          const firstBrace = rawContent.indexOf('{');
-          const lastBrace = rawContent.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            rawContent = rawContent.substring(firstBrace, lastBrace + 1);
-          }
         }
 
-        let rawData = JSON.parse(rawContent);
+        // Always apply substring extraction to ensure we only parse the JSON object/array
+        const firstBrace = rawContent.indexOf('{');
+        const lastBrace = rawContent.lastIndexOf('}');
+        const firstBracket = rawContent.indexOf('[');
+        const lastBracket = rawContent.lastIndexOf(']');
+        
+        let startIdx = firstBrace;
+        if (firstBrace === -1) startIdx = firstBracket;
+        else if (firstBracket !== -1 && firstBracket < firstBrace) startIdx = firstBracket;
+        
+        let endIdx = lastBrace;
+        if (lastBrace === -1) endIdx = lastBracket;
+        else if (lastBracket !== -1 && lastBracket > lastBrace) endIdx = lastBracket;
+        
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          rawContent = rawContent.substring(startIdx, endIdx + 1);
+        }
+
+        // Remove trailing commas before closing braces/brackets (often caused by LLMs)
+        rawContent = rawContent.replace(/,\s*([}\]])/g, '$1');
+
+        let rawData;
+        try {
+          rawData = JSON.parse(rawContent);
+        } catch (e: any) {
+          throw new Error(`JSON parse error: ${e.message} (Raw: ${rawContent.substring(0, 50)}...)`);
+        }
+
         if (!rawData) {
           throw new Error('Failed to parse structured output natively');
         }
@@ -106,9 +187,7 @@ export class ModelGateway {
           }
         }
 
-        // If the AI wrapped the response in a single top-level key (e.g. { strategy: {...} })
-        // and that single value is an object (not an array), unwrap it automatically.
-        // This handles models that hallucinate a wrapper like { "strategy": { goal: ... } }.
+        // If the AI wrapped the response in a single top-level key
         if (
           !Array.isArray(rawData) &&
           typeof rawData === 'object' &&
@@ -119,19 +198,30 @@ export class ModelGateway {
           const schemaKeys = new Set(Object.keys((schema as any).shape));
           const dataKeys = Object.keys(rawData);
           const topLevelMatchCount = dataKeys.filter(k => schemaKeys.has(k)).length;
-          // If NONE of the top-level keys match the schema, but there is exactly one key whose value is an object,
-          // assume it is a wrapper and unwrap it.
+          
           if (topLevelMatchCount === 0 && dataKeys.length === 1) {
             const wrappedValue = rawData[dataKeys[0]];
-            if (typeof wrappedValue === 'object' && wrappedValue !== null && !Array.isArray(wrappedValue)) {
+            
+            if (Array.isArray(wrappedValue) && schemaKeys.size === 1) {
+               // The AI wrapped an array inside a generic key (e.g. { "contentPlan": [...] })
+               // and the schema expects exactly one key (e.g. { "items": [...] }).
+               const schemaKey = Array.from(schemaKeys)[0];
+               console.log(`[${requestId}] AI returned wrapped array under key "${dataKeys[0]}". Unwrapping into "${schemaKey}".`);
+               rawData = { [schemaKey]: wrappedValue };
+            } else if (typeof wrappedValue === 'object' && wrappedValue !== null && !Array.isArray(wrappedValue)) {
               console.log(`[${requestId}] AI returned wrapped object under key "${dataKeys[0]}". Unwrapping automatically.`);
               rawData = wrappedValue;
             }
           }
         }
-        
         // Strictly validate and coerce using the provided Zod schema
-        const data = schema.parse(rawData);
+        let data;
+        try {
+          data = schema.parse(rawData);
+        } catch (e: any) {
+          console.error(`[${requestId}] Zod Validation failed. Raw parsed data:`, JSON.stringify(rawData, null, 2));
+          throw e;
+        }
 
         const latencyMs = Date.now() - startTime;
         const usage = response.usage;
@@ -163,6 +253,9 @@ export class ModelGateway {
       } catch (error: any) {
         attempts++;
         console.error(`[${requestId}] Generation attempt ${attempts} failed:`, error.message);
+        if (error.errors) {
+          console.error(`[${requestId}] Zod Errors:`, JSON.stringify(error.errors, null, 2));
+        }
         
         // Check for permanent client errors (400, 401, 403, 404)
         const status = error.status || error.statusCode || error.code;

@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq';
 import { prisma } from '@abge/database';
 import { ModelGateway } from './ai/gateway';
-import { StrategySchema } from './strategy.schema';
+import { NewStrategySchema } from './strategy.schema';
 import { randomUUID } from 'crypto';
 
 const gateway = new ModelGateway();
@@ -73,6 +73,42 @@ export const strategyWorker = new Worker(
         where: { brandId, organizationId },
       });
 
+      // Compute deterministic data limitations
+      let competitorDataAvailability: 'UNAVAILABLE' | 'WEBSITE_ONLY' | 'FULL' = 'UNAVAILABLE';
+      if (competitorAccounts.length > 0) {
+        const hasOfficial = competitorAccounts.some((a) => a.sourceType === 'OFFICIAL_API' && a.syncStatus === 'COMPLETED');
+        const hasCompletedSync = competitorAccounts.some((a) => a.syncStatus === 'COMPLETED');
+        if (hasOfficial) {
+          competitorDataAvailability = 'FULL';
+        } else if (hasCompletedSync) {
+          competitorDataAvailability = 'WEBSITE_ONLY';
+        }
+      }
+
+      const dataLimitations = {
+        historicalPerformance: 'UNAVAILABLE',
+        competitorData: competitorDataAvailability,
+        audienceData: activeDna ? 'VALIDATED' : 'UNAVAILABLE',
+        notes: [
+          'Historical performance is completely UNAVAILABLE because no analytics integrations are connected.',
+          competitorDataAvailability === 'UNAVAILABLE' 
+            ? 'Competitor intelligence is completely UNAVAILABLE.' 
+            : competitorDataAvailability === 'WEBSITE_ONLY'
+              ? 'Competitor analysis is based solely on publicly available website/social scrape content (PUBLIC_WEB).'
+              : 'Competitor analysis utilizes official APIs and ingestion sources.',
+        ]
+      };
+
+      // Maintain valid source IDs for anti-hallucination validation
+      const validSourceIds = new Set([
+        activeDna.id,
+        brand.id,
+        ...products.map((p) => p.id),
+        ...competitorAccounts.map((a) => a.id),
+        ...competitorPosts.map((p) => p.id),
+        ...aiRecommendations.map((r) => r.id),
+      ]);
+
       // Build context
       const brandDnaContext = {
         id: activeDna.id,
@@ -128,18 +164,26 @@ export const strategyWorker = new Worker(
         recommendation: r.recommendation,
       }));
 
-      const systemPrompt = `You are a world-class Marketing Strategist AI. Generate a comprehensive marketing Strategy based ONLY on the provided inputs.
-You MUST trace all observations, decisions, and recommendations to the actual database entity IDs provided in the prompt.
-Do not fabricate or invent IDs. Only use the IDs provided.
+      const systemPrompt = `You are a world-class Marketing Strategist AI. Generate an actionable, evidence-backed strategy.
+      
+LANGUAGE RULES:
+- Use simple, concise, active language (e.g., "Build trust through evidence-based content").
+- Avoid generic AI-sounding prose and excessive marketing jargon.
+- Write as a senior strategist speaking directly to a marketing manager.
 
-CRITICAL OUTPUT RULES:
-- Return a SINGLE flat JSON object. Do NOT wrap it in any parent key (e.g. do NOT return {"strategy": {...}} or {"marketing_strategy": {...}}).
-- The JSON object must start directly with these top-level keys: goal, audienceSegments, contentPillars, contentMix, funnelMapping, platformStrategy, formats, cadence, themes, campaignOpportunities, reasoning, sources.
-- Do NOT add any extra keys or wrapper objects around the response.
-- Under "sources", return an ARRAY of objects each with keys: type, id, label. Do NOT put strings in the sources array.
-- Under "reasoning", each item must have: section, observation, evidence, reasoning, recommendation, sources (array of string IDs).
-- Ensure that the allocations in "contentMix" sum to exactly 100%.
-- Ensure that the allocations in "funnelMapping" (TOFU, MOFU, BOFU recommendedAllocation) sum to exactly 100%.`;
+ANTI-HALLUCINATION RULES (CRITICAL):
+- Do NOT invent or estimate baseline performance numbers, traffic, or engagement rates. If it's not provided, explicitly state it is unavailable.
+- Do NOT fabricate source IDs. Every source ID in your response MUST exactly match the entity IDs provided in the context.
+- Distinguish clearly between observed historical facts and proposed strategic hypotheses.
+
+OUTPUT STRUCTURE RULES:
+- Return a SINGLE flat JSON object conforming exactly to the schema.
+- Data Limitations: You must return the EXACT dataLimitations object provided in the User Prompt.
+- Content Mix: Allocations must sum exactly to 100%.
+- Funnel Mapping: TOFU, MOFU, and BOFU recommendedAllocations must sum exactly to 100%.
+- Platforms: Do not include a platform with 0% allocation unless its 'role' explicitly states it is 'Not recommended'.
+- Experiments: Propose hypotheses (not guaranteed results) with metrics and test variables.
+- Content Engine Contract: Ensure content pillars, themes, and formats are directly actionable by a downstream content generator.`;
 
       const userPrompt = `
 ACTIVE Brand DNA:
@@ -157,15 +201,15 @@ ${competitorContext ? JSON.stringify(competitorContext, null, 2) : 'Competitor i
 AI Recommendations:
 ${JSON.stringify(recommendationsContext, null, 2)}
 
-Historical Performance:
-Historical performance is completely UNAVAILABLE. Set historicalPerformanceAvailable = false.
+DATA LIMITATIONS (Include this EXACT object in your JSON output):
+${JSON.stringify(dataLimitations, null, 2)}
 `;
 
       const result = await gateway.generateStructured(
         null,
         systemPrompt,
         userPrompt,
-        StrategySchema,
+        NewStrategySchema,
         'Strategy',
         'Structured marketing strategy data',
         requestId
@@ -202,6 +246,20 @@ Historical performance is completely UNAVAILABLE. Set historicalPerformanceAvail
       if (Math.abs(funnelSum - 100) > 0.01) {
         throw new Error(`Funnel mapping allocations must sum to 100%, got ${funnelSum}%`);
       }
+      
+      // Validate anti-hallucination source IDs
+      for (const src of result.data.sources) {
+        if (!validSourceIds.has(src.id)) {
+          throw new Error(`Fabricated source ID detected: ${src.id} (${src.label}). Only use provided entity IDs.`);
+        }
+      }
+      for (const item of result.data.reasoning) {
+        for (const srcId of item.sources) {
+          if (!result.data.sources.some((s: any) => s.id === srcId)) {
+            throw new Error(`Reasoning section "${item.section}" references source ID ${srcId} which is not present in the sources list.`);
+          }
+        }
+      }
 
       // Save complete inside a transaction
       await prisma.$transaction(async (tx) => {
@@ -236,6 +294,8 @@ Historical performance is completely UNAVAILABLE. Set historicalPerformanceAvail
             campaignOpportunities: result.data.campaignOpportunities,
             reasoning: result.data.reasoning,
             sources: result.data.sources,
+            dataLimitations: result.data.dataLimitations,
+            experiments: result.data.experiments,
           },
         });
       });

@@ -93,18 +93,6 @@ export async function regenerateStrategy(brandId: string) {
     return { success: false, error: 'GENERATION_ALREADY_IN_PROGRESS' };
   }
 
-  // Reject if the active strategy is APPROVED/LOCKED
-  const activeApproved = await prisma.strategy.findFirst({
-    where: {
-      brandId,
-      organizationId: session.organizationId,
-      approvalStatus: 'APPROVED',
-    },
-  });
-
-  if (activeApproved) {
-    return { success: false, error: 'STRATEGY_LOCKED' };
-  }
 
   // Determine next version number
   const versionAggregation = await prisma.strategy.aggregate({

@@ -3,7 +3,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/ThemeProvider";
 import { Button } from '@abge/ui/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@abge/ui/components/ui/card';
 import { Input } from '@abge/ui/components/ui/input';
@@ -21,7 +21,7 @@ import { EmptyState } from '@abge/ui/components/ui/empty-state';
 import { Search, Moon, Sun, ArrowRight, FolderOpen, Check } from "lucide-react";
 
 export default function DesignSystemPage() {
-  const { setTheme, theme } = useTheme();
+  const { toggle, theme } = useTheme();
 
   return (
     <div className="min-h-screen bg-background text-foreground p-8 font-sans pb-32">
@@ -31,7 +31,7 @@ export default function DesignSystemPage() {
             <h1 className="text-4xl font-bold tracking-tight mb-2">Design System</h1>
             <p className="text-muted-foreground">Component library and tokens for the AI Brand Growth Engine.</p>
           </div>
-          <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+          <Button variant="outline" size="icon" onClick={toggle}>
             <Sun className="h-5 w-5 dark:hidden" />
             <Moon className="h-5 w-5 hidden dark:block" />
             <span className="sr-only">Toggle theme</span>

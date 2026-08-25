@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Brain, Users, TrendingUp, Lightbulb,
   Sparkles, Megaphone, Send, BarChart3, Search, MessageSquare,
-  Settings, Zap, ChevronRight, LogOut
+  Settings, Zap, ChevronRight, LogOut, Calendar
 } from "lucide-react";
 
 const nav = [
@@ -14,6 +14,7 @@ const nav = [
   { label: "Competitor Intel",    href: "/competitors",icon: Users },
   { label: "Market Intelligence", href: "/market",     icon: TrendingUp },
   { label: "Strategy Engine",     href: "/strategy",   icon: Lightbulb },
+  { label: "Content Calendar",    href: "/calendar",   icon: Calendar },
   { label: "Content Engine",      href: "/content",    icon: Sparkles },
   { label: "Campaign Engine",     href: "/campaigns",  icon: Megaphone },
   { label: "Publishing",          href: "/publishing", icon: Send },
@@ -99,7 +100,7 @@ export function Sidebar({
       <nav style={{ flex: 1, padding: "0.75rem 0.625rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
         <div className="section-label" style={{ padding: "0.25rem 0.75rem 0.5rem" }}>Engines</div>
 
-        {nav.slice(0, 11).map(({ label, href, icon: Icon }) => {
+        {nav.slice(0, 12).map(({ label, href, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href} className={`sidebar-item ${active ? "active" : ""}`}>
@@ -115,7 +116,7 @@ export function Sidebar({
         <div style={{ flex: 1 }} />
         <div className="section-label" style={{ padding: "0.75rem 0.75rem 0.5rem" }}>System</div>
 
-        {nav.slice(11).map(({ label, href, icon: Icon }) => {
+        {nav.slice(12).map(({ label, href, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href} className={`sidebar-item ${active ? "active" : ""}`}>
