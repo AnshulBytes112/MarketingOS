@@ -17,6 +17,7 @@ export async function POST(request: Request) {
       organizationId: session.organizationId,
     });
 
+    const body = await request.json();
     const { brandId, filename, replaceAssetId, fileSize } = body;
     let contentType = body.contentType;
     if (!contentType) {
