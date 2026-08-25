@@ -11,47 +11,47 @@
    LIGHT MODE — DESIGN SYSTEM TOKENS
 ══════════════════════════════════════════ */
 :root {
-  /* Shadcn standard semantics */
-  --background: oklch(0.97 0 0); /* #f5f7fa */
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.488 0.243 264.376); /* #7c3aed */
+  /* Shadcn standard semantics - Premium Warm Cremish-Yellow Palette */
+  --background: oklch(0.975 0.015 85); /* Premium warm cream/alabaster background */
+  --foreground: oklch(0.20 0.01 80); /* Deep charcoal-brown/warm-charcoal */
+  --card: oklch(1 0.005 85); /* Alabaster warm-white */
+  --card-foreground: oklch(0.20 0.01 80);
+  --popover: oklch(1 0.005 85);
+  --popover-foreground: oklch(0.20 0.01 80);
+  --primary: oklch(0.488 0.243 264.376); /* Keep royal purple primary accent */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.95 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.95 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325); /* #ef4444 approx */
+  --secondary: oklch(0.95 0.015 85);
+  --secondary-foreground: oklch(0.25 0.015 80);
+  --muted: oklch(0.95 0.015 85);
+  --muted-foreground: oklch(0.48 0.015 80);
+  --accent: oklch(0.94 0.02 85);
+  --accent-foreground: oklch(0.25 0.015 80);
+  --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.91 0.015 85); /* Soft warm-sand border */
+  --input: oklch(0.91 0.015 85);
   --ring: oklch(0.488 0.243 264.376);
-  --radius: 0.625rem; /* 10px */
+  --radius: 0.625rem;
 
-  /* Mock UI Legacy/Custom tokens to preserve styling */
-  --bg-base: #f5f7fa;
-  --bg-sidebar: rgba(255,255,255,0.98);
-  --bg-topbar: rgba(255,255,255,0.92);
-  --bg-solid: #ffffff;
-  --surface: rgba(0,0,0,0.025);
-  --surface-2: rgba(0,0,0,0.04);
-  --surface-3: rgba(0,0,0,0.06);
-  --surface-hover: rgba(0,0,0,0.05);
-  --surface-hover-2: rgba(0,0,0,0.08);
-  --border-subtle: rgba(0,0,0,0.05);
-  --border-medium: rgba(0,0,0,0.1);
-  --border-strong: rgba(0,0,0,0.14);
-  --text-primary: #0f172a;
-  --text-soft: #1e293b;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --card-shadow: 0 1px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.05);
-  --accent-glow: rgba(124,58,237,0.1);
+  /* Mock UI Legacy/Custom tokens to preserve styling - Warm Cream */
+  --bg-base: #FAF8F0; /* Premium warm-cream base */
+  --bg-sidebar: rgba(255, 255, 255, 0.98);
+  --bg-topbar: rgba(250, 248, 240, 0.92);
+  --bg-solid: #FFFFFF;
+  --surface: rgba(139, 137, 120, 0.06); /* Soft warm-sand surface */
+  --surface-2: rgba(139, 137, 120, 0.09);
+  --surface-3: rgba(139, 137, 120, 0.13);
+  --surface-hover: rgba(139, 137, 120, 0.08);
+  --surface-hover-2: rgba(139, 137, 120, 0.12);
+  --border-subtle: rgba(139, 137, 120, 0.08);
+  --border-medium: rgba(139, 137, 120, 0.15);
+  --border-strong: rgba(139, 137, 120, 0.22);
+  --text-primary: #1E1F1A; /* Deep warm-charcoal */
+  --text-soft: #3A3B34;
+  --text-secondary: #5C5D54; /* Muted olive-gray/brown */
+  --text-muted: #8E9084;
+  --card-shadow: 0 4px 20px -2px rgba(139, 137, 120, 0.08), 0 2px 8px -1px rgba(139, 137, 120, 0.04), 0 0 0 1px rgba(139, 137, 120, 0.06);
+  --accent-glow: rgba(124, 58, 237, 0.08);
 }
 
 /* ══════════════════════════════════════════
@@ -271,4 +271,105 @@
 .sidebar-item:hover .sidebar-icon,
 .sidebar-item.active .sidebar-icon {
   color: #7c3aed; /* purple brand accent */
+}
+
+/* ══════════════════════════════════════════
+   SMART THEME OVERRIDES FOR LIGHT MODE
+   (Adapts hardcoded dark colors automatically)
+   ══════════════════════════════════════════ */
+html:not(.dark) [class*="bg-[#12111A]"] {
+  background-color: var(--bg-solid) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--card-shadow) !important;
+}
+
+html:not(.dark) [class*="bg-[#12111A]"] .text-white,
+html:not(.dark) [class*="bg-[#12111A]"] h3.text-white,
+html:not(.dark) [class*="bg-[#12111A]"] h4.text-white,
+html:not(.dark) [class*="bg-[#12111A]"] p.text-white,
+html:not(.dark) [class*="bg-[#12111A]"] span.text-white,
+html:not(.dark) [class*="bg-[#12111A]"] div.text-white {
+  color: var(--text-primary) !important;
+}
+
+html:not(.dark) [class*="bg-[#12111A]"] .text-gray-100,
+html:not(.dark) [class*="bg-[#12111A]"] .text-slate-100,
+html:not(.dark) [class*="bg-[#12111A]"] .text-zinc-100 {
+  color: var(--text-primary) !important;
+}
+
+html:not(.dark) [class*="bg-[#12111A]"] .text-gray-200,
+html:not(.dark) [class*="bg-[#12111A]"] .text-slate-200,
+html:not(.dark) [class*="bg-[#12111A]"] .text-zinc-200 {
+  color: var(--text-soft) !important;
+}
+
+html:not(.dark) [class*="bg-[#12111A]"] .text-gray-300,
+html:not(.dark) [class*="bg-[#12111A]"] .text-slate-300,
+html:not(.dark) [class*="bg-[#12111A]"] .text-zinc-300 {
+  color: var(--text-secondary) !important;
+}
+
+html:not(.dark) [class*="bg-[#12111A]"] .text-gray-400,
+html:not(.dark) [class*="bg-[#12111A]"] .text-slate-400,
+html:not(.dark) [class*="bg-[#12111A]"] .text-zinc-400 {
+  color: var(--text-muted) !important;
+}
+
+html:not(.dark) [class*="bg-[#12111A]"] .bg-white\/5,
+html:not(.dark) [class*="bg-[#12111A]"] .bg-white\/10 {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+html:not(.dark) [class*="bg-[#12111A]"] .border-white\/5,
+html:not(.dark) [class*="bg-[#12111A]"] .border-white\/10 {
+  border-color: var(--border) !important;
+}
+
+html:not(.dark) [class*="bg-[#12111A]"] .text-purple-300 {
+  color: #6d28d9 !important;
+}
+html:not(.dark) [class*="bg-[#12111A]"] .bg-purple-500\/10 {
+  background-color: rgba(124, 58, 237, 0.08) !important;
+}
+html:not(.dark) [class*="bg-[#12111A]"] .bg-purple-500\/20 {
+  background-color: rgba(124, 58, 237, 0.15) !important;
+}
+html:not(.dark) [class*="bg-[#12111A]"] .text-emerald-300 {
+  color: #047857 !important;
+}
+html:not(.dark) [class*="bg-[#12111A]"] .text-emerald-400 {
+  color: #047857 !important;
+}
+html:not(.dark) [class*="bg-[#12111A]"] .text-amber-300 {
+  color: #b45309 !important;
+}
+html:not(.dark) [class*="bg-[#12111A]"] .text-blue-300 {
+  color: #1d4ed8 !important;
+}
+html:not(.dark) [class*="bg-[#12111A]"] .text-indigo-300 {
+  color: #4338ca !important;
+}
+html:not(.dark) [class*="bg-[#12111A]"] .text-pink-300 {
+  color: #be185d !important;
+}
+
+/* Overrides for nested boxes inside cards (#181624) */
+html:not(.dark) [class*="bg-[#181624]"] {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+html:not(.dark) [class*="bg-[#181624]"] .text-gray-200,
+html:not(.dark) [class*="bg-[#181624]"] .text-slate-200,
+html:not(.dark) [class*="bg-[#181624]"] .text-zinc-200 {
+  color: var(--text-soft) !important;
+}
+
+/* Overrides for progress bar tracks and placeholders (#1C1A2B) */
+html:not(.dark) [class*="bg-[#1C1A2B]"] {
+  background-color: var(--surface-2) !important;
 }
