@@ -6,10 +6,11 @@ import CompetitorDetailClient from './competitor-detail-client';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function CompetitorDetailPage({ params }: PageProps) {
+  const { id } = await params;
   const session = await requireAuth();
 
   const brand = await prisma.brand.findFirst({
@@ -23,7 +24,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
 
   return (
     <CompetitorDetailClient 
-      competitorId={params.id} 
+      competitorId={id} 
       brandId={brand.id} 
       userRole={session.role}
     />
