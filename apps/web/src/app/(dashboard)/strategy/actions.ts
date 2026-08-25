@@ -80,6 +80,19 @@ export async function regenerateStrategy(brandId: string) {
     throw new Error('Brand not found or access denied');
   }
 
+  // Check if active strategy is approved/locked
+  const activeStrategy = await prisma.strategy.findFirst({
+    where: {
+      brandId,
+      organizationId: session.organizationId,
+      publicationStatus: 'ACTIVE',
+    },
+  });
+
+  if (activeStrategy && activeStrategy.approvalStatus === 'APPROVED') {
+    return { success: false, error: 'STRATEGY_LOCKED' };
+  }
+
   // Check if a generation is already in progress
   const activeGenerating = await prisma.strategy.findFirst({
     where: {
