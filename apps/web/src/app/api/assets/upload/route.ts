@@ -17,8 +17,8 @@ export async function POST(request: Request) {
       organizationId: session.organizationId,
     });
 
-    const body = await request.json();
-    let { brandId, filename, contentType, replaceAssetId, fileSize } = body;
+    const { brandId, filename, replaceAssetId, fileSize } = body;
+    let contentType = body.contentType;
     if (!contentType) {
       contentType = 'application/octet-stream';
     }
