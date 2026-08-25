@@ -23,7 +23,7 @@ export function generateTotpUri(secret: string, email: string) {
 }
 
 export async function verifyTotpToken(token: string, secret: string): Promise<boolean> {
-  const result = await verify({ token, secret });
+  const result = await verify({ token, secret, epochTolerance: 300 });
   return result.valid;
 }
 

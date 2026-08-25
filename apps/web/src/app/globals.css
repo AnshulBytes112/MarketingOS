@@ -233,3 +233,42 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in-up { animation: fadeInUp 0.4s ease both; }
+
+/* Sidebar Navigation Items */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.sidebar-item:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+  border-color: var(--border-subtle);
+}
+
+.sidebar-item.active {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border-color: var(--border-medium);
+  font-weight: 600;
+}
+
+.sidebar-icon {
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.sidebar-item:hover .sidebar-icon,
+.sidebar-item.active .sidebar-icon {
+  color: #7c3aed; /* purple brand accent */
+}

@@ -33,8 +33,14 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+    router.push("/login");
+    router.refresh();
   };
 
   return (

@@ -1,7 +1,7 @@
 import { Queue, Worker } from 'bullmq';
 
 const redisConnection = {
-  host: process.env.REDIS_HOST || 'localhost',
+  host: process.env.REDIS_HOST || '127.0.0.1',
   port: parseInt(process.env.REDIS_PORT || '6379'),
 };
 
@@ -34,3 +34,11 @@ export async function enqueueBrandDnaGeneration(organizationId: string, brandId:
     },
   });
 }
+
+let _competitorIngestionQueue: Queue | null = null;
+export const getCompetitorIngestionQueue = () => {
+  if (!_competitorIngestionQueue) {
+    _competitorIngestionQueue = new Queue('competitor-ingestion', { connection: redisConnection });
+  }
+  return _competitorIngestionQueue;
+};

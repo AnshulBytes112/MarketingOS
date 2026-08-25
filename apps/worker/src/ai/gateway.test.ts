@@ -5,20 +5,18 @@ import { z } from 'zod';
 vi.mock('openai', () => {
   return {
     default: class MockOpenAI {
-      beta = {
-        chat: {
-          completions: {
-            parse: vi.fn().mockResolvedValue({
-              choices: [{ message: { parsed: { success: true } } }],
-              usage: {
-                prompt_tokens: 10,
-                completion_tokens: 20,
-                total_tokens: 30
-              }
-            })
-          }
+      chat = {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [{ message: { content: '{"success": true}' } }],
+            usage: {
+              prompt_tokens: 10,
+              completion_tokens: 20,
+              total_tokens: 30
+            }
+          })
         }
-      }
+      };
     }
   };
 });

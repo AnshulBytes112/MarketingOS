@@ -66,6 +66,9 @@ model Organization {
   brands                Brand[]
   brandProducts         BrandProduct[]
   brandCompetitors      BrandCompetitor[]
+  competitorAccounts    CompetitorAccount[]
+  competitorPosts       CompetitorPost[]
+  aiRecommendations     AIRecommendation[]
   auditLogs             AuditLog[]
   sessions              Session[]
   brandAssets           BrandAsset[]
@@ -144,6 +147,9 @@ model Brand {
   assets       BrandAsset[]
   products     BrandProduct[]
   competitors  BrandCompetitor[]
+  competitorAccounts CompetitorAccount[]
+  competitorPosts   CompetitorPost[]
+  aiRecommendations  AIRecommendation[]
   dnaVersions  BrandDNAVersion[]
   dnaEdits     BrandDNAEdit[]
   aiUsage      AIUsage[]
@@ -174,14 +180,115 @@ model BrandCompetitor {
   organizationId String
   name           String
   websiteUrl     String?
+  instagram      String?
+  facebook       String?
+  linkedin       String?
+  twitter        String?
+  youtube        String?
+  tiktok         String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  accounts     CompetitorAccount[]
+  posts        CompetitorPost[]
+  recommendations AIRecommendation[]
+
   @@index([brandId])
   @@index([organizationId])
+}
+
+model CompetitorAccount {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  brandId             String
+  competitorId        String
+  platform            String
+  handle              String
+  profileUrl          String?
+  displayName         String?
+  bio                 String?
+  followerCount       Int?
+  followingCount      Int?
+  postCount           Int?
+  lastSyncedAt        DateTime?
+  syncStatus          String
+  sourceType          String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  competitor   BrandCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  posts        CompetitorPost[]
+
+  @@unique([organizationId, competitorId, platform])
+  @@index([brandId])
+  @@index([organizationId])
+  @@index([competitorId])
+}
+
+model CompetitorPost {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  brandId             String
+  competitorId        String
+  competitorAccountId String
+  platform            String
+  externalPostId      String?
+  url                 String?
+  publishedAt         DateTime
+  captionText         String?
+  mediaType           String?
+  likeCount           Int?
+  commentCount        Int?
+  shareCount          Int?
+  viewCount           Int?
+  engagementRate      Float?
+  collectedAt         DateTime @default(now())
+  sourceType          String
+  rawMetadata         Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  brand             Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  competitor        BrandCompetitor   @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  competitorAccount CompetitorAccount @relation(fields: [competitorAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, competitorAccountId, externalPostId])
+  @@index([brandId])
+  @@index([organizationId])
+  @@index([competitorId])
+  @@index([competitorAccountId])
+}
+
+model AIRecommendation {
+  id             String   @id @default(cuid())
+  organizationId String
+  brandId        String
+  competitorId   String
+  type           String
+  observation    String
+  likelyCause    String
+  recommendation String
+  action         String
+  confidence     Float
+  sources        Json
+  status         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  competitor   BrandCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+  @@index([organizationId])
+  @@index([competitorId])
 }
 
 model AuditLog {

@@ -111,12 +111,12 @@ describe('Platform Admin & Impersonation Integration', () => {
 
   it('non-platform user cannot access admin', async () => {
     mockCookies(tenantSessionToken, null);
-    await expect(requirePlatformAuth()).rejects.toThrow('UNAUTHORIZED_PLATFORM');
+    await expect(requirePlatformAuth()).rejects.toThrow('NEXT_REDIRECT');
   });
 
   it('tenant ADMIN cannot access platform admin', async () => {
     mockCookies(tenantAdminSessionToken, null);
-    await expect(requirePlatformAuth()).rejects.toThrow('UNAUTHORIZED_PLATFORM');
+    await expect(requirePlatformAuth()).rejects.toThrow('NEXT_REDIRECT');
   });
 
   it('platform admin can access permitted admin operations', async () => {

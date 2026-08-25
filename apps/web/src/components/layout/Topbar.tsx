@@ -32,8 +32,14 @@ export function Topbar({
   const { theme, toggle } = useTheme();
   const isDark = theme === "dark";
 
-  const handleLogout = () => {
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+    router.push("/login");
+    router.refresh();
   };
 
   return (

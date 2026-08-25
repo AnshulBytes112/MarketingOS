@@ -110,6 +110,69 @@ export class TenantRepository {
 
   // --- BRAND COMPETITOR OPERATIONS ---
 
+  async getBrandCompetitors(brandId: string): Promise<BrandCompetitor[]> {
+    const brand = await prisma.brand.findFirst({
+      where: { id: brandId, organizationId: this.organizationId }
+    });
+    if (!brand) throw new Error('Brand not found or access denied');
+
+    return prisma.brandCompetitor.findMany({
+      where: {
+        brandId,
+        organizationId: this.organizationId,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async getBrandCompetitor(competitorId: string, brandId: string): Promise<BrandCompetitor | null> {
+    return prisma.brandCompetitor.findFirst({
+      where: {
+        id: competitorId,
+        brandId,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  async createBrandCompetitorScoped(brandId: string, data: Omit<Prisma.BrandCompetitorCreateInput, 'brand' | 'organization'>): Promise<BrandCompetitor> {
+    const brand = await prisma.brand.findFirst({
+      where: { id: brandId, organizationId: this.organizationId }
+    });
+    if (!brand) throw new Error('Brand not found or access denied');
+
+    return prisma.brandCompetitor.create({
+      data: {
+        ...data,
+        brand: { connect: { id: brandId } },
+        organization: { connect: { id: this.organizationId } },
+      },
+    });
+  }
+
+  async updateBrandCompetitorScoped(competitorId: string, brandId: string, data: Omit<Prisma.BrandCompetitorUpdateInput, 'brand' | 'organization'>): Promise<BrandCompetitor> {
+    const competitor = await prisma.brandCompetitor.findFirst({
+      where: { id: competitorId, brandId, organizationId: this.organizationId }
+    });
+    if (!competitor) throw new Error('Competitor not found or access denied');
+
+    return prisma.brandCompetitor.update({
+      where: { id: competitorId },
+      data,
+    });
+  }
+
+  async deleteBrandCompetitorScoped(competitorId: string, brandId: string): Promise<BrandCompetitor> {
+    const competitor = await prisma.brandCompetitor.findFirst({
+      where: { id: competitorId, brandId, organizationId: this.organizationId }
+    });
+    if (!competitor) throw new Error('Competitor not found or access denied');
+
+    return prisma.brandCompetitor.delete({
+      where: { id: competitorId },
+    });
+  }
+
   async findManyBrandCompetitors(args?: Omit<Prisma.BrandCompetitorFindManyArgs, 'where'> & { where?: Omit<Prisma.BrandCompetitorWhereInput, 'organizationId'> }): Promise<BrandCompetitor[]> {
     return prisma.brandCompetitor.findMany({
       ...args,
@@ -405,6 +468,117 @@ export class TenantRepository {
       });
 
       return newVersion;
+    });
+  }
+
+  // --- COMPETITOR ANALYSIS PERSISTENCE ---
+
+  async getCompetitorAccounts(competitorId: string) {
+    return prisma.competitorAccount.findMany({
+      where: {
+        competitorId,
+        organizationId: this.organizationId,
+      },
+    });
+  }
+
+  async getCompetitorPosts(competitorId: string) {
+    return prisma.competitorPost.findMany({
+      where: {
+        competitorId,
+        organizationId: this.organizationId,
+      },
+      orderBy: {
+        publishedAt: 'desc',
+      },
+    });
+  }
+
+  async createManualPost(competitorId: string, brandId: string, data: {
+    platform: string;
+    url?: string;
+    publishedAt: Date;
+    captionText?: string;
+    likeCount?: number;
+    commentCount?: number;
+    shareCount?: number;
+    viewCount?: number;
+  }) {
+    const competitor = await prisma.brandCompetitor.findFirst({
+      where: {
+        id: competitorId,
+        brandId,
+        organizationId: this.organizationId,
+      },
+    });
+    if (!competitor) {
+      throw new Error('Competitor not found or unauthorized');
+    }
+
+    const account = await prisma.competitorAccount.upsert({
+      where: {
+        organizationId_competitorId_platform: {
+          organizationId: this.organizationId,
+          competitorId,
+          platform: data.platform.toLowerCase(),
+        },
+      },
+      create: {
+        organizationId: this.organizationId,
+        brandId,
+        competitorId,
+        platform: data.platform.toLowerCase(),
+        handle: 'manual-entry',
+        syncStatus: 'COMPLETED',
+        sourceType: 'MANUAL',
+      },
+      update: {},
+    });
+
+    const externalPostId = `manual-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    return prisma.competitorPost.create({
+      data: {
+        organizationId: this.organizationId,
+        brandId,
+        competitorId,
+        competitorAccountId: account.id,
+        platform: data.platform.toLowerCase(),
+        externalPostId,
+        url: data.url || null,
+        publishedAt: data.publishedAt,
+        captionText: data.captionText || null,
+        likeCount: data.likeCount || 0,
+        commentCount: data.commentCount || 0,
+        shareCount: data.shareCount || 0,
+        viewCount: data.viewCount || 0,
+        sourceType: 'MANUAL',
+      },
+    });
+  }
+
+  async getAIRecommendations(brandId: string) {
+    return prisma.aIRecommendation.findMany({
+      where: {
+        brandId,
+        organizationId: this.organizationId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async updateRecommendationStatus(id: string, brandId: string, status: string) {
+    return prisma.aIRecommendation.update({
+      where: {
+        id,
+        brandId,
+        organizationId: this.organizationId,
+      },
+      data: {
+        status,
+      },
     });
   }
 }

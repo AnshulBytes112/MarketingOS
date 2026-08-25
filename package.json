@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nx dev web",
+    "worker": "tsx apps/worker/src/main.ts",
     "build": "nx build web",
     "start": "nx start web",
     "lint": "nx run-many -t lint",

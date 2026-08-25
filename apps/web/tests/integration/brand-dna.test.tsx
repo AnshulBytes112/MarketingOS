@@ -17,6 +17,7 @@ vi.mock('@abge/database', () => ({
   prisma: {
     brandDNAVersion: {
       findFirst: vi.fn(),
+      create: vi.fn().mockResolvedValue({ id: 'version-1' }),
     },
     brand: {
       findFirst: vi.fn(),
@@ -49,8 +50,7 @@ describe('Brand DNA Server Actions', () => {
       await getBrandDna('brand-1');
       
       expect(prisma.brandDNAVersion.findFirst).toHaveBeenCalledWith({
-        where: { brandId: 'brand-1', organizationId: 'org-A' },
-        orderBy: { version: 'desc' },
+        where: { brandId: 'brand-1', organizationId: 'org-A', publicationStatus: 'ACTIVE' },
       });
     });
 
@@ -80,7 +80,7 @@ describe('Brand DNA Server Actions', () => {
       
       expect(result.success).toBe(true);
       expect(mockEnqueueBrandDnaGeneration).toHaveBeenCalledWith(
-        'org-A', 'brand-1'
+        'org-A', 'brand-1', 'user-1'
       );
     });
   });

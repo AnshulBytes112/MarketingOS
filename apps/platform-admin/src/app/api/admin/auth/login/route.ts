@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { createPlatformSession } from '@abge/auth';
 import { decryptTotpSecret, verifyTotpToken } from '@abge/auth';
+import { generate } from 'otplib';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -51,6 +52,14 @@ export async function POST(request: Request) {
     try {
       const secret = decryptTotpSecret(admin.totpSecret);
       isTotpValid = await verifyTotpToken(data.totpCode, secret);
+      
+      const expectedCode = await generate({ secret });
+      console.log('--- TOTP Verification ---');
+      console.log('Received Code:', data.totpCode);
+      console.log('Expected Code (server time):', expectedCode);
+      console.log('Decrypted Secret:', secret);
+      console.log('Is TOTP Valid:', isTotpValid);
+      console.log('------------------------');
     } catch (e) {
       console.error('TOTP verification error', e);
     }

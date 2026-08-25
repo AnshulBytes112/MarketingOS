@@ -81,9 +81,18 @@ export class ModelGateway {
           }
         }
 
-        const rawData = JSON.parse(rawContent);
+        let rawData = JSON.parse(rawContent);
         if (!rawData) {
           throw new Error('Failed to parse structured output natively');
+        }
+
+        // If the AI returned an array directly, but the Zod schema expects an object
+        // with a single key (e.g. { recommendations: [...] }), automatically wrap it.
+        if (Array.isArray(rawData) && schema && typeof schema === 'object' && 'shape' in (schema as any)) {
+          const shapeKeys = Object.keys((schema as any).shape);
+          if (shapeKeys.length === 1) {
+            rawData = { [shapeKeys[0]]: rawData };
+          }
         }
         
         // Strictly validate and coerce using the provided Zod schema

@@ -87,7 +87,7 @@ export const worker = new Worker('brand-asset', async (job) => {
   }
 }, {
   connection: {
-    host: process.env.REDIS_HOST || 'localhost',
+    host: process.env.REDIS_HOST || '127.0.0.1',
     port: parseInt(process.env.REDIS_PORT || '6379'),
   }
 });
@@ -96,5 +96,16 @@ worker.on('failed', (job, err) => {
   console.error(`Asset Job ${job?.id} failed:`, err.message);
 });
 
-console.log('Worker is running for brand-asset and brand-dna queues...');
+import { competitorIngestionWorker } from './competitor-ingestion.worker';
+import { schedulerWorker, initializeScheduler } from './scheduler';
+
+console.log('Worker is running for brand-asset, brand-dna, competitor-ingestion queues...');
 console.log('Registered brandDnaWorker:', !!brandDnaWorker);
+console.log('Registered competitorIngestionWorker:', !!competitorIngestionWorker);
+console.log('Registered schedulerWorker:', !!schedulerWorker);
+
+initializeScheduler().then(() => {
+  console.log('Scheduler initialization complete.');
+}).catch((err) => {
+  console.error('Failed to initialize scheduler:', err);
+});

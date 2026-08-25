@@ -198,7 +198,7 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
 
 }, {
   connection: {
-    host: process.env.REDIS_HOST || 'localhost',
+    host: process.env.REDIS_HOST || '127.0.0.1',
     port: parseInt(process.env.REDIS_PORT || '6379'),
   }
 });
