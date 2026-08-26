@@ -539,7 +539,9 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                   <div key={stage} className="p-5 bg-white/5 border border-white/5 rounded-xl space-y-3 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl" />
                     <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                      <span className="font-bold text-white text-sm tracking-wider">{stage}</span>
+                      <span className="font-bold text-white text-sm tracking-wider">
+                        {stage === 'TOFU' ? 'Reach New People' : stage === 'MOFU' ? 'Build Interest & Trust' : stage === 'BOFU' ? 'Drive Action' : stage}
+                      </span>
                       <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-semibold">
                         Allocation: {stageData?.recommendedAllocation || 0}%
                       </span>
@@ -599,7 +601,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                       <td className="py-4 px-4">
                         <p className="text-gray-300 max-w-xs truncate" title={p.objective}>{p.objective}</p>
                         <p className="text-[10px] text-gray-500 mt-0.5">Role: {p.role}</p>
-                        <p className="text-[10px] text-emerald-400 mt-0.5">KPI: {p.primaryKPI}</p>
+                        <p className="text-[10px] text-emerald-400 mt-0.5">Goal: {p.primaryKPI}</p>
                       </td>
                       <td className="py-4 px-4 text-gray-300">{p.audienceFit}</td>
                       <td className="py-4 px-4">

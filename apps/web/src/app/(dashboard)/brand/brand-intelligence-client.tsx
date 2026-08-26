@@ -314,7 +314,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         {[
           { key: 'dna', label: 'Brand DNA' },
           { key: 'voice', label: 'Voice & Tone' },
-          { key: 'audience', label: 'Audience' },
+          { key: 'audience', label: 'Customers' },
           { key: 'assets', label: 'Assets' },
           { key: 'guidelines', label: 'Guidelines' },
           { key: 'history', label: 'History & Diff' },
@@ -616,7 +616,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
 
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  CTA Preferences
+                  What Action to Drive
                 </h4>
                 <EditableField
                   versionId={brandDna?.id || ''}
@@ -640,13 +640,13 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
           <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-5">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-purple-400" />
-              <h3 className="text-base font-semibold text-white">Target Audience</h3>
+              <h3 className="text-base font-semibold text-white">Target Customers</h3>
             </div>
 
             <div className="space-y-4 pt-1">
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  AI Analyzed Audience Profile
+                  AI Analyzed Customer Profile
                 </h4>
                 <EditableField
                   versionId={brandDna?.id || ''}
@@ -691,7 +691,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
 
           {/* Audience Demographics */}
           <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-6">
-            <h3 className="text-base font-semibold text-white">Audience Demographics</h3>
+            <h3 className="text-base font-semibold text-white">Customer Demographics</h3>
 
             <div className="space-y-4 pt-2">
               {audienceDemographics.map((demo: any, i) => (

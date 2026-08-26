@@ -175,7 +175,7 @@ export const performanceData = {
   insights: [
     { type: "win", text: "Reels are outperforming static posts by 2.8× on Instagram this month." },
     { type: "win", text: "Sustainability-pillar content generates 34% more saves than average." },
-    { type: "opportunity", text: "LinkedIn articles posted Tuesday 9-11am get 41% higher CTR." },
+    { type: "opportunity", text: "LinkedIn articles posted Tuesday 9-11am get 41% more clicks." },
     { type: "warning", text: "Engagement rate dropped 12% on X posts with hashtags > 3." },
   ],
 };
@@ -202,7 +202,7 @@ export const campaigns = [
   {
     id: "camp2",
     name: "Origin Stories Series",
-    goal: "Thought Leadership",
+    goal: "Establish Industry Expertise",
     status: "planned",
     startDate: "2026-09-01",
     endDate: "2026-09-30",
@@ -328,6 +328,6 @@ export const copilotHistory = [
   },
   {
     role: "assistant",
-    content: "**Observation:** LinkedIn engagement dropped 18% week-over-week (from 4.2% to 3.4% avg engagement rate).\n\n**Likely Cause:** Your 3 posts last week were all published on Friday afternoon — LinkedIn's lowest-engagement window. Additionally, all 3 were image-only posts; your audience responds 2.3× better to articles and carousels.\n\n**Recommendation:** Shift LinkedIn publishing to Tuesday–Thursday, 8–10am. Prioritize articles and document carousels over static images. Schedule at least 1 article per week to maintain your thought leadership positioning."
+    content: "**Observation:** LinkedIn engagement dropped 18% week-over-week (from 4.2% to 3.4% avg engagement rate).\n\n**Likely Cause:** Your 3 posts last week were all published on Friday afternoon — LinkedIn's lowest-engagement window. Additionally, all 3 were image-only posts; your audience responds 2.3× better to articles and carousels.\n\n**Recommendation:** Shift LinkedIn publishing to Tuesday–Thursday, 8–10am. Prioritize articles and document carousels over static images. Schedule at least 1 article per week to maintain your position as an industry expert."
   },
 ];

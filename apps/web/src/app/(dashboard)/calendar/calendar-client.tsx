@@ -113,6 +113,19 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
     }
   };
 
+  const getFunnelLabel = (stage: string) => {
+    switch (stage.toUpperCase()) {
+      case 'TOFU':
+        return 'Reach New People';
+      case 'MOFU':
+        return 'Build Interest & Trust';
+      case 'BOFU':
+        return 'Drive Action';
+      default:
+        return stage;
+    }
+  };
+
   // Format date helper
   const formatDate = (dateInput: any) => {
     const d = new Date(dateInput);
@@ -186,9 +199,9 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
           className="bg-[#0B0A11]/60 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-all cursor-pointer"
         >
           <option value="ALL">All Funnel Stages</option>
-          <option value="TOFU">TOFU (Awareness)</option>
-          <option value="MOFU">MOFU (Consideration)</option>
-          <option value="BOFU">BOFU (Conversion)</option>
+          <option value="TOFU">Reach New People</option>
+          <option value="MOFU">Build Interest & Trust</option>
+          <option value="BOFU">Drive Action</option>
         </select>
       </div>
 
@@ -232,7 +245,7 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
                     <span className="capitalize">{item.platform}</span>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(item.funnelStage)}`}>
-                    {item.funnelStage}
+                    {getFunnelLabel(item.funnelStage)}
                   </span>
                 </div>
 
@@ -280,7 +293,7 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
                     <td className="py-4 px-6 text-gray-400 capitalize">{item.format}</td>
                     <td className="py-4 px-6">
                       <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(item.funnelStage)}`}>
-                        {item.funnelStage}
+                        {getFunnelLabel(item.funnelStage)}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-gray-400 max-w-xs truncate">
@@ -330,7 +343,7 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
                 <span className="text-gray-400">Funnel Stage</span>
                 <div>
                   <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(selectedItem.funnelStage)}`}>
-                    {selectedItem.funnelStage}
+                    {getFunnelLabel(selectedItem.funnelStage)}
                   </span>
                 </div>
               </div>
