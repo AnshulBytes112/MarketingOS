@@ -81,6 +81,9 @@ model Organization {
   strategyEdits         StrategyEdit[]
   contentPlans          ContentPlan[]
   contentItems          ContentItem[]
+  contentChannels       ContentChannel[]
+  contentGenerations    ContentGeneration[]
+  generatedAssets       GeneratedAsset[]
 }
 
 model User {
@@ -95,10 +98,10 @@ model User {
   auditLogs             AuditLog[]
   sessions              Session[]
   impersonationSessions ImpersonationSession[]
-  dnaVersionsCreated    BrandDNAVersion[] @relation("DNAVersionCreator")
+  dnaVersionsCreated    BrandDNAVersion[]      @relation("DNAVersionCreator")
   dnaEdits              BrandDNAEdit[]
-  strategiesCreated     Strategy[] @relation("StrategyCreator")
-  strategiesApproved    Strategy[] @relation("StrategyApprover")
+  strategiesCreated     Strategy[]             @relation("StrategyCreator")
+  strategiesApproved    Strategy[]             @relation("StrategyApprover")
   strategyEdits         StrategyEdit[]
 }
 
@@ -150,20 +153,23 @@ model Brand {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  assets       BrandAsset[]
-  products     BrandProduct[]
-  competitors  BrandCompetitor[]
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets             BrandAsset[]
+  products           BrandProduct[]
+  competitors        BrandCompetitor[]
   competitorAccounts CompetitorAccount[]
-  competitorPosts   CompetitorPost[]
+  competitorPosts    CompetitorPost[]
   aiRecommendations  AIRecommendation[]
-  dnaVersions  BrandDNAVersion[]
-  dnaEdits     BrandDNAEdit[]
-  aiUsage      AIUsage[]
-  strategies   Strategy[]
-  strategyEdits StrategyEdit[]
-  contentPlans  ContentPlan[]
-  contentItems  ContentItem[]
+  dnaVersions        BrandDNAVersion[]
+  dnaEdits           BrandDNAEdit[]
+  aiUsage            AIUsage[]
+  strategies         Strategy[]
+  strategyEdits      StrategyEdit[]
+  contentPlans       ContentPlan[]
+  contentItems       ContentItem[]
+  contentChannels    ContentChannel[]
+  contentGenerations ContentGeneration[]
+  generatedAssets    GeneratedAsset[]
 
   @@index([organizationId])
 }
@@ -203,8 +209,8 @@ model BrandCompetitor {
   brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  accounts     CompetitorAccount[]
-  posts        CompetitorPost[]
+  accounts        CompetitorAccount[]
+  posts           CompetitorPost[]
   recommendations AIRecommendation[]
 
   @@index([brandId])
@@ -212,29 +218,29 @@ model BrandCompetitor {
 }
 
 model CompetitorAccount {
-  id                  String   @id @default(cuid())
-  organizationId      String
-  brandId             String
-  competitorId        String
-  platform            String
-  handle              String
-  profileUrl          String?
-  displayName         String?
-  bio                 String?
-  followerCount       Int?
-  followingCount      Int?
-  postCount           Int?
-  lastSyncedAt        DateTime?
-  syncStatus          String
-  sourceType          String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id             String    @id @default(cuid())
+  organizationId String
+  brandId        String
+  competitorId   String
+  platform       String
+  handle         String
+  profileUrl     String?
+  displayName    String?
+  bio            String?
+  followerCount  Int?
+  followingCount Int?
+  postCount      Int?
+  lastSyncedAt   DateTime?
+  syncStatus     String
+  sourceType     String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   competitor   BrandCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
 
-  posts        CompetitorPost[]
+  posts CompetitorPost[]
 
   @@unique([organizationId, competitorId, platform])
   @@index([brandId])
@@ -293,8 +299,8 @@ model AIRecommendation {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   competitor   BrandCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
 
   @@index([brandId])
@@ -350,13 +356,13 @@ model BrandAsset {
 }
 
 model BrandDNAVersion {
-  id                    String         @id @default(cuid())
+  id                    String                    @id @default(cuid())
   organizationId        String
   brandId               String
   version               Int
-  status                BrandDNAStatus @default(GENERATING)
+  status                BrandDNAStatus            @default(GENERATING)
   publicationStatus     BrandDNAPublicationStatus @default(DRAFT)
-  source                String         @default("AI_GENERATION")
+  source                String                    @default("AI_GENERATION")
   restoredFromVersionId String?
   personality           String?
   voice                 String?
@@ -372,7 +378,7 @@ model BrandDNAVersion {
   constraints           Json?
   confidenceScore       Int?
   sources               Json?
-  createdAt             DateTime       @default(now())
+  createdAt             DateTime                  @default(now())
   completedAt           DateTime?
   createdById           String?
 
@@ -386,7 +392,7 @@ model BrandDNAVersion {
 }
 
 model BrandDNAEdit {
-  id                String          @id @default(cuid())
+  id                String   @id @default(cuid())
   organizationId    String
   brandId           String
   brandDNAVersionId String
@@ -394,14 +400,14 @@ model BrandDNAEdit {
   field             String
   previousValue     String? // Stored as JSON string
   newValue          String? // Stored as JSON string
-  source            String          @default("MANUAL_EDIT")
+  source            String   @default("MANUAL_EDIT")
   requestId         String?
-  createdAt         DateTime        @default(now())
+  createdAt         DateTime @default(now())
 
-  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand             Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  brandDNAVersion   BrandDNAVersion @relation(fields: [brandDNAVersionId], references: [id], onDelete: Cascade)
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand           Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandDNAVersion BrandDNAVersion @relation(fields: [brandDNAVersionId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([brandDNAVersionId])
@@ -516,7 +522,7 @@ model Strategy {
   organizationId    String
   brandId           String
   version           Int
-  status            String                    // "GENERATING", "COMPLETED", "FAILED"
+  status            String // "GENERATING", "COMPLETED", "FAILED"
   publicationStatus StrategyPublicationStatus @default(DRAFT)
   source            String                    @default("AI_GENERATION")
   createdById       String?
@@ -540,15 +546,15 @@ model Strategy {
   dataLimitations       Json?
   experiments           Json?
 
-  approvalStatus        StrategyApprovalStatus    @default(PENDING)
-  approvedAt            DateTime?
-  approvedById          String?
-  lockedAt              DateTime?
+  approvalStatus StrategyApprovalStatus @default(PENDING)
+  approvedAt     DateTime?
+  approvedById   String?
+  lockedAt       DateTime?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  createdBy    User?        @relation("StrategyCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  approvedBy   User?        @relation("StrategyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdBy    User?          @relation("StrategyCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  approvedBy   User?          @relation("StrategyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   edits        StrategyEdit[]
   contentPlans ContentPlan[]
   contentItems ContentItem[]
@@ -583,10 +589,10 @@ model ContentPlan {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand          Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  strategy       Strategy     @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-  contentItems   ContentItem[]
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  strategy     Strategy      @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  contentItems ContentItem[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -598,9 +604,10 @@ model ContentItem {
   organizationId String
   brandId        String
   contentPlanId  String
-  strategyId     String
-  title          String
-  platform       String
+  strategyId       String
+  contentChannelId String?
+  title            String
+  platform         String
   type           String?
   format         String
   scheduledDate  DateTime
@@ -618,15 +625,19 @@ model ContentItem {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand          Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  contentPlan    ContentPlan  @relation(fields: [contentPlanId], references: [id], onDelete: Cascade)
-  strategy       Strategy     @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentPlan  ContentPlan     @relation(fields: [contentPlanId], references: [id], onDelete: Cascade)
+  strategy     Strategy        @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  channel      ContentChannel? @relation(fields: [contentChannelId], references: [id], onDelete: SetNull)
+
+  generations  ContentGeneration[]
 
   @@index([organizationId])
   @@index([brandId])
   @@index([contentPlanId])
   @@index([strategyId])
+  @@index([contentChannelId])
   @@index([scheduledDate])
 }
 
@@ -637,7 +648,7 @@ enum StrategyPublicationStatus {
 }
 
 model StrategyEdit {
-  id               String       @id @default(cuid())
+  id               String   @id @default(cuid())
   organizationId   String
   brandId          String
   strategyId       String
@@ -646,13 +657,101 @@ model StrategyEdit {
   field            String
   previousValue    Json?
   newValue         Json?
-  createdAt        DateTime     @default(now())
+  createdAt        DateTime @default(now())
 
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand            Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  strategy         Strategy     @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  strategy     Strategy     @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([strategyId])
+}
+
+model ContentChannel {
+  id             String   @id @default(cuid())
+  organizationId String
+  brandId        String
+  type           String
+  platform       String
+  name           String
+  handle         String?
+  url            String?
+  isActive       Boolean  @default(true)
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand          Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItems   ContentItem[]
+
+  @@index([organizationId])
+  @@index([brandId])
+}
+
+model ContentGeneration {
+  id               String   @id @default(cuid())
+  organizationId   String
+  brandId          String
+  contentItemId    String
+  version          Int      @default(1)
+  
+  textStatus       GenerationStatus @default(NOT_CONFIGURED)
+  imageStatus      GenerationStatus @default(NOT_CONFIGURED)
+  videoStatus      GenerationStatus @default(NOT_CONFIGURED)
+
+  textContent      Json?
+  errorLog         Json?
+  metadata         Json?
+  textRequestId    String?
+  imageRequestId   String?
+  videoRequestId   String?
+  videoOperationId String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  contentItem      ContentItem  @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand            Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  assets           GeneratedAsset[]
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentItemId])
+}
+
+enum GenerationStatus {
+  QUEUED
+  GENERATING
+  COMPLETED
+  FAILED
+  NOT_CONFIGURED
+}
+
+model GeneratedAsset {
+  id               String   @id @default(cuid())
+  organizationId   String
+  brandId          String
+  generationId     String
+  contentItemId    String
+  type             String
+  objectKey        String
+  mimeType         String?
+  url              String?
+  provider         String
+  model            String
+  slideIndex       Int?
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  generation       ContentGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand            Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([generationId])
+  @@index([contentItemId])
 }

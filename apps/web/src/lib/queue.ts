@@ -89,3 +89,63 @@ export async function enqueueContentPlanGeneration(params: {
     },
   });
 }
+
+let _textGenerationQueue: Queue | null = null;
+export const getTextGenerationQueue = () => {
+  if (!_textGenerationQueue) {
+    _textGenerationQueue = new Queue('text-generation', { connection: redisConnection });
+  }
+  return _textGenerationQueue;
+};
+
+export async function enqueueTextGeneration(params: {
+  generationId: string;
+  organizationId: string;
+  brandId: string;
+  contentItemId: string;
+}) {
+  return getTextGenerationQueue().add(`text:${params.generationId}`, params, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+  });
+}
+
+let _imageGenerationQueue: Queue | null = null;
+export const getImageGenerationQueue = () => {
+  if (!_imageGenerationQueue) {
+    _imageGenerationQueue = new Queue('image-generation', { connection: redisConnection });
+  }
+  return _imageGenerationQueue;
+};
+
+export async function enqueueImageGeneration(params: {
+  generationId: string;
+  organizationId: string;
+  brandId: string;
+  contentItemId: string;
+}) {
+  return getImageGenerationQueue().add(`image:${params.generationId}`, params, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+  });
+}
+
+let _videoGenerationQueue: Queue | null = null;
+export const getVideoGenerationQueue = () => {
+  if (!_videoGenerationQueue) {
+    _videoGenerationQueue = new Queue('video-generation', { connection: redisConnection });
+  }
+  return _videoGenerationQueue;
+};
+
+export async function enqueueVideoGeneration(params: {
+  generationId: string;
+  organizationId: string;
+  brandId: string;
+  contentItemId: string;
+}) {
+  return getVideoGenerationQueue().add(`video:${params.generationId}`, params, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+  });
+}

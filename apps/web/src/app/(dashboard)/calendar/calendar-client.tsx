@@ -17,7 +17,7 @@ import {
 import { DndContext, useDraggable, useDroppable, DragEndEvent, closestCenter } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getContentItems, rescheduleContentItem, bulkUpdateContentItems, createContentItem } from './actions';
+import { getContentItems, rescheduleContentItem, bulkUpdateContentItems, createContentItem, requestContentGeneration, retryContentGeneration } from './actions';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 
 const PlatformIcon = ({ platform, className = "w-4 h-4" }: { platform: string, className?: string }) => {
@@ -79,6 +79,7 @@ export interface ContentItem {
   reason?: string | null;
   source: string;
   version: number;
+  generations?: any[];
 }
 
 interface CalendarClientProps {
@@ -339,6 +340,28 @@ export default function CalendarClient({
     }
   });
 
+  const generateContentMutation = useMutation({
+    mutationFn: requestContentGeneration,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content-items', brandId] });
+      setErrorMsg(null);
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message || 'Generation request failed');
+    }
+  });
+
+  const retryContentMutation = useMutation({
+    mutationFn: ({ generationId, modality }: { generationId: string, modality: 'TEXT' | 'IMAGE' | 'VIDEO' }) => retryContentGeneration(generationId, modality),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content-items', brandId] });
+      setErrorMsg(null);
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message || 'Retry request failed');
+    }
+  });
+
   // --- DRAG LOGIC ---
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -511,6 +534,79 @@ export default function CalendarClient({
               <div className="space-y-1">
                 <span className="text-gray-400 font-medium">Call to Action (CTA)</span>
                 <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-rose-300">{selectedItem.cta}</p>
+              </div>
+            )}
+          </div>
+
+          {/* AI Generation Status UI */}
+          <div className="space-y-3 pt-4 border-t border-white/5">
+            <h4 className="text-xs font-semibold text-white flex items-center gap-2"><Sparkles className="w-4 h-4 text-purple-400" /> AI Generation</h4>
+            
+            {selectedItem.generations && selectedItem.generations.length > 0 ? (
+              <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-4 space-y-4">
+                {/* Find the latest generation */}
+                {(() => {
+                  const latestGen = [...selectedItem.generations].sort((a, b) => b.version - a.version)[0];
+                  
+                  const renderStatus = (modality: string, status: string, retryFn?: () => void) => {
+                    if (status === 'NOT_CONFIGURED') return null;
+                    
+                    let icon, color, text;
+                    if (status === 'COMPLETED') { icon = <CheckCircle2 className="w-3 h-3" />; color = 'text-emerald-400'; text = 'Ready'; }
+                    else if (status === 'QUEUED' || status === 'GENERATING') { icon = <Loader2 className="w-3 h-3 animate-spin" />; color = 'text-blue-400'; text = 'Generating...'; }
+                    else if (status === 'FAILED') { icon = <AlertCircle className="w-3 h-3" />; color = 'text-rose-400'; text = 'Failed'; }
+                    else { icon = <Clock className="w-3 h-3" />; color = 'text-gray-400'; text = status; }
+
+                    return (
+                      <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                        <span className="text-xs text-gray-400 font-medium capitalize">{modality}</span>
+                        <div className="flex items-center gap-3">
+                           <span className={`text-xs flex items-center gap-1 ${color}`}>{icon} {text}</span>
+                           {status === 'FAILED' && retryFn && !isViewer && (
+                             <button onClick={retryFn} disabled={retryContentMutation.isPending} className="text-[10px] px-2 py-0.5 bg-white/10 hover:bg-white/20 rounded text-white">
+                               Retry
+                             </button>
+                           )}
+                        </div>
+                      </div>
+                    );
+                  };
+
+                  return (
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] text-gray-500 font-semibold uppercase">Version {latestGen.version}</span>
+                        {!isViewer && (
+                          <button
+                            onClick={() => generateContentMutation.mutate(selectedItem.id)}
+                            disabled={generateContentMutation.isPending || ['QUEUED', 'GENERATING'].includes(latestGen.textStatus) || ['QUEUED', 'GENERATING'].includes(latestGen.imageStatus) || ['QUEUED', 'GENERATING'].includes(latestGen.videoStatus)}
+                            className="text-[10px] px-2 py-1 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded font-medium"
+                          >
+                            {generateContentMutation.isPending ? 'Requesting...' : 'Regenerate'}
+                          </button>
+                        )}
+                      </div>
+                      
+                      {renderStatus('Text', latestGen.textStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'TEXT' }))}
+                      {renderStatus('Image', latestGen.imageStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'IMAGE' }))}
+                      {renderStatus('Video', latestGen.videoStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'VIDEO' }))}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-3">
+                <p className="text-xs text-gray-400">No content has been generated for this item yet.</p>
+                {!isViewer && (
+                  <button
+                    onClick={() => generateContentMutation.mutate(selectedItem.id)}
+                    disabled={generateContentMutation.isPending}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition-colors shadow-lg shadow-purple-500/20"
+                  >
+                    {generateContentMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Generate Content
+                  </button>
+                )}
               </div>
             )}
           </div>
