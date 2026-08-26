@@ -96,6 +96,14 @@ export const strategyWorker = new Worker(
         ]
       };
 
+      if (!activeDna) {
+        throw new Error('INSUFFICIENT_DATA: No active Brand DNA exists for this brand.');
+      }
+
+      if (!brand) {
+        throw new Error('Brand not found.');
+      }
+
       // Maintain valid source IDs for anti-hallucination validation
       const validSourceIds = new Set([
         activeDna.id,
@@ -133,14 +141,6 @@ export const strategyWorker = new Worker(
         name: p.name,
         description: p.description || '',
       }));
-
-      if (!activeDna) {
-        throw new Error('INSUFFICIENT_DATA: No active Brand DNA exists for this brand.');
-      }
-
-      if (!brand) {
-        throw new Error('Brand not found.');
-      }
 
       let competitorAggregate = null;
       let competitorContext = null;

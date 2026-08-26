@@ -1,15 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Calendar as CalendarIcon,
   List,
   Filter,
-  CheckCircle2,
   Clock,
   Sparkles,
-  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  CheckCircle2,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { DndContext, useDraggable, useDroppable, DragEndEvent, closestCenter } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getContentItems, rescheduleContentItem, bulkUpdateContentItems, createContentItem } from './actions';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 
 const PlatformIcon = ({ platform, className = "w-4 h-4" }: { platform: string, className?: string }) => {
   switch (platform.toLowerCase()) {
@@ -52,127 +61,540 @@ const PlatformIcon = ({ platform, className = "w-4 h-4" }: { platform: string, c
   }
 };
 
-interface ContentItem {
+export interface ContentItem {
   id: string;
   title: string;
   platform: string;
   format: string;
+  type?: string | null;
   scheduledDate: Date;
   funnelStage: string;
   contentPillar: string;
   theme: string | null;
   status: string;
+  hook?: string | null;
+  cta?: string | null;
+  campaign?: string | null;
+  aiScore?: number | null;
+  reason?: string | null;
+  source: string;
+  version: number;
 }
 
 interface CalendarClientProps {
   initialItems: ContentItem[];
   brandName: string;
+  brandId: string;
+  contentPlanId: string;
+  strategyId: string;
+  userRole: string;
+  initialStartDate: string;
+  initialEndDate: string;
 }
 
-export default function CalendarClient({ initialItems, brandName }: CalendarClientProps) {
+// Helpers
+const getPlatformIcon = (platform: string) => {
+  switch (platform.toLowerCase()) {
+    case 'instagram': return <PlatformIcon platform="instagram" className="w-4 h-4 text-pink-400" />;
+    case 'linkedin': return <PlatformIcon platform="linkedin" className="w-4 h-4 text-blue-400" />;
+    case 'twitter':
+    case 'x': return <PlatformIcon platform="twitter" className="w-4 h-4 text-sky-400" />;
+    case 'youtube': return <PlatformIcon platform="youtube" className="w-4 h-4 text-red-500" />;
+    default: return <Sparkles className="w-4 h-4 text-purple-400" />;
+  }
+};
+
+const getFunnelBadgeClass = (stage: string) => {
+  switch (stage.toUpperCase()) {
+    case 'TOFU': return 'bg-sky-500/10 border-sky-500/30 text-sky-400';
+    case 'MOFU': return 'bg-purple-500/10 border-purple-500/30 text-purple-400';
+    case 'BOFU': return 'bg-pink-500/10 border-pink-500/30 text-pink-400';
+    default: return 'bg-gray-500/10 border-gray-500/30 text-gray-400';
+  }
+};
+
+const getFunnelLabel = (stage: string) => {
+  switch (stage.toUpperCase()) {
+    case 'TOFU': return 'Reach New People';
+    case 'MOFU': return 'Build Interest & Trust';
+    case 'BOFU': return 'Drive Action';
+    default: return stage;
+  }
+};
+
+// --- DRAGGABLE ITEM ---
+function DraggableContentCard({ 
+  item, 
+  onClick, 
+  isSelected, 
+  onSelectToggle,
+  isViewer 
+}: { 
+  item: ContentItem; 
+  onClick: () => void; 
+  isSelected: boolean; 
+  onSelectToggle: () => void;
+  isViewer: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: item.id,
+    data: { item },
+    disabled: isViewer,
+  });
+
+  const style = transform ? {
+    transform: CSS.Translate.toString(transform),
+    zIndex: isDragging ? 50 : 1,
+    opacity: isDragging ? 0.8 : 1,
+  } : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-[#12111A]/90 border ${isSelected ? 'border-purple-500' : 'border-white/5 hover:border-purple-500/40'} rounded-2xl p-5 space-y-4 transition-all duration-300 relative group flex flex-col justify-between ${isDragging ? 'shadow-2xl shadow-purple-500/20' : ''}`}
+    >
+      <div className="absolute top-3 right-3 flex gap-2 z-10">
+        {!isViewer && (
+          <div 
+            className="w-5 h-5 rounded border border-white/20 flex items-center justify-center cursor-pointer bg-black/40 hover:bg-white/10"
+            onClick={(e) => { e.stopPropagation(); onSelectToggle(); }}
+          >
+            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />}
+          </div>
+        )}
+      </div>
+
+      <div 
+        className="space-y-3 cursor-pointer h-full flex flex-col" 
+        onClick={onClick}
+        {...listeners} 
+        {...attributes}
+      >
+        <div className="flex justify-between items-center gap-2 pr-8">
+          <span className="text-[10px] text-gray-400 flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5" />
+            {format(new Date(item.scheduledDate), 'h:mm a')}
+          </span>
+          <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${item.status === 'PUBLISHED' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : item.status === 'SCHEDULED' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400' : 'bg-gray-500/10 border border-gray-500/30 text-gray-400'}`}>
+            {item.status}
+          </span>
+        </div>
+
+        <h3 className="text-sm font-semibold text-white group-hover:text-purple-300 transition-colors line-clamp-2 mt-1">
+          {item.title}
+        </h3>
+
+        <div className="flex-1" />
+
+        <div className="space-y-3 pt-3 border-t border-white/5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-white">
+              {getPlatformIcon(item.platform)}
+              <span className="capitalize">{item.platform}</span>
+            </div>
+            <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(item.funnelStage)}`}>
+              {getFunnelLabel(item.funnelStage)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="text-[10px] text-gray-400 line-clamp-1">
+              <span className="font-semibold text-purple-400">Pillar: </span>
+              {item.contentPillar}
+            </div>
+            {item.source === 'MANUAL' && (
+              <span className="text-[9px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-1.5 py-0.5 rounded">MANUAL</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- DROPPABLE ROW ---
+function DroppableDateRow({ date, items, selectedIds, onSelectItem, onOpenItem, isViewer }: { 
+  date: Date; 
+  items: ContentItem[]; 
+  selectedIds: Set<string>;
+  onSelectItem: (id: string) => void;
+  onOpenItem: (item: ContentItem) => void;
+  isViewer: boolean;
+}) {
+  const dateStr = format(date, 'yyyy-MM-dd');
+  const { isOver, setNodeRef } = useDroppable({ id: dateStr });
+
+  return (
+    <div ref={setNodeRef} className={`mb-8 rounded-2xl p-4 transition-colors ${isOver ? 'bg-purple-500/10 border border-purple-500/30' : 'bg-transparent border border-transparent'}`}>
+      <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          {format(date, 'EEEE, MMM do')}
+          {isSameDay(date, new Date()) && <span className="text-xs bg-purple-600 px-2 py-0.5 rounded-full text-white">Today</span>}
+        </h3>
+        <span className="text-xs text-gray-500">{items.length} post{items.length !== 1 ? 's' : ''}</span>
+      </div>
+      
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-white/5 rounded-xl bg-white/5 opacity-50">
+          <p className="text-xs text-gray-500">No content scheduled.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {items.map(item => (
+            <DraggableContentCard 
+              key={item.id} 
+              item={item} 
+              isSelected={selectedIds.has(item.id)}
+              onSelectToggle={() => onSelectItem(item.id)}
+              onClick={() => onOpenItem(item)}
+              isViewer={isViewer}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function CalendarClient({ 
+  initialItems, 
+  brandName, 
+  brandId, 
+  contentPlanId, 
+  strategyId, 
+  userRole,
+  initialStartDate,
+  initialEndDate
+}: CalendarClientProps) {
+  const queryClient = useQueryClient();
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [platformFilter, setPlatformFilter] = useState<string>('ALL');
   const [funnelFilter, setFunnelFilter] = useState<string>('ALL');
   const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
+  
+  const [currentStart, setCurrentStart] = useState(new Date(initialStartDate));
+  const [currentEnd, setCurrentEnd] = useState(new Date(initialEndDate));
+  
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Group or filter items
-  const filteredItems = initialItems.filter((item) => {
-    const matchesPlatform =
-      platformFilter === 'ALL' || item.platform.toUpperCase() === platformFilter.toUpperCase();
-    const matchesFunnel =
-      funnelFilter === 'ALL' || item.funnelStage.toUpperCase() === funnelFilter.toUpperCase();
-    return matchesPlatform && matchesFunnel;
+  const isViewer = userRole === 'VIEWER' || userRole === 'ANALYST';
+
+  // --- QUERY ---
+  const { data: items = initialItems, isLoading } = useQuery({
+    queryKey: ['content-items', brandId, currentStart.toISOString(), currentEnd.toISOString(), platformFilter, funnelFilter],
+    queryFn: async () => {
+      return getContentItems({
+        brandId,
+        startDate: currentStart.toISOString(),
+        endDate: currentEnd.toISOString(),
+        filters: { platform: platformFilter, funnelStage: funnelFilter }
+      }) as Promise<ContentItem[]>;
+    },
+    initialData: initialItems,
   });
 
-  const getPlatformIcon = (platform: string) => {
-    switch (platform.toLowerCase()) {
-      case 'instagram':
-        return <PlatformIcon platform="instagram" className="w-4 h-4 text-pink-400" />;
-      case 'linkedin':
-        return <PlatformIcon platform="linkedin" className="w-4 h-4 text-blue-400" />;
-      case 'twitter':
-      case 'x':
-        return <PlatformIcon platform="twitter" className="w-4 h-4 text-sky-400" />;
-      case 'youtube':
-        return <PlatformIcon platform="youtube" className="w-4 h-4 text-red-500" />;
-      default:
-        return <Sparkles className="w-4 h-4 text-purple-400" />;
+  // --- MUTATIONS ---
+  const rescheduleMutation = useMutation({
+    mutationFn: rescheduleContentItem,
+    onMutate: async (newInfo) => {
+      // Optimistic update
+      const qKey = ['content-items', brandId, currentStart.toISOString(), currentEnd.toISOString(), platformFilter, funnelFilter];
+      await queryClient.cancelQueries({ queryKey: qKey });
+      
+      const previousItems = queryClient.getQueryData<ContentItem[]>(qKey);
+      
+      queryClient.setQueryData<ContentItem[]>(qKey, (old) => {
+        if (!old) return [];
+        return old.map(item => 
+          item.id === newInfo.contentItemId 
+            ? { ...item, scheduledDate: new Date(newInfo.newScheduledDate) }
+            : item
+        );
+      });
+      
+      return { previousItems, qKey };
+    },
+    onError: (err, newInfo, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(context.qKey, context.previousItems);
+      }
+      setErrorMsg(err.message || 'Failed to reschedule item.');
+    },
+    onSettled: (data, error, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: context?.qKey });
+    },
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: bulkUpdateContentItems,
+    onSuccess: () => {
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['content-items', brandId] });
+      setErrorMsg(null);
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message || 'Bulk update failed');
+    }
+  });
+
+  // --- DRAG LOGIC ---
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || !active) return;
+    
+    const targetDateStr = over.id as string;
+    const draggedItemId = active.id as string;
+    const item = items.find(i => i.id === draggedItemId);
+    
+    if (!item) return;
+
+    // Construct a new date keeping the original time
+    const oldDateObj = new Date(item.scheduledDate);
+    const targetDateObj = new Date(targetDateStr);
+    
+    targetDateObj.setHours(oldDateObj.getHours());
+    targetDateObj.setMinutes(oldDateObj.getMinutes());
+    targetDateObj.setSeconds(oldDateObj.getSeconds());
+    
+    if (oldDateObj.getTime() !== targetDateObj.getTime()) {
+      rescheduleMutation.mutate({
+        contentItemId: draggedItemId,
+        newScheduledDate: targetDateObj.toISOString(),
+        brandId,
+        version: item.version,
+      });
     }
   };
 
-  const getFunnelBadgeClass = (stage: string) => {
-    switch (stage.toUpperCase()) {
-      case 'TOFU':
-        return 'bg-sky-500/10 border-sky-500/30 text-sky-400';
-      case 'MOFU':
-        return 'bg-purple-500/10 border-purple-500/30 text-purple-400';
-      case 'BOFU':
-        return 'bg-pink-500/10 border-pink-500/30 text-pink-400';
-      default:
-        return 'bg-gray-500/10 border-gray-500/30 text-gray-400';
-    }
-  };
-
-  const getFunnelLabel = (stage: string) => {
-    switch (stage.toUpperCase()) {
-      case 'TOFU':
-        return 'Reach New People';
-      case 'MOFU':
-        return 'Build Interest & Trust';
-      case 'BOFU':
-        return 'Drive Action';
-      default:
-        return stage;
-    }
-  };
-
-  // Format date helper
-  const formatDate = (dateInput: any) => {
-    const d = new Date(dateInput);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+  // --- SELECTION LOGIC ---
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   };
 
+  const selectAllVisible = () => {
+    setSelectedIds(new Set(items.map(i => i.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkStatus = (status: string) => {
+    if (selectedIds.size === 0) return;
+    bulkUpdateMutation.mutate({
+      itemIds: Array.from(selectedIds),
+      brandId,
+      changes: { status }
+    });
+  };
+
+  // --- MONTH NAVIGATION ---
+  const nextMonth = () => {
+    const newStart = startOfMonth(addMonths(currentStart, 1));
+    const newEnd = endOfMonth(addMonths(currentStart, 1));
+    setCurrentStart(newStart);
+    setCurrentEnd(newEnd);
+  };
+
+  const prevMonth = () => {
+    const newStart = startOfMonth(subMonths(currentStart, 1));
+    const newEnd = endOfMonth(subMonths(currentStart, 1));
+    setCurrentStart(newStart);
+    setCurrentEnd(newEnd);
+  };
+
+  const daysInRange = eachDayOfInterval({ start: currentStart, end: currentEnd });
+
+  // --- RENDER HELPERS ---
+  const renderItemModal = () => {
+    if (!selectedItem) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="bg-[#12111A] border border-white/10 rounded-2xl p-6 max-w-2xl w-full space-y-6 shadow-2xl relative animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[10px] text-gray-400 flex items-center gap-1 mb-1">
+                <Clock className="w-3.5 h-3.5" />
+                {format(new Date(selectedItem.scheduledDate), 'EEEE, MMM do yyyy - h:mm a')}
+              </span>
+              <h3 className="text-xl font-bold text-white leading-snug pr-8">{selectedItem.title}</h3>
+            </div>
+            <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-white text-lg font-semibold bg-white/5 w-8 h-8 rounded-lg flex items-center justify-center shrink-0">✕</button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-[#0B0A11]/60 p-4 rounded-xl border border-white/5 text-xs">
+            <div className="space-y-1">
+              <span className="text-gray-400">Platform</span>
+              <div className="flex items-center gap-1.5 text-white font-medium capitalize">
+                {getPlatformIcon(selectedItem.platform)}
+                {selectedItem.platform}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-gray-400">Format</span>
+              <div className="text-white font-medium capitalize">{selectedItem.format}</div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-gray-400">Funnel Stage</span>
+              <div>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(selectedItem.funnelStage)}`}>
+                  {getFunnelLabel(selectedItem.funnelStage)}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-gray-400">Status</span>
+              <div>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${selectedItem.status === 'PUBLISHED' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : selectedItem.status === 'SCHEDULED' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400' : 'bg-gray-500/10 border border-gray-500/30 text-gray-400'}`}>
+                  {selectedItem.status}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 text-xs">
+            {/* AI Score & Reason */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1 p-3 bg-white/5 rounded-xl border border-white/5">
+                <span className="text-gray-400 font-medium flex items-center gap-1"><Sparkles className="w-3.5 h-3.5 text-purple-400" /> AI Score</span>
+                <p className="text-white text-lg font-bold">
+                  {selectedItem.aiScore ? `${selectedItem.aiScore}/100` : <span className="text-sm font-normal text-gray-500">Not scored yet</span>}
+                </p>
+              </div>
+              <div className="space-y-1 p-3 bg-white/5 rounded-xl border border-white/5">
+                <span className="text-gray-400 font-medium">Source</span>
+                <p className="text-white mt-1">
+                  {selectedItem.source === 'MANUAL' ? (
+                    <span className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400 font-medium border border-yellow-500/20">MANUAL CREATION</span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium border border-purple-500/20">AI GENERATED</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {selectedItem.reason && (
+               <div className="space-y-1">
+                 <span className="text-gray-400 font-medium">AI Reasoning</span>
+                 <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-gray-300 leading-relaxed italic">{selectedItem.reason}</p>
+               </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <span className="text-gray-400 font-medium">Content Pillar</span>
+                <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-white">{selectedItem.contentPillar}</p>
+              </div>
+              {selectedItem.campaign && (
+                <div className="space-y-1">
+                  <span className="text-gray-400 font-medium">Campaign</span>
+                  <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-white">{selectedItem.campaign}</p>
+                </div>
+              )}
+            </div>
+
+            {selectedItem.hook && (
+              <div className="space-y-1">
+                <span className="text-gray-400 font-medium">Hook / Opening</span>
+                <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-white">{selectedItem.hook}</p>
+              </div>
+            )}
+            
+            {selectedItem.cta && (
+              <div className="space-y-1">
+                <span className="text-gray-400 font-medium">Call to Action (CTA)</span>
+                <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-rose-300">{selectedItem.cta}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            {!isViewer && (
+              <button
+                onClick={() => {
+                  bulkUpdateMutation.mutate({ itemIds: [selectedItem.id], brandId, changes: { status: 'PUBLISHED' } });
+                  setSelectedItem(null);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium"
+              >
+                Mark Published
+              </button>
+            )}
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-medium"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-24 relative">
       {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#12111A]/90 border border-white/5 rounded-2xl p-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#12111A]/90 border border-white/5 rounded-2xl p-6">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <CalendarIcon className="w-6 h-6 text-purple-500" />
             Content Calendar
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Publishing pipeline for <span className="text-purple-400 font-semibold">{brandName}</span>. 14-day campaign execution map.
+            Publishing pipeline for <span className="text-purple-400 font-semibold">{brandName}</span>.
           </p>
         </div>
 
-        {/* View Controls */}
-        <div className="flex items-center gap-2 bg-[#0B0A11]/60 p-1 rounded-xl border border-white/5">
-          <button
-            onClick={() => setView('grid')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-              view === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <CalendarIcon className="w-3.5 h-3.5" />
-            Grid
-          </button>
-          <button
-            onClick={() => setView('list')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-              view === 'list' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-            List
-          </button>
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Month Navigation */}
+          <div className="flex items-center gap-2 bg-[#0B0A11]/60 p-1.5 rounded-xl border border-white/5">
+            <button onClick={prevMonth} className="p-1 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-semibold text-white min-w-[100px] text-center">
+              {format(currentStart, 'MMMM yyyy')}
+            </span>
+            <button onClick={nextMonth} className="p-1 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* View Controls */}
+          <div className="flex items-center gap-2 bg-[#0B0A11]/60 p-1 rounded-xl border border-white/5">
+            <button onClick={() => setView('grid')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${view === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+              <CalendarIcon className="w-3.5 h-3.5" />
+              Calendar
+            </button>
+            <button onClick={() => setView('list')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${view === 'list' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+              <List className="w-3.5 h-3.5" />
+              List
+            </button>
+          </div>
+
+          {!isViewer && (
+             <button onClick={() => alert('Manual creation modal placeholder. Hook this to a real modal and call createContentItem.')} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-medium flex items-center gap-2">
+               <Plus className="w-4 h-4" />
+               New Post
+             </button>
+          )}
         </div>
       </div>
+
+      {/* Error state */}
+      {errorMsg && (
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 text-rose-300 text-sm flex justify-between items-center">
+          <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4"/> {errorMsg}</div>
+          <button onClick={() => setErrorMsg(null)} className="text-xs font-semibold text-rose-400 hover:text-rose-300">Dismiss</button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-4 flex flex-wrap items-center gap-4">
@@ -181,11 +603,7 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
           <span>Filter:</span>
         </div>
 
-        <select
-          value={platformFilter}
-          onChange={(e) => setPlatformFilter(e.target.value)}
-          className="bg-[#0B0A11]/60 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-all cursor-pointer"
-        >
+        <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)} className="bg-[#0B0A11]/60 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-all cursor-pointer">
           <option value="ALL">All Platforms</option>
           <option value="INSTAGRAM">Instagram</option>
           <option value="LINKEDIN">LinkedIn</option>
@@ -193,11 +611,7 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
           <option value="YOUTUBE">YouTube</option>
         </select>
 
-        <select
-          value={funnelFilter}
-          onChange={(e) => setFunnelFilter(e.target.value)}
-          className="bg-[#0B0A11]/60 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-all cursor-pointer"
-        >
+        <select value={funnelFilter} onChange={(e) => setFunnelFilter(e.target.value)} className="bg-[#0B0A11]/60 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-all cursor-pointer">
           <option value="ALL">All Funnel Stages</option>
           <option value="TOFU">Reach New People</option>
           <option value="MOFU">Build Interest & Trust</option>
@@ -205,99 +619,72 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
         </select>
       </div>
 
-      {/* Grid Calendar / List Items */}
-      {filteredItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-[#12111A]/90 border border-white/5 rounded-2xl">
-          <CalendarIcon className="w-10 h-10 text-purple-500 mb-4 opacity-50" />
-          <h3 className="text-white font-medium mb-1">No Scheduled Posts Found</h3>
-          <p className="text-gray-400 text-sm max-w-md text-center">
-            Try adjusting your filters or verify that a strategy has been approved to generate a calendar.
-          </p>
+      {/* Calendar Area */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+           <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
+           <p className="text-gray-400 text-sm">Loading calendar...</p>
         </div>
       ) : view === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredItems.map((item, idx) => (
-            <div
-              key={item.id}
-              onClick={() => setSelectedItem(item)}
-              className="bg-[#12111A]/90 border border-white/5 hover:border-purple-500/40 rounded-2xl p-5 space-y-4 cursor-pointer transition-all hover:translate-y-[-2px] duration-300 relative group flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex justify-between items-center gap-2">
-                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    {formatDate(item.scheduledDate)}
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold uppercase">
-                    {item.status}
-                  </span>
-                </div>
-
-                <h3 className="text-sm font-semibold text-white group-hover:text-purple-300 transition-colors line-clamp-2">
-                  {item.title}
-                </h3>
-              </div>
-
-              <div className="space-y-3 pt-3 border-t border-white/5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs text-white">
-                    {getPlatformIcon(item.platform)}
-                    <span className="capitalize">{item.platform}</span>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(item.funnelStage)}`}>
-                    {getFunnelLabel(item.funnelStage)}
-                  </span>
-                </div>
-
-                <div className="text-[10px] text-gray-400 line-clamp-1">
-                  <span className="font-semibold text-purple-400">Pillar: </span>
-                  {item.contentPillar}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+          <div className="space-y-2">
+            {daysInRange.map((date) => {
+              const dayItems = items.filter(i => isSameDay(new Date(i.scheduledDate), date));
+              // Only render rows that have items, or all days if we want a full calendar feel.
+              // We'll render all days in the month to allow dropping on empty days.
+              return (
+                <DroppableDateRow 
+                  key={date.toISOString()} 
+                  date={date} 
+                  items={dayItems} 
+                  selectedIds={selectedIds}
+                  onSelectItem={toggleSelection}
+                  onOpenItem={setSelectedItem}
+                  isViewer={isViewer}
+                />
+              );
+            })}
+          </div>
+        </DndContext>
       ) : (
         <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/5 bg-[#0B0A11]/30 text-xs text-gray-400 font-semibold">
+                  {!isViewer && <th className="py-4 px-6 w-12"><input type="checkbox" onChange={(e) => e.target.checked ? selectAllVisible() : clearSelection()} checked={selectedIds.size > 0 && selectedIds.size === items.length} className="rounded border-white/20 bg-black/40 text-purple-600 focus:ring-purple-500" /></th>}
                   <th className="py-4 px-6">Scheduled Date</th>
                   <th className="py-4 px-6">Post Concept</th>
                   <th className="py-4 px-6">Platform</th>
-                  <th className="py-4 px-6">Format</th>
-                  <th className="py-4 px-6">Funnel Stage</th>
-                  <th className="py-4 px-6">Content Pillar</th>
+                  <th className="py-4 px-6">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-xs">
-                {filteredItems.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => setSelectedItem(item)}
-                    className="hover:bg-white/5 transition-colors cursor-pointer text-white"
-                  >
-                    <td className="py-4 px-6 text-gray-400 whitespace-nowrap">
-                      {formatDate(item.scheduledDate)}
+                {items.length === 0 && (
+                  <tr><td colSpan={5} className="py-8 text-center text-gray-500">No scheduled content found.</td></tr>
+                )}
+                {items.map((item) => (
+                  <tr key={item.id} className={`hover:bg-white/5 transition-colors cursor-pointer text-white ${selectedIds.has(item.id) ? 'bg-purple-500/5' : ''}`}>
+                    {!isViewer && (
+                      <td className="py-4 px-6">
+                        <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelection(item.id)} onClick={e => e.stopPropagation()} className="rounded border-white/20 bg-black/40 text-purple-600 focus:ring-purple-500" />
+                      </td>
+                    )}
+                    <td className="py-4 px-6 text-gray-400 whitespace-nowrap" onClick={() => setSelectedItem(item)}>
+                      {format(new Date(item.scheduledDate), 'MMM d, yyyy h:mm a')}
                     </td>
-                    <td className="py-4 px-6 font-semibold line-clamp-2 max-w-xs">
+                    <td className="py-4 px-6 font-semibold line-clamp-2 max-w-xs" onClick={() => setSelectedItem(item)}>
                       {item.title}
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-1.5">
-                        {getPlatformIcon(item.platform)}
-                        <span className="capitalize">{item.platform}</span>
+                    <td className="py-4 px-6" onClick={() => setSelectedItem(item)}>
+                      <div className="flex items-center gap-1.5 capitalize">
+                        {getPlatformIcon(item.platform)} {item.platform}
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-gray-400 capitalize">{item.format}</td>
-                    <td className="py-4 px-6">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(item.funnelStage)}`}>
-                        {getFunnelLabel(item.funnelStage)}
+                    <td className="py-4 px-6" onClick={() => setSelectedItem(item)}>
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${item.status === 'PUBLISHED' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-gray-500/10 border border-gray-500/30 text-gray-400'}`}>
+                        {item.status}
                       </span>
-                    </td>
-                    <td className="py-4 px-6 text-gray-400 max-w-xs truncate">
-                      {item.contentPillar}
                     </td>
                   </tr>
                 ))}
@@ -307,85 +694,29 @@ export default function CalendarClient({ initialItems, brandName }: CalendarClie
         </div>
       )}
 
-      {/* Details Modal */}
-      {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#12111A] border border-white/10 rounded-2xl p-6 max-w-lg w-full space-y-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-[10px] text-gray-400 flex items-center gap-1 mb-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  {formatDate(selectedItem.scheduledDate)}
-                </span>
-                <h3 className="text-lg font-bold text-white leading-snug">{selectedItem.title}</h3>
-              </div>
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="text-gray-400 hover:text-white text-lg font-semibold bg-white/5 w-8 h-8 rounded-lg flex items-center justify-center"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 bg-[#0B0A11]/60 p-4 rounded-xl border border-white/5 text-xs">
-              <div className="space-y-1">
-                <span className="text-gray-400">Platform</span>
-                <div className="flex items-center gap-1.5 text-white font-medium capitalize">
-                  {getPlatformIcon(selectedItem.platform)}
-                  {selectedItem.platform}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <span className="text-gray-400">Content Format</span>
-                <div className="text-white font-medium capitalize">{selectedItem.format}</div>
-              </div>
-              <div className="space-y-1">
-                <span className="text-gray-400">Funnel Stage</span>
-                <div>
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(selectedItem.funnelStage)}`}>
-                    {getFunnelLabel(selectedItem.funnelStage)}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <span className="text-gray-400">Status</span>
-                <div>
-                  <span className="px-2 py-0.5 rounded text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold uppercase">
-                    {selectedItem.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="space-y-1">
-                <span className="text-gray-400 font-medium">Content Pillar</span>
-                <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-white">
-                  {selectedItem.contentPillar}
-                </p>
-              </div>
-
-              {selectedItem.theme && (
-                <div className="space-y-1">
-                  <span className="text-gray-400 font-medium">Strategic Theme</span>
-                  <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-white">
-                    {selectedItem.theme}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-medium"
-              >
-                Close
-              </button>
-            </div>
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && !isViewer && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#12111A] border border-purple-500/30 shadow-2xl shadow-purple-500/20 rounded-2xl p-4 flex items-center gap-6 z-40 animate-in slide-in-from-bottom-10">
+          <div className="text-sm font-semibold text-white flex items-center gap-2">
+            <span className="bg-purple-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">{selectedIds.size}</span>
+            items selected
+          </div>
+          <div className="h-6 w-px bg-white/10" />
+          <div className="flex items-center gap-3">
+            <button disabled={bulkUpdateMutation.isPending} onClick={() => handleBulkStatus('SCHEDULED')} className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-medium transition-colors">
+              Mark Scheduled
+            </button>
+            <button disabled={bulkUpdateMutation.isPending} onClick={() => handleBulkStatus('PUBLISHED')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition-colors shadow-lg shadow-emerald-500/20">
+              Mark Published
+            </button>
+            <button disabled={bulkUpdateMutation.isPending} onClick={clearSelection} className="px-3 py-2 text-gray-400 hover:text-white text-xs font-medium transition-colors">
+              Cancel
+            </button>
           </div>
         </div>
       )}
+
+      {renderItemModal()}
     </div>
   );
 }

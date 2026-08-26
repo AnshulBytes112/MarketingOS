@@ -80,6 +80,10 @@ export const contentPlanWorker = new Worker(
         contentPillars: activeDna.contentPillars,
       } : 'No active Brand DNA found.';
 
+      if (!strategy) {
+        throw new Error('Strategy not found, not approved, or access denied');
+      }
+
       const strategyContext = {
         goal: strategy.goal,
         audienceSegments: strategy.audienceSegments,
@@ -96,10 +100,6 @@ export const contentPlanWorker = new Worker(
         name: p.name,
         description: p.description || '',
       }));
-
-      if (!strategy) {
-        throw new Error('Strategy not found, not approved, or access denied');
-      }
 
       const platformCounts: Record<string, number> = {};
       competitorPosts.forEach(p => {
