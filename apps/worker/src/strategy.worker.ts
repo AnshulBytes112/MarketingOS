@@ -11,6 +11,7 @@ export const strategyWorker = new Worker(
   async (job) => {
     const { organizationId, brandId, strategyId, userId, source } = job.data;
     const requestId = randomUUID();
+    const startTimeMs = performance.now();
     console.log(`[${requestId}] Processing Strategy generation job ${job.id} for strategy record: ${strategyId}`);
 
     // Load current strategy record
@@ -29,49 +30,45 @@ export const strategyWorker = new Worker(
     }
 
     try {
-      // 1. Fetch active Brand DNA
-      const activeDna = await prisma.brandDNAVersion.findFirst({
-        where: {
-          brandId,
-          organizationId,
-          publicationStatus: 'ACTIVE',
-          status: 'COMPLETED',
-        },
-      });
-
-      if (!activeDna) {
-        throw new Error('INSUFFICIENT_DATA: No active Brand DNA exists for this brand.');
-      }
-
-      // 2. Fetch onboarding details
-      const brand = await prisma.brand.findUnique({
-        where: { id: brandId, organizationId },
-      });
-
-      if (!brand) {
-        throw new Error('Brand not found.');
-      }
-
-      // 3. Fetch products
-      const products = await prisma.brandProduct.findMany({
-        where: { brandId, organizationId },
-      });
-
-      // 4. Fetch competitor accounts and posts
-      const competitorAccounts = await prisma.competitorAccount.findMany({
-        where: { brandId, organizationId },
-      });
-
-      const competitorPosts = await prisma.competitorPost.findMany({
-        where: { brandId, organizationId },
-        orderBy: { publishedAt: 'desc' },
-        take: 30, // Limit context size
-      });
-
-      // 5. Fetch AI Recommendations
-      const aiRecommendations = await prisma.aIRecommendation.findMany({
-        where: { brandId, organizationId },
-      });
+      const dbStartTime = performance.now();
+      // Group independent queries to parallelize DB fetches
+      const maxPosts = parseInt(process.env.COMPETITOR_AI_MAX_POSTS || '20', 10);
+      const [
+        activeDna,
+        brand,
+        products,
+        competitorAccounts,
+        competitorPosts,
+        aiRecommendations,
+      ] = await Promise.all([
+        prisma.brandDNAVersion.findFirst({
+          where: {
+            brandId,
+            organizationId,
+            publicationStatus: 'ACTIVE',
+            status: 'COMPLETED',
+          },
+        }),
+        prisma.brand.findUnique({
+          where: { id: brandId, organizationId },
+        }),
+        prisma.brandProduct.findMany({
+          where: { brandId, organizationId },
+        }),
+        prisma.competitorAccount.findMany({
+          where: { brandId, organizationId },
+        }),
+        prisma.competitorPost.findMany({
+          where: { brandId, organizationId },
+          orderBy: { publishedAt: 'desc' },
+          take: maxPosts,
+        }),
+        prisma.aIRecommendation.findMany({
+          where: { brandId, organizationId },
+        })
+      ]);
+      const dbPrepTimeMs = Math.round(performance.now() - dbStartTime);
+      console.log(`[${requestId}] DB Prep took ${dbPrepTimeMs}ms`);
 
       // Compute deterministic data limitations
       let competitorDataAvailability: 'UNAVAILABLE' | 'WEBSITE_ONLY' | 'FULL' = 'UNAVAILABLE';
@@ -137,14 +134,50 @@ export const strategyWorker = new Worker(
         description: p.description || '',
       }));
 
-      const competitorContext = competitorAccounts.length > 0
-        ? {
+      if (!activeDna) {
+        throw new Error('INSUFFICIENT_DATA: No active Brand DNA exists for this brand.');
+      }
+
+      if (!brand) {
+        throw new Error('Brand not found.');
+      }
+
+      let competitorAggregate = null;
+      let competitorContext = null;
+
+      if (competitorAccounts.length > 0) {
+        let totalLikes = 0;
+        let totalComments = 0;
+        const platformCounts: Record<string, number> = {};
+        
+        competitorPosts.forEach(p => {
+          platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
+          totalLikes += p.likeCount || 0;
+          totalComments += p.commentCount || 0;
+        });
+        
+        const avgLikes = competitorPosts.length > 0 ? (totalLikes / competitorPosts.length).toFixed(1) : '0';
+        const avgComments = competitorPosts.length > 0 ? (totalComments / competitorPosts.length).toFixed(1) : '0';
+
+        competitorAggregate = {
+          totalAccounts: competitorAccounts.length,
+          analyzedPostsLimit: maxPosts,
+          postsSelected: competitorPosts.length,
+          platformDistribution: platformCounts,
+          averageEngagement: {
+            likes: avgLikes,
+            comments: avgComments
+          }
+        };
+
+        competitorContext = {
           accounts: competitorAccounts.map((a) => ({
             id: a.id,
             platform: a.platform,
             handle: a.handle,
             followerCount: a.followerCount,
           })),
+          aggregateStats: competitorAggregate,
           posts: competitorPosts.map((p) => ({
             id: p.id,
             competitorAccountId: p.competitorAccountId,
@@ -154,8 +187,8 @@ export const strategyWorker = new Worker(
             commentCount: p.commentCount,
             engagementRate: p.engagementRate,
           })),
-        }
-        : null;
+        };
+      }
 
       const recommendationsContext = aiRecommendations.map((r) => ({
         id: r.id,
@@ -318,7 +351,8 @@ ${JSON.stringify(dataLimitations, null, 2)}
         });
       }
 
-      console.log(`[${requestId}] Strategy generation completed successfully for strategy: ${strategyId}`);
+      const totalDurationMs = Math.round(performance.now() - startTimeMs);
+      console.log(`[${requestId}] Strategy generation completed successfully for strategy: ${strategyId} in ${totalDurationMs}ms`);
 
     } catch (error: any) {
       console.error(`[${requestId}] Strategy generation failed for strategy: ${strategyId}`, error);

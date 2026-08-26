@@ -12,6 +12,7 @@ export const contentPlanWorker = new Worker(
   async (job) => {
     const { organizationId, brandId, strategyId, userId } = job.data;
     const requestId = randomUUID();
+    const startTimeMs = performance.now();
     console.log(`[${requestId}] Processing ContentPlan generation job ${job.id} for strategy: ${strategyId}`);
 
     // Fetch the content plan linked to this job if it was created
@@ -32,41 +33,42 @@ export const contentPlanWorker = new Worker(
     }
 
     try {
-      // 1. Fetch Strategy and make sure it is APPROVED
-      const strategy = await prisma.strategy.findFirst({
-        where: {
-          id: strategyId,
-          organizationId,
-          brandId,
-          approvalStatus: 'APPROVED',
-        },
-      });
-
-      if (!strategy) {
-        throw new Error('Strategy not found, not approved, or access denied');
-      }
-
-      // 2. Fetch active Brand DNA
-      const activeDna = await prisma.brandDNAVersion.findFirst({
-        where: {
-          brandId,
-          organizationId,
-          publicationStatus: 'ACTIVE',
-          status: 'COMPLETED',
-        },
-      });
-
-      // 3. Fetch products
-      const products = await prisma.brandProduct.findMany({
-        where: { brandId, organizationId },
-      });
-
-      // 4. Fetch competitor posts
-      const competitorPosts = await prisma.competitorPost.findMany({
-        where: { brandId, organizationId },
-        orderBy: { publishedAt: 'desc' },
-        take: 15,
-      });
+      const dbStartTime = performance.now();
+      const maxPosts = parseInt(process.env.COMPETITOR_AI_MAX_POSTS || '15', 10);
+      
+      const [
+        strategy,
+        activeDna,
+        products,
+        competitorPosts
+      ] = await Promise.all([
+        prisma.strategy.findFirst({
+          where: {
+            id: strategyId,
+            organizationId,
+            brandId,
+            approvalStatus: 'APPROVED',
+          },
+        }),
+        prisma.brandDNAVersion.findFirst({
+          where: {
+            brandId,
+            organizationId,
+            publicationStatus: 'ACTIVE',
+            status: 'COMPLETED',
+          },
+        }),
+        prisma.brandProduct.findMany({
+          where: { brandId, organizationId },
+        }),
+        prisma.competitorPost.findMany({
+          where: { brandId, organizationId },
+          orderBy: { publishedAt: 'desc' },
+          take: maxPosts,
+        })
+      ]);
+      const dbPrepTimeMs = Math.round(performance.now() - dbStartTime);
+      console.log(`[${requestId}] DB Prep took ${dbPrepTimeMs}ms`);
 
       // Build AI prompt contexts
       const brandDnaContext = activeDna ? {
@@ -95,10 +97,25 @@ export const contentPlanWorker = new Worker(
         description: p.description || '',
       }));
 
-      const competitorContext = competitorPosts.map((p) => ({
-        platform: p.platform,
-        captionText: p.captionText ? p.captionText.substring(0, 100) : '',
-      }));
+      if (!strategy) {
+        throw new Error('Strategy not found, not approved, or access denied');
+      }
+
+      const platformCounts: Record<string, number> = {};
+      competitorPosts.forEach(p => {
+        platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
+      });
+
+      const competitorContext = {
+        aggregateStats: {
+          postsSelected: competitorPosts.length,
+          platformDistribution: platformCounts,
+        },
+        posts: competitorPosts.map((p) => ({
+          platform: p.platform,
+          captionText: p.captionText ? p.captionText.substring(0, 100) : '',
+        }))
+      };
 
       const systemPrompt = `You are an expert Social Media Planner. Generate a detailed 14-day content calendar allocation (exactly 14 items) for the brand.
 You MUST align the calendar items strictly with the approved Strategy's guidelines:
@@ -217,7 +234,8 @@ UNAVAILABLE. No historical performance analytics are available for this brand.
         });
       });
 
-      console.log(`[${requestId}] Content plan generation completed successfully. Generated ${result.data.items.length} items.`);
+      const totalDurationMs = Math.round(performance.now() - startTimeMs);
+      console.log(`[${requestId}] Content plan generation completed successfully in ${totalDurationMs}ms. Generated ${result.data.items.length} items.`);
 
     } catch (error: any) {
       console.error(`[${requestId}] Content plan generation failed:`, error);

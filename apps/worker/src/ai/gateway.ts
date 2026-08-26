@@ -90,8 +90,9 @@ export class ModelGateway {
     schemaDescription: string,
     requestId: string,
   ): Promise<ModelGatewayResponse<T>> {
-    const startTime = Date.now();
+    const startTimeMs = performance.now();
     let attempts = 0;
+    let zodRetries = 0;
     const maxAttempts = 5;
 
     // Auto-inject clean flat JSON Schema into the system prompt to prevent hallucinations
@@ -223,7 +224,7 @@ export class ModelGateway {
           throw e;
         }
 
-        const latencyMs = Date.now() - startTime;
+        const latencyMs = Math.round(performance.now() - startTimeMs);
         const usage = response.usage;
         const inputTokens = usage?.prompt_tokens || 0;
         const outputTokens = usage?.completion_tokens || 0;
@@ -262,6 +263,15 @@ export class ModelGateway {
         if (status === 400 || status === 401 || status === 403 || status === 404 || status === '404') {
           console.error(`[${requestId}] Permanent error encountered (${status}). Halting retries.`);
           throw error;
+        }
+
+        // Limit Zod parsing retries to 1 to avoid token waste
+        if (error.errors || error.name === 'ZodError' || error.message.includes('JSON parse error') || error.message.includes('Failed to parse structured output natively')) {
+          zodRetries++;
+          if (zodRetries > 1) {
+             console.error(`[${requestId}] Structured output parsing failed twice. Halting retries.`);
+             throw error;
+          }
         }
 
         if (attempts >= maxAttempts) {
