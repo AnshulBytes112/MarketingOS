@@ -294,6 +294,18 @@ export default function CalendarClient({
       }) as Promise<ContentItem[]>;
     },
     initialData: initialItems,
+    refetchInterval: (query) => {
+      const data = query.state.data as ContentItem[];
+      const itemsToCheck = data || initialItems;
+      const active = itemsToCheck.some(item => 
+        item.generations?.some(gen => 
+          gen.textStatus === 'QUEUED' || gen.textStatus === 'GENERATING' ||
+          gen.imageStatus === 'QUEUED' || gen.imageStatus === 'GENERATING' ||
+          gen.videoStatus === 'QUEUED' || gen.videoStatus === 'GENERATING'
+        )
+      );
+      return active ? 3000 : false;
+    }
   });
 
   // --- MUTATIONS ---
@@ -590,6 +602,19 @@ export default function CalendarClient({
                       {renderStatus('Text', latestGen.textStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'TEXT' }))}
                       {renderStatus('Image', latestGen.imageStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'IMAGE' }))}
                       {renderStatus('Video', latestGen.videoStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'VIDEO' }))}
+                      
+                      {latestGen.brandDnaVersionId && (
+                        <div className="mt-4 pt-3 border-t border-white/5 space-y-1">
+                           <span className="text-gray-400 font-medium text-[10px] uppercase">Generated using:</span>
+                           <ul className="text-[10px] text-gray-500 space-y-0.5">
+                             <li>Strategy v{latestGen.strategyVersion || '?'}</li>
+                             <li>Brand DNA ({latestGen.brandDnaVersionId.substring(0,8)}...)</li>
+                             {latestGen.sourceIds && Array.isArray(latestGen.sourceIds) && (
+                               <li>{latestGen.sourceIds.length} source(s)</li>
+                             )}
+                           </ul>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

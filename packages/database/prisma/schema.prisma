@@ -709,6 +709,10 @@ model ContentGeneration {
   videoRequestId   String?
   videoOperationId String?
 
+  brandDnaVersionId String?
+  strategyVersion   Int?
+  sourceIds         Json?
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -720,6 +724,7 @@ model ContentGeneration {
   @@index([organizationId])
   @@index([brandId])
   @@index([contentItemId])
+  @@index([brandDnaVersionId])
 }
 
 enum GenerationStatus {

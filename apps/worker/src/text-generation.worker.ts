@@ -3,8 +3,10 @@ import { prisma } from '@abge/database';
 import { ModelGateway } from './ai/gateway';
 import { TextGenerationSchema } from './text-generation.schema';
 import { randomUUID } from 'crypto';
+import { DirectDatabaseContextProvider } from './ai/content-context.provider';
 
 const gateway = new ModelGateway();
+const contextProvider = new DirectDatabaseContextProvider();
 
 export const textGenerationWorker = new Worker(
   'text-generation',
@@ -17,12 +19,7 @@ export const textGenerationWorker = new Worker(
     const generation = await prisma.contentGeneration.findUnique({
       where: { id: generationId },
       include: {
-        contentItem: {
-          include: {
-            strategy: true,
-            channel: true,
-          }
-        },
+        contentItem: true
       }
     });
 
@@ -32,10 +29,6 @@ export const textGenerationWorker = new Worker(
 
     const item = generation.contentItem;
 
-    if (item.strategy.publicationStatus !== 'ACTIVE' && item.strategy.status !== 'COMPLETED') {
-      throw new Error('STRATEGY_NOT_AVAILABLE');
-    }
-
     // Set status to GENERATING
     await prisma.contentGeneration.update({
       where: { id: generationId },
@@ -43,39 +36,24 @@ export const textGenerationWorker = new Worker(
     });
 
     try {
-      // Load Brand DNA
-      const activeDna = await prisma.brandDNAVersion.findFirst({
-        where: {
-          brandId,
-          organizationId,
-          publicationStatus: 'ACTIVE',
-          status: 'COMPLETED',
-        },
-      });
+      // Get context via abstraction
+      const ctx = await contextProvider.getContext(contentItemId, brandId, organizationId);
+
+      const needsCreativeBrief = ['IMAGE', 'VIDEO', 'CAROUSEL', 'REEL'].includes(item.format.toUpperCase());
 
       const systemPrompt = `You are an expert Social Media Content Creator.
 Your task is to write high-converting, destination-specific text content based on the brand's approved strategy.
 
-BRAND CONTEXT:
-Name: ${item.brandId}
-DNA: ${JSON.stringify(activeDna || {})}
-
-STRATEGIC CONTEXT:
-Strategy Outline: ${JSON.stringify(item.strategy || {})}
-Content Pillar: ${item.contentPillar}
-Funnel Stage: ${item.funnelStage}
-
-DESTINATION CONTEXT:
-Platform: ${item.platform}
-Format: ${item.format}
-Channel Details: ${JSON.stringify(item.channel || {})}
+${ctx.context}
 
 REQUIREMENTS:
-- Use simple, natural language for the end-user (do not use internal marketing jargon like TOFU/MOFU in the final text).
+- Use simple, natural language for the end-user (e.g., use "reach new people" instead of TOFU, "encourage action" instead of BOFU, do NOT use ICP).
 - Tailor the structure to the specific platform (e.g., short engaging captions for Instagram, professional body text for LinkedIn, SEO headers for blogs).
 - If it's a Video/Reel format, provide a script.
 - If it's a standard post, provide a caption/body.
-- Include a specific Call to Action (CTA) aligned with the funnel stage.`;
+- Include a specific Call to Action (CTA) aligned with the funnel stage.
+- Only use facts present in the provided sources. Do not invent product features.
+- ${needsCreativeBrief ? 'Since this format requires visual production, you MUST provide a structured creativeBrief.' : 'Do NOT provide a creativeBrief for this format.'}`;
 
       const userPrompt = `Please generate the content for this item:
 Title/Topic: ${item.title}
@@ -110,13 +88,16 @@ Campaign: ${item.campaign || 'N/A'}`;
         },
       });
 
-      // Update generation with success
+      // Update generation with success and traceability
       await prisma.contentGeneration.update({
         where: { id: generationId },
         data: {
           textStatus: 'COMPLETED',
           textContent: aiResponse.data.content,
           textRequestId: requestId,
+          brandDnaVersionId: ctx.brandDnaVersionId,
+          strategyVersion: ctx.strategyVersion,
+          sourceIds: ctx.sourceIds,
         }
       });
 

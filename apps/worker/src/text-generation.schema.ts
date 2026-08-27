@@ -10,5 +10,18 @@ export const TextGenerationSchema = z.object({
     hashtags: z.array(z.string()).optional().describe('List of relevant hashtags without the # symbol'),
     script: z.string().optional().describe('Video script or talking points (if applicable)'),
     platformSpecificNotes: z.string().optional().describe('Any formatting or structural notes for the user'),
+    seoTitle: z.string().optional().describe('SEO Title for web content'),
+    seoDescription: z.string().optional().describe('SEO meta description for web content'),
+    creativeBrief: z.object({
+      visualConcept: z.string().optional(),
+      sceneDescription: z.string().optional(),
+      subject: z.string().optional(),
+      composition: z.string().optional(),
+      mood: z.string().optional(),
+      brandElements: z.string().optional(),
+      textOverlay: z.string().optional(),
+      aspectRatio: z.string().optional(),
+      visualInstructions: z.string().optional()
+    }).optional().describe('Structured creative brief for downstream image/video generation (only if required by format)')
   })
 });
