@@ -59,8 +59,7 @@ export async function rescheduleContentItem({
 }) {
   const session = await requireAuth();
 
-  // Reuse existing RBAC logic (generate_content permission covers content creation/scheduling)
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   // Verify ownership and version (OCC)
   const item = await prisma.contentItem.findUnique({
@@ -121,7 +120,7 @@ export async function createContentItem(data: {
   status?: any; // ContentItemStatus
 }) {
   const session = await requireAuth();
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   const newItem = await prisma.$transaction(async (tx) => {
     const id = crypto.randomUUID();
@@ -182,7 +181,7 @@ export async function bulkUpdateContentItems({
   };
 }) {
   const session = await requireAuth();
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   await prisma.$transaction(async (tx) => {
     // Verify all items belong to this tenant and brand
@@ -232,7 +231,7 @@ export async function bulkUpdateContentItems({
 
 export async function requestContentGeneration(contentItemId: string) {
   const session = await requireAuth();
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   // Load item
   const item = await prisma.contentItem.findUnique({
@@ -336,7 +335,7 @@ export async function requestContentGeneration(contentItemId: string) {
 
 export async function retryContentGeneration(generationId: string, modality: 'TEXT' | 'IMAGE' | 'VIDEO') {
   const session = await requireAuth();
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   const generation = await prisma.contentGeneration.findUnique({
     where: { id: generationId },
@@ -443,7 +442,7 @@ export async function retryQualityScoring(generationId: string) {
 
 export async function saveContentEdit(generationId: string, newContent: string) {
   const session = await requireAuth();
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   const oldGen = await prisma.contentGeneration.findUnique({
     where: { id: generationId },
@@ -502,7 +501,7 @@ export async function saveContentEdit(generationId: string, newContent: string) 
 
 export async function restoreContentVersion(oldGenerationId: string, contentItemId: string) {
   const session = await requireAuth();
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   const oldGen = await prisma.contentGeneration.findUnique({
     where: { id: oldGenerationId }
@@ -561,7 +560,7 @@ export async function restoreContentVersion(oldGenerationId: string, contentItem
 
 export async function regenerateContentWithInstruction(contentItemId: string, instruction: string) {
   const session = await requireAuth();
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   const item = await prisma.contentItem.findUnique({
     where: { id: contentItemId },
@@ -630,7 +629,7 @@ export async function regenerateContentWithInstruction(contentItemId: string, in
 
 export async function markContentReadyForReview(contentItemId: string) {
   const session = await requireAuth();
-  await requirePermission('generate_content');
+  await requirePermission('calendar.edit');
 
   const item = await prisma.contentItem.findUnique({
     where: { id: contentItemId }

@@ -84,6 +84,7 @@ model Organization {
   contentChannels       ContentChannel[]
   contentGenerations    ContentGeneration[]
   generatedAssets       GeneratedAsset[]
+  approvals             Approval[]
 }
 
 model User {
@@ -103,6 +104,8 @@ model User {
   strategiesCreated     Strategy[]             @relation("StrategyCreator")
   strategiesApproved    Strategy[]             @relation("StrategyApprover")
   strategyEdits         StrategyEdit[]
+  approvalsRequested    Approval[]             @relation("ApprovalRequestedBy")
+  approvalsReviewed     Approval[]             @relation("ApprovalReviewedBy")
 }
 
 model Session {
@@ -121,13 +124,19 @@ model Session {
   @@index([sessionToken])
 }
 
+enum MemberStatus {
+  ACTIVE
+  DEACTIVATED
+}
+
 model OrganizationMember {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   userId         String
   role           Role
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  status         MemberStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -136,6 +145,7 @@ model OrganizationMember {
   @@index([organizationId])
   @@index([userId])
 }
+
 
 model Brand {
   id               String           @id @default(cuid())
@@ -170,6 +180,7 @@ model Brand {
   contentChannels    ContentChannel[]
   contentGenerations ContentGeneration[]
   generatedAssets    GeneratedAsset[]
+  approvals          Approval[]
 
   @@index([organizationId])
 }
@@ -634,6 +645,7 @@ model ContentItem {
   channel      ContentChannel? @relation(fields: [contentChannelId], references: [id], onDelete: SetNull)
 
   generations  ContentGeneration[]
+  approvals    Approval[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -731,6 +743,7 @@ model ContentGeneration {
   organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   brand            Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
   assets           GeneratedAsset[]
+  approvals        Approval[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -777,4 +790,39 @@ model GeneratedAsset {
   @@index([brandId])
   @@index([generationId])
   @@index([contentItemId])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+model Approval {
+  id               String         @id @default(cuid())
+  organizationId   String
+  brandId          String
+  contentItemId    String
+  contentVersionId String
+  status           ApprovalStatus @default(PENDING)
+  reason           String?
+  requestedById    String
+  reviewedById     String?
+  requestedAt      DateTime       @default(now())
+  reviewedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand            Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItem      ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentVersion   ContentGeneration @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
+  requestedBy      User              @relation("ApprovalRequestedBy", fields: [requestedById], references: [id])
+  reviewedBy       User?             @relation("ApprovalReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentItemId])
+  @@index([contentVersionId])
 }

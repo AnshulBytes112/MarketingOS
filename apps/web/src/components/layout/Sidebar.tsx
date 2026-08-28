@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, Brain, Users, TrendingUp, Lightbulb,
   Sparkles, Megaphone, Send, BarChart3, Search, MessageSquare,
-  Settings, Zap, ChevronRight, LogOut, Calendar
+  Settings, Zap, ChevronRight, LogOut, Calendar, Check
 } from "lucide-react";
+import { getAvailableOrganizations, switchOrganization } from "./org-actions";
 
 const nav = [
   { label: "Dashboard",          href: "/overview",   icon: LayoutDashboard },
@@ -16,6 +18,7 @@ const nav = [
   { label: "Strategy Engine",     href: "/strategy",   icon: Lightbulb },
   { label: "Content Calendar",    href: "/calendar",   icon: Calendar },
   { label: "Content Engine",      href: "/content",    icon: Sparkles },
+  { label: "Approval Queue",      href: "/approvals",  icon: Check },
   { label: "Campaign Engine",     href: "/campaigns",  icon: Megaphone },
   { label: "Publishing",          href: "/publishing", icon: Send },
   { label: "Analytics",           href: "/analytics",  icon: BarChart3 },
@@ -33,6 +36,39 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const [orgs, setOrgs] = useState<any[]>([]);
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getAvailableOrganizations().then(setOrgs).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowOrgDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSwitchOrg = async (orgId: string) => {
+    setShowOrgDropdown(false);
+    try {
+      await switchOrganization(orgId);
+      // Let the router refresh the app shell and server components
+      router.refresh();
+      // To ensure all client side react-query caches are invalidated, we might do a full reload
+      // But server actions with revalidatePath usually handle Next's side.
+      // If we want a hard reload: window.location.reload();
+      // We'll try router.refresh() first.
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -74,25 +110,67 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Org badge */}
-        <div style={{
-          marginTop: "0.75rem",
-          background: "rgba(124,58,237,0.08)",
-          border: "1px solid rgba(124,58,237,0.18)",
-          borderRadius: "0.5rem",
-          padding: "0.375rem 0.625rem",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-            <div style={{
-              width: 20, height: 20, borderRadius: "4px",
-              background: "linear-gradient(135deg,#7c3aed,#2563eb)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "0.5rem", fontWeight: 700, color: "white",
-            }}>{organization?.name?.substring(0, 2).toUpperCase() || 'OG'}</div>
-            <span style={{ fontSize: "0.75rem", color: "#7c3aed", fontWeight: 500 }}>{organization?.name || 'Organization'}</span>
+        {/* Org badge / Switcher */}
+        <div style={{ position: "relative" }} ref={dropdownRef}>
+          <div 
+            onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+            style={{
+              marginTop: "0.75rem",
+              background: "rgba(124,58,237,0.08)",
+              border: "1px solid rgba(124,58,237,0.18)",
+              borderRadius: "0.5rem",
+              padding: "0.375rem 0.625rem",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              cursor: "pointer",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: "4px",
+                background: "linear-gradient(135deg,#7c3aed,#2563eb)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "0.5rem", fontWeight: 700, color: "white",
+              }}>{organization?.name?.substring(0, 2).toUpperCase() || 'OG'}</div>
+              <span style={{ fontSize: "0.75rem", color: "#7c3aed", fontWeight: 500 }}>{organization?.name || 'Organization'}</span>
+            </div>
+            <ChevronRight size={12} color="#7c3aed" style={{ transform: showOrgDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
           </div>
-          <ChevronRight size={12} color="#7c3aed" />
+
+          {showOrgDropdown && orgs.length > 0 && (
+            <div style={{
+              position: "absolute",
+              top: "100%", left: 0, right: 0,
+              marginTop: "0.5rem",
+              background: "#12111A",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "0.5rem",
+              padding: "0.5rem",
+              zIndex: 50,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+            }}>
+              <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, padding: "0 0.5rem 0.5rem", textTransform: "uppercase" }}>Switch Organization</div>
+              {orgs.map((org) => (
+                <div 
+                  key={org.id} 
+                  onClick={() => handleSwitchOrg(org.id)}
+                  style={{
+                    padding: "0.5rem",
+                    borderRadius: "0.25rem",
+                    cursor: org.isCurrent ? "default" : "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    background: org.isCurrent ? "rgba(255,255,255,0.05)" : "transparent",
+                    color: org.isCurrent ? "white" : "var(--text-muted)",
+                    fontSize: "0.75rem",
+                  }}
+                  onMouseEnter={(e) => { if (!org.isCurrent) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+                  onMouseLeave={(e) => { if (!org.isCurrent) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <span>{org.name}</span>
+                  {org.isCurrent && <Check size={12} color="#10b981" />}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -48,7 +48,7 @@ export async function getAssets(brandId: string, page: number = 1, pageSize: num
 }
 
 export async function deleteAssetAction(assetId: string) {
-  const session = await requirePermission('manage_brand_dna');
+  const session = await requirePermission('brand.edit');
   const repo = new TenantRepository(session);
 
   const asset = await repo.findUniqueBrandAsset({ where: { id: assetId } });
@@ -79,7 +79,7 @@ export async function getAssetPreviewUrl(assetId: string) {
 }
 
 export async function enqueueAssetExtraction(assetId: string, brandId: string) {
-  const session = await requirePermission('manage_brand_dna');
+  const session = await requirePermission('brand.edit');
   
   await getBrandAssetQueue().add('brand-asset.extract-text', {
     organizationId: session.organizationId,
@@ -130,7 +130,7 @@ export async function getBrandDnaVersions(brandId: string) {
 }
 
 export async function regenerateBrandDna(brandId: string) {
-  const session = await requirePermission('manage_brand_dna');
+  const session = await requirePermission('brand.edit');
 
   // Verify ownership
   const brand = await prisma.brand.findFirst({
@@ -187,7 +187,7 @@ const updateBrandDnaFieldSchema = z.object({
 });
 
 export async function updateBrandDnaField(payload: z.infer<typeof updateBrandDnaFieldSchema>) {
-  const session = await requirePermission('manage_brand_dna');
+  const session = await requirePermission('brand.edit');
   
   // Validate basic payload
   const { versionId, brandId, field, value } = updateBrandDnaFieldSchema.parse(payload);
@@ -324,7 +324,7 @@ export async function updateBrandDnaField(payload: z.infer<typeof updateBrandDna
 }
 
 export async function publishBrandDnaVersionAction(brandId: string, versionId: string) {
-  const session = await requirePermission('manage_brand_dna');
+  const session = await requirePermission('brand.edit');
   const repo = new TenantRepository(session);
   await repo.publishBrandDnaVersion(brandId, versionId, session.userId);
   revalidatePath('/brand');
@@ -332,7 +332,7 @@ export async function publishBrandDnaVersionAction(brandId: string, versionId: s
 }
 
 export async function restoreBrandDnaVersionAction(brandId: string, versionId: string) {
-  const session = await requirePermission('manage_brand_dna');
+  const session = await requirePermission('brand.edit');
   const repo = new TenantRepository(session);
   await repo.restoreBrandDnaVersion(brandId, versionId, session.userId);
   revalidatePath('/brand');

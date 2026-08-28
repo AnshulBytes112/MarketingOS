@@ -45,5 +45,11 @@ export default async function BrandIntelligencePage() {
     targetAudience: brand.targetAudience || '',
   };
 
-  return <BrandIntelligenceClient brand={brandData} />;
+  const { hasPermission } = await import('@abge/rbac');
+  const permissions = {
+    canView: hasPermission(session.role, 'brand.view'),
+    canEdit: hasPermission(session.role, 'brand.edit'),
+  };
+
+  return <BrandIntelligenceClient brand={brandData} organizationId={session.organizationId} permissions={permissions} />;
 }

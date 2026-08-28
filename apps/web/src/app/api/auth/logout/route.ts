@@ -10,3 +10,12 @@ export async function POST() {
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
   }
 }
+
+export async function GET(request: Request) {
+  try {
+    await invalidateSession();
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+  return NextResponse.redirect(new URL('/login', request.url));
+}

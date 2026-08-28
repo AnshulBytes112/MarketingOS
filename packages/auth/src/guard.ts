@@ -11,6 +11,7 @@ export type AuthenticatedContext = {
   isImpersonated: boolean;
   impersonatorId?: string;
   readOnly?: boolean;
+  isSuspended?: boolean;
 };
 
 export async function getCurrentSession(): Promise<AuthenticatedContext | null> {
@@ -34,7 +35,7 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
         },
       });
 
-      if (membership) {
+      if (membership && membership.status === 'ACTIVE') {
         return {
           userId: impSession.targetUserId,
           organizationId: impSession.targetOrganizationId,
@@ -67,9 +68,7 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
     return null;
   }
 
-  if (session.organization.status === 'SUSPENDED') {
-    return null;
-  }
+  const isSuspended = session.organization.status === 'SUSPENDED';
 
   // Get user's role in the active organization
   const membership = await prisma.organizationMember.findUnique({
@@ -81,7 +80,7 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
     },
   });
 
-  if (!membership) {
+  if (!membership || membership.status !== 'ACTIVE') {
     return null;
   }
 
@@ -90,14 +89,20 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
     organizationId: session.activeOrganizationId,
     role: membership.role,
     isImpersonated: false,
+    isSuspended,
   };
 }
 
-export async function requireAuth(): Promise<AuthenticatedContext> {
+export async function requireAuth(options?: { allowSuspended?: boolean }): Promise<AuthenticatedContext> {
   const session = await getCurrentSession();
   if (!session) {
-    redirect('/login');
+    redirect('/api/auth/logout');
   }
+  
+  if (session.isSuspended && !options?.allowSuspended) {
+    redirect('/suspended');
+  }
+
   return session;
 }
 

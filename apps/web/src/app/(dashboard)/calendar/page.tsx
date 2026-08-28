@@ -61,14 +61,23 @@ export default async function Page() {
     orderBy: { scheduledDate: 'asc' },
   });
 
+  const { hasPermission } = await import('@abge/rbac');
+  
+  const permissions = {
+    canView: hasPermission(session.role, 'calendar.view'),
+    canEdit: hasPermission(session.role, 'calendar.edit'),
+    canGenerate: hasPermission(session.role, 'calendar.create'),
+  };
+
   return (
     <CalendarClient
       initialItems={items}
       brandName={brand.name}
       brandId={brand.id}
+      organizationId={session.organizationId}
       contentPlanId={latestPlan.id}
       strategyId={latestPlan.strategyId}
-      userRole={session.role}
+      permissions={permissions}
       initialStartDate={start.toISOString()}
       initialEndDate={end.toISOString()}
     />

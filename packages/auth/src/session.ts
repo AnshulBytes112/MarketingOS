@@ -10,12 +10,24 @@ export async function createSession(userId: string, activeOrganizationId?: strin
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRATION_DAYS);
 
-  // If no activeOrganizationId is provided, try to find the user's first organization
   let orgId = activeOrganizationId;
   if (!orgId) {
-    const membership = await prisma.organizationMember.findFirst({
-      where: { userId },
+    // Prefer an ACTIVE organization membership first
+    let membership = await prisma.organizationMember.findFirst({
+      where: { 
+        userId,
+        status: 'ACTIVE',
+        organization: { status: 'ACTIVE' }
+      },
     });
+
+    // Fallback to any membership if no active ones exist
+    if (!membership) {
+      membership = await prisma.organizationMember.findFirst({
+        where: { userId },
+      });
+    }
+    
     orgId = membership?.organizationId;
   }
 

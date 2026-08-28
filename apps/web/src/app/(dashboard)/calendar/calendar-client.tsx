@@ -92,9 +92,14 @@ interface CalendarClientProps {
   initialItems: ContentItem[];
   brandName: string;
   brandId: string;
+  organizationId: string;
   contentPlanId: string;
   strategyId: string;
-  userRole: string;
+  permissions: {
+    canView: boolean;
+    canEdit: boolean;
+    canGenerate: boolean;
+  };
   initialStartDate: string;
   initialEndDate: string;
 }
@@ -267,9 +272,10 @@ export default function CalendarClient({
   initialItems, 
   brandName, 
   brandId, 
+  organizationId,
   contentPlanId, 
   strategyId, 
-  userRole,
+  permissions,
   initialStartDate,
   initialEndDate
 }: CalendarClientProps) {
@@ -293,11 +299,11 @@ export default function CalendarClient({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const isViewer = userRole === 'VIEWER' || userRole === 'ANALYST';
+  const isViewer = !permissions.canEdit;
 
   // --- QUERY ---
   const { data: items = initialItems, isLoading } = useQuery({
-    queryKey: ['content-items', brandId, currentStart.toISOString(), currentEnd.toISOString(), platformFilter, funnelFilter],
+    queryKey: ['content-items', organizationId, brandId, currentStart.toISOString(), currentEnd.toISOString(), platformFilter, funnelFilter],
     queryFn: async () => {
       return getContentItems({
         brandId,
@@ -358,7 +364,7 @@ export default function CalendarClient({
     mutationFn: bulkUpdateContentItems,
     onSuccess: () => {
       setSelectedIds(new Set());
-      queryClient.invalidateQueries({ queryKey: ['content-items', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['content-items', organizationId, brandId] });
       setErrorMsg(null);
     },
     onError: (err: any) => {
@@ -369,7 +375,7 @@ export default function CalendarClient({
   const generateContentMutation = useMutation({
     mutationFn: requestContentGeneration,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['content-items', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['content-items', organizationId, brandId] });
       setErrorMsg(null);
     },
     onError: (err: any) => {
@@ -380,7 +386,7 @@ export default function CalendarClient({
   const retryContentMutation = useMutation({
     mutationFn: ({ generationId, modality }: { generationId: string, modality: 'TEXT' | 'IMAGE' | 'VIDEO' }) => retryContentGeneration(generationId, modality),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['content-items', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['content-items', organizationId, brandId] });
       setErrorMsg(null);
     },
     onError: (err: any) => {
@@ -412,7 +418,7 @@ export default function CalendarClient({
   const retryQualityMutation = useMutation({
     mutationFn: retryQualityScoring,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['content-items', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['content-items', organizationId, brandId] });
       setErrorMsg(null);
     },
     onError: (err: any) => {

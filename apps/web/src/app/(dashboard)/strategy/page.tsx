@@ -1,11 +1,11 @@
 import { requireAuth } from '@abge/auth';
 import { prisma } from '@abge/database';
 import StrategyClient from './strategy-client';
+import { hasPermission } from '@abge/rbac';
 
 export default async function StrategyPage() {
   const session = await requireAuth();
 
-  // Fetch real brand from database for active organization
   const brand = await prisma.brand.findFirst({
     where: { organizationId: session.organizationId },
     orderBy: { createdAt: 'desc' },
@@ -20,11 +20,19 @@ export default async function StrategyPage() {
     );
   }
 
+  const permissions = {
+    canGenerate: hasPermission(session.role, 'strategy.generate'),
+    canEdit: hasPermission(session.role, 'strategy.edit'),
+    canApprove: hasPermission(session.role, 'strategy.approve'),
+    canApplyRecommendation: hasPermission(session.role, 'strategy.apply_recommendation'),
+  };
+
   return (
     <StrategyClient
       brandId={brand.id}
       brandName={brand.name}
-      userRole={session.role}
+      organizationId={session.organizationId}
+      permissions={permissions}
     />
   );
 }
