@@ -27,14 +27,14 @@ export default async function OverviewPage() {
     brand = await prisma.brand.create({
       data: {
         organizationId: session.organizationId,
-        name: org?.name ? `${org.name} Brand` : 'NovaBrew Coffee',
-        industry: 'Food & Beverage',
-        geography: 'United States',
-        priceSegment: 'Premium',
-        websiteUrl: 'novabrew.com',
-        positioning: 'Sustainable specialty coffee for the modern professional',
-        usp: 'Single-origin, ethically sourced beans with AI-powered roast profiles',
-        targetAudience: 'Urban professionals 25-40',
+        name: org?.name ? `${org.name} Brand` : 'My Brand',
+        industry: '',
+        geography: '',
+        priceSegment: '',
+        websiteUrl: '',
+        positioning: '',
+        usp: '',
+        targetAudience: '',
         onboardingStatus: 'ACTIVE',
       },
     });

@@ -12,12 +12,18 @@ import {
   Plus,
   CheckCircle2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  History,
+  GitMerge,
+  Edit,
+  Save,
+  ArrowLeft,
+  X
 } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, DragEndEvent, closestCenter } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getContentItems, rescheduleContentItem, bulkUpdateContentItems, createContentItem, requestContentGeneration, retryContentGeneration } from './actions';
+import { getContentItems, rescheduleContentItem, bulkUpdateContentItems, createContentItem, requestContentGeneration, retryContentGeneration, retryQualityScoring, saveContentEdit, restoreContentVersion, regenerateContentWithInstruction, markContentReadyForReview } from './actions';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 
 const PlatformIcon = ({ platform, className = "w-4 h-4" }: { platform: string, className?: string }) => {
@@ -277,6 +283,13 @@ export default function CalendarClient({
   const [currentEnd, setCurrentEnd] = useState(new Date(initialEndDate));
   
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [comparingVersionId, setComparingVersionId] = useState<string | null>(null);
+  const [regenerationInstruction, setRegenerationInstruction] = useState('');
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -301,7 +314,8 @@ export default function CalendarClient({
         item.generations?.some(gen => 
           gen.textStatus === 'QUEUED' || gen.textStatus === 'GENERATING' ||
           gen.imageStatus === 'QUEUED' || gen.imageStatus === 'GENERATING' ||
-          gen.videoStatus === 'QUEUED' || gen.videoStatus === 'GENERATING'
+          gen.videoStatus === 'QUEUED' || gen.videoStatus === 'GENERATING' ||
+          gen.scoringStatus === 'SCORING'
         )
       );
       return active ? 3000 : false;
@@ -371,6 +385,38 @@ export default function CalendarClient({
     },
     onError: (err: any) => {
       setErrorMsg(err.message || 'Retry request failed');
+    }
+  });
+
+  
+  const saveEditMutation = useMutation({
+    mutationFn: (data: { generationId: string, newContent: string }) => saveContentEdit(data.generationId, data.newContent),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['calendar-items'] }); setIsEditing(false); },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (data: { oldGenId: string, itemId: string }) => restoreContentVersion(data.oldGenId, data.itemId),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['calendar-items'] }); setShowVersionHistory(false); setComparingVersionId(null); },
+  });
+
+  const regenerateInstructionMutation = useMutation({
+    mutationFn: (data: { itemId: string, instruction: string }) => regenerateContentWithInstruction(data.itemId, data.instruction),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['calendar-items'] }); setRegenerationInstruction(''); },
+  });
+
+  const readyForReviewMutation = useMutation({
+    mutationFn: (itemId: string) => markContentReadyForReview(itemId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['calendar-items'] }),
+  });
+
+  const retryQualityMutation = useMutation({
+    mutationFn: retryQualityScoring,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content-items', brandId] });
+      setErrorMsg(null);
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message || 'Retry quality request failed');
     }
   });
 
@@ -450,211 +496,194 @@ export default function CalendarClient({
   // --- RENDER HELPERS ---
   const renderItemModal = () => {
     if (!selectedItem) return null;
+    const latestGen = selectedItem.generations && selectedItem.generations.length > 0 
+      ? [...selectedItem.generations].sort((a: any, b: any) => b.version - a.version)[0] 
+      : null;
+
+    if (showVersionHistory) {
+      const sortedGens = [...(selectedItem.generations || [])].sort((a: any, b: any) => b.version - a.version);
+      const compareGen = comparingVersionId ? sortedGens.find((g: any) => g.id === comparingVersionId) : null;
+      
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#12111A] border border-white/10 rounded-2xl p-6 max-w-4xl w-full space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <History className="w-5 h-5 text-purple-400" />
+                Version History
+              </h3>
+              <button onClick={() => { setShowVersionHistory(false); setComparingVersionId(null); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            {comparingVersionId && compareGen ? (
+              <div className="space-y-4">
+                <button onClick={() => setComparingVersionId(null)} className="text-xs text-purple-400 flex items-center gap-1 hover:text-purple-300">
+                  <ArrowLeft className="w-3 h-3" /> Back to History
+                </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                    <h4 className="text-sm font-semibold text-white mb-2">Version {compareGen.version} (Selected)</h4>
+                    <pre className="text-xs text-gray-300 whitespace-pre-wrap">{compareGen.textContent ? JSON.stringify(compareGen.textContent, null, 2) : 'No content'}</pre>
+                  </div>
+                  <div className="bg-purple-900/10 p-4 rounded-xl border border-purple-500/30">
+                    <h4 className="text-sm font-semibold text-purple-300 mb-2">Version {latestGen.version} (Current)</h4>
+                    <pre className="text-xs text-gray-300 whitespace-pre-wrap">{latestGen.textContent ? JSON.stringify(latestGen.textContent, null, 2) : 'No content'}</pre>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sortedGens.map((gen: any, idx: number) => (
+                  <div key={gen.id} className={`bg-white/5 border p-4 rounded-xl flex items-center justify-between ${idx === 0 ? 'border-purple-500/50 bg-purple-500/5' : 'border-white/10'}`}>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">Version {gen.version}</span>
+                        {idx === 0 && <span className="bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">Current</span>}
+                        <span className="text-[10px] text-gray-400 font-mono">{gen.generationSource || 'AI_GENERATION'}</span>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1 flex items-center gap-4">
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {new Date(gen.createdAt).toLocaleString()}</span>
+                        {gen.qualityScore && <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-yellow-400"/> Score: {gen.qualityScore.composite}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {idx !== 0 && (
+                        <button onClick={() => setComparingVersionId(gen.id)} className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg flex items-center gap-1.5">
+                          <GitMerge className="w-3 h-3" /> Compare
+                        </button>
+                      )}
+                      {idx !== 0 && !isViewer && (
+                        <button onClick={() => { if(confirm('Restore this version? This creates a new version from this content. This will not overwrite history.')) restoreMutation.mutate({ oldGenId: gen.id, itemId: selectedItem.id }) }} className="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg flex items-center gap-1.5">
+                          Restore
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-[#12111A] border border-white/10 rounded-2xl p-6 max-w-2xl w-full space-y-6 shadow-2xl relative animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+        <div className="bg-[#12111A] border border-white/10 rounded-2xl p-6 max-w-3xl w-full space-y-6 shadow-2xl relative animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-start">
             <div>
               <span className="text-[10px] text-gray-400 flex items-center gap-1 mb-1">
                 <Clock className="w-3.5 h-3.5" />
-                {format(new Date(selectedItem.scheduledDate), 'EEEE, MMM do yyyy - h:mm a')}
+                {new Date(selectedItem.scheduledDate).toLocaleString()}
               </span>
               <h3 className="text-xl font-bold text-white leading-snug pr-8">{selectedItem.title}</h3>
             </div>
             <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-white text-lg font-semibold bg-white/5 w-8 h-8 rounded-lg flex items-center justify-center shrink-0">✕</button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-[#0B0A11]/60 p-4 rounded-xl border border-white/5 text-xs">
-            <div className="space-y-1">
-              <span className="text-gray-400">Platform</span>
-              <div className="flex items-center gap-1.5 text-white font-medium capitalize">
-                {getPlatformIcon(selectedItem.platform)}
-                {selectedItem.platform}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <span className="text-gray-400">Format</span>
-              <div className="text-white font-medium capitalize">{selectedItem.format}</div>
-            </div>
-            <div className="space-y-1">
-              <span className="text-gray-400">Funnel Stage</span>
-              <div>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${getFunnelBadgeClass(selectedItem.funnelStage)}`}>
-                  {getFunnelLabel(selectedItem.funnelStage)}
-                </span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <span className="text-gray-400">Status</span>
-              <div>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${selectedItem.status === 'PUBLISHED' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : selectedItem.status === 'SCHEDULED' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400' : 'bg-gray-500/10 border border-gray-500/30 text-gray-400'}`}>
-                  {selectedItem.status}
-                </span>
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-2 text-[10px]">
+             <span className="px-2 py-1 bg-white/5 rounded-lg text-gray-300 font-semibold uppercase">{selectedItem.platform}</span>
+             <span className="px-2 py-1 bg-white/5 rounded-lg text-gray-300">{selectedItem.format}</span>
+             <span className={`px-2 py-1 rounded-lg uppercase font-semibold ${selectedItem.status === 'PUBLISHED' ? 'bg-emerald-500/10 text-emerald-400' : selectedItem.status === 'READY_FOR_REVIEW' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'}`}>{selectedItem.status}</span>
+             {latestGen && <button onClick={() => setShowVersionHistory(true)} className="px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg flex items-center gap-1"><History className="w-3 h-3" /> Version History</button>}
           </div>
 
-          <div className="space-y-4 text-xs">
-            {/* AI Score & Reason */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1 p-3 bg-white/5 rounded-xl border border-white/5">
-                <span className="text-gray-400 font-medium flex items-center gap-1"><Sparkles className="w-3.5 h-3.5 text-purple-400" /> AI Score</span>
-                <p className="text-white text-lg font-bold">
-                  {selectedItem.aiScore ? `${selectedItem.aiScore}/100` : <span className="text-sm font-normal text-gray-500">Not scored yet</span>}
-                </p>
-              </div>
-              <div className="space-y-1 p-3 bg-white/5 rounded-xl border border-white/5">
-                <span className="text-gray-400 font-medium">Source</span>
-                <p className="text-white mt-1">
-                  {selectedItem.source === 'MANUAL' ? (
-                    <span className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400 font-medium border border-yellow-500/20">MANUAL CREATION</span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium border border-purple-500/20">AI GENERATED</span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            {selectedItem.reason && (
-               <div className="space-y-1">
-                 <span className="text-gray-400 font-medium">AI Reasoning</span>
-                 <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-gray-300 leading-relaxed italic">{selectedItem.reason}</p>
-               </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <span className="text-gray-400 font-medium">Content Pillar</span>
-                <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-white">{selectedItem.contentPillar}</p>
-              </div>
-              {selectedItem.campaign && (
-                <div className="space-y-1">
-                  <span className="text-gray-400 font-medium">Campaign</span>
-                  <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-white">{selectedItem.campaign}</p>
-                </div>
+          {!latestGen && (
+            <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center text-center space-y-3">
+              <p className="text-xs text-gray-400">No content has been generated for this item yet.</p>
+              {!isViewer && (
+                <button
+                  onClick={() => generateContentMutation.mutate(selectedItem.id)}
+                  disabled={generateContentMutation.isPending}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-xl text-xs font-medium flex items-center gap-2"
+                >
+                  {generateContentMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  Generate Content
+                </button>
               )}
             </div>
+          )}
 
-            {selectedItem.hook && (
-              <div className="space-y-1">
-                <span className="text-gray-400 font-medium">Hook / Opening</span>
-                <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-white">{selectedItem.hook}</p>
+          {latestGen && latestGen.textContent && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                 <h4 className="text-sm font-semibold text-white">Generated Content</h4>
+                 {!isViewer && (
+                   <div className="flex items-center gap-2">
+                     {isEditing ? (
+                       <>
+                         <button onClick={() => setIsEditing(false)} className="text-xs px-3 py-1.5 text-gray-400 hover:text-white">Cancel</button>
+                         <button disabled={saveEditMutation.isPending} onClick={() => saveEditMutation.mutate({ generationId: latestGen.id, newContent: editContent })} className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center gap-1.5">
+                           <Save className="w-3 h-3" /> Save
+                         </button>
+                       </>
+                     ) : (
+                       <button onClick={() => { setEditContent(JSON.stringify(latestGen.textContent, null, 2)); setIsEditing(true); }} className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg flex items-center gap-1.5">
+                         <Edit className="w-3 h-3" /> Edit
+                       </button>
+                     )}
+                   </div>
+                 )}
               </div>
-            )}
-            
-            {selectedItem.cta && (
-              <div className="space-y-1">
-                <span className="text-gray-400 font-medium">Call to Action (CTA)</span>
-                <p className="bg-white/5 border border-white/5 rounded-lg p-3 text-rose-300">{selectedItem.cta}</p>
-              </div>
-            )}
-          </div>
+              
+              {isEditing ? (
+                <textarea 
+                  value={editContent} 
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full h-64 bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white font-mono focus:border-purple-500 focus:outline-none"
+                />
+              ) : (
+                <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-4">
+                  <pre className="text-xs text-gray-300 whitespace-pre-wrap font-sans">
+                    {typeof latestGen.textContent === 'string' ? latestGen.textContent : 
+                      Object.entries(latestGen.textContent).map(([k, v]) => v ? `[${k.toUpperCase()}]
+${v}
 
-          {/* AI Generation Status UI */}
-          <div className="space-y-3 pt-4 border-t border-white/5">
-            <h4 className="text-xs font-semibold text-white flex items-center gap-2"><Sparkles className="w-4 h-4 text-purple-400" /> AI Generation</h4>
-            
-            {selectedItem.generations && selectedItem.generations.length > 0 ? (
-              <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-4 space-y-4">
-                {/* Find the latest generation */}
-                {(() => {
-                  const latestGen = [...selectedItem.generations].sort((a, b) => b.version - a.version)[0];
-                  
-                  const renderStatus = (modality: string, status: string, retryFn?: () => void) => {
-                    if (status === 'NOT_CONFIGURED') return null;
-                    
-                    let icon, color, text;
-                    if (status === 'COMPLETED') { icon = <CheckCircle2 className="w-3 h-3" />; color = 'text-emerald-400'; text = 'Ready'; }
-                    else if (status === 'QUEUED' || status === 'GENERATING') { icon = <Loader2 className="w-3 h-3 animate-spin" />; color = 'text-blue-400'; text = 'Generating...'; }
-                    else if (status === 'FAILED') { icon = <AlertCircle className="w-3 h-3" />; color = 'text-rose-400'; text = 'Failed'; }
-                    else { icon = <Clock className="w-3 h-3" />; color = 'text-gray-400'; text = status; }
+` : '').join('') || JSON.stringify(latestGen.textContent, null, 2)}
+                  </pre>
+                </div>
+              )}
 
-                    return (
-                      <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                        <span className="text-xs text-gray-400 font-medium capitalize">{modality}</span>
-                        <div className="flex items-center gap-3">
-                           <span className={`text-xs flex items-center gap-1 ${color}`}>{icon} {text}</span>
-                           {status === 'FAILED' && retryFn && !isViewer && (
-                             <button onClick={retryFn} disabled={retryContentMutation.isPending} className="text-[10px] px-2 py-0.5 bg-white/10 hover:bg-white/20 rounded text-white">
-                               Retry
-                             </button>
-                           )}
-                        </div>
-                      </div>
-                    );
-                  };
-
-                  return (
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] text-gray-500 font-semibold uppercase">Version {latestGen.version}</span>
-                        {!isViewer && (
-                          <button
-                            onClick={() => generateContentMutation.mutate(selectedItem.id)}
-                            disabled={generateContentMutation.isPending || ['QUEUED', 'GENERATING'].includes(latestGen.textStatus) || ['QUEUED', 'GENERATING'].includes(latestGen.imageStatus) || ['QUEUED', 'GENERATING'].includes(latestGen.videoStatus)}
-                            className="text-[10px] px-2 py-1 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded font-medium"
-                          >
-                            {generateContentMutation.isPending ? 'Requesting...' : 'Regenerate'}
-                          </button>
-                        )}
-                      </div>
-                      
-                      {renderStatus('Text', latestGen.textStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'TEXT' }))}
-                      {renderStatus('Image', latestGen.imageStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'IMAGE' }))}
-                      {renderStatus('Video', latestGen.videoStatus, () => retryContentMutation.mutate({ generationId: latestGen.id, modality: 'VIDEO' }))}
-                      
-                      {latestGen.brandDnaVersionId && (
-                        <div className="mt-4 pt-3 border-t border-white/5 space-y-1">
-                           <span className="text-gray-400 font-medium text-[10px] uppercase">Generated using:</span>
-                           <ul className="text-[10px] text-gray-500 space-y-0.5">
-                             <li>Strategy v{latestGen.strategyVersion || '?'}</li>
-                             <li>Brand DNA ({latestGen.brandDnaVersionId.substring(0,8)}...)</li>
-                             {latestGen.sourceIds && Array.isArray(latestGen.sourceIds) && (
-                               <li>{latestGen.sourceIds.length} source(s)</li>
-                             )}
-                           </ul>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : (
-              <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-3">
-                <p className="text-xs text-gray-400">No content has been generated for this item yet.</p>
-                {!isViewer && (
-                  <button
-                    onClick={() => generateContentMutation.mutate(selectedItem.id)}
-                    disabled={generateContentMutation.isPending}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition-colors shadow-lg shadow-purple-500/20"
+              {/* AI Instruction / Regeneration */}
+              {!isEditing && !isViewer && (
+                <div className="bg-purple-900/10 border border-purple-500/20 rounded-xl p-3 flex items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-purple-400 shrink-0" />
+                  <input 
+                    type="text" 
+                    value={regenerationInstruction}
+                    onChange={(e) => setRegenerationInstruction(e.target.value)}
+                    placeholder="Tell AI how you want this version changed (e.g. 'Make it shorter')..."
+                    className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white placeholder:text-purple-300/50"
+                  />
+                  <button 
+                    disabled={regenerateInstructionMutation.isPending || !regenerationInstruction} 
+                    onClick={() => regenerateInstructionMutation.mutate({ itemId: selectedItem.id, instruction: regenerationInstruction })}
+                    className="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-lg whitespace-nowrap"
                   >
-                    {generateContentMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Generate Content
+                    {regenerateInstructionMutation.isPending ? 'Regenerating...' : 'Regenerate'}
+                  </button>
+                </div>
+              )}
+
+              {/* Status and Actions */}
+              <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                <div className="flex items-center gap-4">
+                  {latestGen.qualityScore && (
+                    <div className="flex items-center gap-2">
+                       <span className="text-[10px] text-gray-400 uppercase font-semibold">Quality</span>
+                       <span className={`text-sm font-bold ${latestGen.qualityScore.composite >= 90 ? 'text-emerald-400' : latestGen.qualityScore.composite >= 75 ? 'text-blue-400' : 'text-yellow-400'}`}>{latestGen.qualityScore.composite}</span>
+                    </div>
+                  )}
+                  {latestGen.scoringStatus === 'SCORING' && <div className="text-[10px] text-blue-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Scoring...</div>}
+                </div>
+                {!isViewer && selectedItem.status === 'DRAFT' && (
+                  <button disabled={readyForReviewMutation.isPending} onClick={() => readyForReviewMutation.mutate(selectedItem.id)} className="text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20">
+                    Ready for Review
                   </button>
                 )}
               </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            {!isViewer && (
-              <button
-                onClick={() => {
-                  bulkUpdateMutation.mutate({ itemIds: [selectedItem.id], brandId, changes: { status: 'PUBLISHED' } });
-                  setSelectedItem(null);
-                }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium"
-              >
-                Mark Published
-              </button>
-            )}
-            <button
-              onClick={() => setSelectedItem(null)}
-              className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-medium"
-            >
-              Close
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -747,7 +776,7 @@ export default function CalendarClient({
            <p className="text-gray-400 text-sm">Loading calendar...</p>
         </div>
       ) : view === 'grid' ? (
-        <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+        <DndContext id="calendar-dnd-context" onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
           <div className="space-y-2">
             {daysInRange.map((date) => {
               const dayItems = items.filter(i => isSameDay(new Date(i.scheduledDate), date));

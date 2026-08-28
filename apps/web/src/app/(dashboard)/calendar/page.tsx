@@ -42,9 +42,10 @@ export default async function Page() {
   }
 
   // Determine initial date range for server-side rendering (e.g. current month)
+  const { startOfMonth, endOfMonth } = require('date-fns');
   const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const start = startOfMonth(today);
+  const end = endOfMonth(today);
 
   // Fetch items for that content plan (with tenant security isolation)
   const items = await prisma.contentItem.findMany({
@@ -53,8 +54,8 @@ export default async function Page() {
       brandId: brand.id,
       organizationId: session.organizationId,
       scheduledDate: {
-        gte: startOfMonth,
-        lte: endOfMonth,
+        gte: start,
+        lte: end,
       },
     },
     orderBy: { scheduledDate: 'asc' },
@@ -68,8 +69,8 @@ export default async function Page() {
       contentPlanId={latestPlan.id}
       strategyId={latestPlan.strategyId}
       userRole={session.role}
-      initialStartDate={startOfMonth.toISOString()}
-      initialEndDate={endOfMonth.toISOString()}
+      initialStartDate={start.toISOString()}
+      initialEndDate={end.toISOString()}
     />
   );
 }

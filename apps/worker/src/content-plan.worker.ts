@@ -127,15 +127,19 @@ You MUST align the calendar items strictly with the approved Strategy's guidelin
 
 IMPORTANT:
 - Historical performance analytics are completely UNAVAILABLE. Do not fabricate or invent any historical performance data.
-- The dates must be sequential YYYY-MM-DD starting from tomorrow.
+- The dates must be within the CURRENT MONTH of the provided Current Date. Do NOT schedule any items in the next month.
+- If there are fewer than 14 days left in the current month, you MUST schedule multiple items on the same day to reach exactly 14 items.
 - Output the result strictly adhering to the requested JSON schema.`;
 
       const userPrompt = `
+Current Date: ${new Date().toISOString().split('T')[0]}
+
 Approved Strategy parameters:
 ${JSON.stringify(strategyContext, null, 2)}
 
 Active Brand DNA:
 ${JSON.stringify(brandDnaContext, null, 2)}
+
 
 Products/Services:
 ${JSON.stringify(productsContext, null, 2)}

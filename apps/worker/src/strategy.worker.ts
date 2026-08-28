@@ -216,7 +216,9 @@ OUTPUT STRUCTURE RULES:
 - Funnel Mapping: TOFU, MOFU, and BOFU recommendedAllocations must sum exactly to 100%.
 - Platforms: Do not include a platform with 0% allocation unless its 'role' explicitly states it is 'Not recommended'.
 - Experiments: Propose hypotheses (not guaranteed results) with metrics and test variables.
-- Content Engine Contract: Ensure content pillars, themes, and formats are directly actionable by a downstream content generator.`;
+- Content Engine Contract: Ensure content pillars, themes, and formats are directly actionable by a downstream content generator.
+- Sources: The top-level 'sources' array MUST be an array of objects containing { type, id, label }. Do not return an array of strings.
+- Cadence: The 'cadence' field MUST be an array of objects containing { platform, cadence }. Do not return a string.`;
 
       const userPrompt = `
 ACTIVE Brand DNA:

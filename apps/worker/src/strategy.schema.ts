@@ -67,7 +67,7 @@ export const NewStrategyContentPillarSchema = z.object({
   description: z.string(),
   objective: z.string(),
   recommendedWeight: z.number().min(0).max(100),
-  priority: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+  priority: z.preprocess((val) => (typeof val === 'string' ? val.toUpperCase() : val), z.enum(['HIGH', 'MEDIUM', 'LOW'])),
   expectedOutcome: z.string(),
   targetFunnelStages: z.array(z.string()),
 });
@@ -153,11 +153,14 @@ export const NewStrategyAIReasoningItemSchema = z.object({
 });
 
 export const StrategySourceSchema = z.preprocess((raw: any) => {
+  if (typeof raw === 'string') {
+    return { type: 'BRAND_DNA', id: raw, label: 'Source Document' };
+  }
   if (!raw || typeof raw !== 'object') return raw;
   return {
     type: normalizeSourceType(raw.type ?? raw.sourceType ?? raw.category ?? ''),
-    id: raw.id ?? raw.sourceId ?? raw.entityId ?? '',
-    label: raw.label ?? raw.name ?? raw.title ?? raw.type ?? '',
+    id: String(raw.id ?? raw.sourceId ?? raw.entityId ?? ''),
+    label: String(raw.label ?? raw.name ?? raw.title ?? raw.type ?? ''),
   };
 }, z.object({
   type: z.enum(['BRAND_DNA', 'ONBOARDING', 'BRAND_PRODUCT', 'COMPETITOR_ACCOUNT', 'COMPETITOR_POST', 'AI_RECOMMENDATION']),

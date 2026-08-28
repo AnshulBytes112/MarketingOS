@@ -370,6 +370,7 @@ model BrandDNAVersion {
   positioning           String?
   visualIdentitySummary String?
   audience              String?
+  demographics          Json?
   contentPillars        Json?
   language              String?
   ctaPreferences        String?
@@ -576,6 +577,7 @@ enum ContentPlanStatus {
 
 enum ContentItemStatus {
   DRAFT
+  READY_FOR_REVIEW
   SCHEDULED
   PUBLISHED
 }
@@ -713,6 +715,15 @@ model ContentGeneration {
   strategyVersion   Int?
   sourceIds         Json?
 
+  generationSource       String?
+  generationInstruction  String?
+  parentVersionId        String?
+  parentVersion          ContentGeneration?  @relation("VersionHistory", fields: [parentVersionId], references: [id], onDelete: SetNull)
+  childVersions          ContentGeneration[] @relation("VersionHistory")
+
+  qualityScore      Json?
+  scoringStatus     ScoringStatus @default(NOT_SCORED)
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -725,6 +736,13 @@ model ContentGeneration {
   @@index([brandId])
   @@index([contentItemId])
   @@index([brandDnaVersionId])
+}
+
+enum ScoringStatus {
+  NOT_SCORED
+  SCORING
+  SCORED
+  FAILED
 }
 
 enum GenerationStatus {

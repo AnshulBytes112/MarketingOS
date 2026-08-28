@@ -120,7 +120,7 @@ export class ModelGateway {
         console.log(`[${requestId}] Generating structured output with model ${model} (Attempt ${attempts + 1}/${maxAttempts})`);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s hard timeout per attempt
+        const timeoutId = setTimeout(() => controller.abort(), 180000); // 180s hard timeout per attempt
         let response;
         try {
           response = await this.openai.chat.completions.create({

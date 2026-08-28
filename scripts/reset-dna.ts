@@ -3,7 +3,7 @@ import { prisma } from '../packages/database/src/client';
 
 
 async function main() {
-  const result = await prisma.brandDNA.updateMany({
+  const result = await prisma.brandDNAVersion.updateMany({
     where: { status: 'GENERATING' },
     data: { status: 'FAILED' }
   });

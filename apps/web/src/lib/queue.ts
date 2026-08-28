@@ -149,3 +149,24 @@ export async function enqueueVideoGeneration(params: {
     backoff: { type: 'exponential', delay: 2000 },
   });
 }
+
+let _qualityScoringQueue: Queue | null = null;
+export const getQualityScoringQueue = () => {
+  if (!_qualityScoringQueue) {
+    _qualityScoringQueue = new Queue('quality-scoring', { connection: redisConnection });
+  }
+  return _qualityScoringQueue;
+};
+
+export async function enqueueQualityScoring(params: {
+  generationId: string;
+  organizationId: string;
+  brandId: string;
+  contentVersionId: string;
+}) {
+  return getQualityScoringQueue().add(`quality-score:${params.contentVersionId}`, params, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+    jobId: `quality-score:${params.contentVersionId}` // Deterministic jobId for idempotency
+  });
+}

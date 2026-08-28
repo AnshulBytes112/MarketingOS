@@ -3,7 +3,7 @@
 import { prisma } from '@abge/database';
 import { requireAuth, requirePermission } from '@abge/auth';
 import { determineRequiredModalities } from '../../../lib/generation-matrix';
-import { enqueueTextGeneration, enqueueImageGeneration, enqueueVideoGeneration } from '../../../lib/queue';
+import { enqueueTextGeneration, enqueueImageGeneration, enqueueVideoGeneration, enqueueQualityScoring } from '../../../lib/queue';
 
 export async function getContentItems({
   brandId,
@@ -396,6 +396,265 @@ export async function retryContentGeneration(generationId: string, modality: 'TE
   } else {
     throw new Error(`Modality ${modality} is not in a FAILED state`);
   }
+
+  return { success: true };
+}
+
+export async function retryQualityScoring(generationId: string) {
+  const session = await requireAuth();
+
+  const generation = await prisma.contentGeneration.findUnique({
+    where: { id: generationId },
+    include: { contentItem: true }
+  });
+
+  if (!generation || generation.organizationId !== session.organizationId) {
+    throw new Error('Not found');
+  }
+
+  if (generation.scoringStatus !== 'FAILED') {
+    throw new Error('Generation is not in a FAILED scoring state');
+  }
+
+  await prisma.contentGeneration.update({
+    where: { id: generationId },
+    data: { scoringStatus: 'SCORING' }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: session.organizationId,
+      userId: session.userId,
+      action: 'CONTENT_SCORING_RETRIED',
+      entityType: 'ContentGeneration',
+      entityId: generationId,
+    }
+  });
+
+  await enqueueQualityScoring({
+    generationId,
+    organizationId: session.organizationId,
+    brandId: generation.brandId,
+    contentVersionId: generationId
+  });
+
+  return { success: true };
+}
+
+export async function saveContentEdit(generationId: string, newContent: string) {
+  const session = await requireAuth();
+  await requirePermission('generate_content');
+
+  const oldGen = await prisma.contentGeneration.findUnique({
+    where: { id: generationId },
+    include: { contentItem: true }
+  });
+
+  if (!oldGen || oldGen.organizationId !== session.organizationId) {
+    throw new Error('Not found or tenant violation');
+  }
+
+  const latestGen = await prisma.contentGeneration.findFirst({
+    where: { contentItemId: oldGen.contentItemId },
+    orderBy: { version: 'desc' }
+  });
+  
+  const newVersion = (latestGen?.version || 0) + 1;
+
+  const newGen = await prisma.contentGeneration.create({
+    data: {
+      organizationId: session.organizationId,
+      brandId: oldGen.brandId,
+      contentItemId: oldGen.contentItemId,
+      version: newVersion,
+      textStatus: 'COMPLETED',
+      imageStatus: oldGen.imageStatus,
+      videoStatus: oldGen.videoStatus,
+      textContent: newContent,
+      brandDnaVersionId: oldGen.brandDnaVersionId,
+      strategyVersion: oldGen.strategyVersion,
+      sourceIds: oldGen.sourceIds || [],
+      generationSource: 'MANUAL_EDIT',
+      parentVersionId: generationId,
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: session.organizationId,
+      userId: session.userId,
+      action: 'CONTENT_EDITED',
+      entityType: 'ContentGeneration',
+      entityId: newGen.id,
+    }
+  });
+
+  const { enqueueQualityScoring } = await import('../../../lib/queue');
+  await enqueueQualityScoring({
+    generationId: newGen.id,
+    organizationId: session.organizationId,
+    brandId: newGen.brandId,
+    contentVersionId: newGen.id
+  });
+
+  return { success: true, generationId: newGen.id };
+}
+
+export async function restoreContentVersion(oldGenerationId: string, contentItemId: string) {
+  const session = await requireAuth();
+  await requirePermission('generate_content');
+
+  const oldGen = await prisma.contentGeneration.findUnique({
+    where: { id: oldGenerationId }
+  });
+
+  if (!oldGen || oldGen.organizationId !== session.organizationId || oldGen.contentItemId !== contentItemId) {
+    throw new Error('Not found or tenant violation');
+  }
+
+  const latestGen = await prisma.contentGeneration.findFirst({
+    where: { contentItemId },
+    orderBy: { version: 'desc' }
+  });
+  
+  const newVersion = (latestGen?.version || 0) + 1;
+
+  const newGen = await prisma.contentGeneration.create({
+    data: {
+      organizationId: session.organizationId,
+      brandId: oldGen.brandId,
+      contentItemId: oldGen.contentItemId,
+      version: newVersion,
+      textStatus: oldGen.textStatus,
+      imageStatus: oldGen.imageStatus,
+      videoStatus: oldGen.videoStatus,
+      textContent: oldGen.textContent || undefined,
+      brandDnaVersionId: oldGen.brandDnaVersionId,
+      strategyVersion: oldGen.strategyVersion,
+      sourceIds: oldGen.sourceIds || [],
+      generationSource: 'RESTORE',
+      parentVersionId: oldGenerationId,
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: session.organizationId,
+      userId: session.userId,
+      action: 'CONTENT_VERSION_RESTORED',
+      entityType: 'ContentGeneration',
+      entityId: newGen.id,
+      metadata: { restoredFrom: oldGenerationId }
+    }
+  });
+
+  const { enqueueQualityScoring } = await import('../../../lib/queue');
+  await enqueueQualityScoring({
+    generationId: newGen.id,
+    organizationId: session.organizationId,
+    brandId: newGen.brandId,
+    contentVersionId: newGen.id
+  });
+
+  return { success: true, generationId: newGen.id };
+}
+
+export async function regenerateContentWithInstruction(contentItemId: string, instruction: string) {
+  const session = await requireAuth();
+  await requirePermission('generate_content');
+
+  const item = await prisma.contentItem.findUnique({
+    where: { id: contentItemId },
+    include: { strategy: true }
+  });
+
+  if (!item || item.organizationId !== session.organizationId) {
+    throw new Error('Not found or tenant violation');
+  }
+
+  const activeGen = await prisma.contentGeneration.findFirst({
+    where: {
+      contentItemId,
+      OR: [
+        { textStatus: 'QUEUED' },
+        { textStatus: 'GENERATING' }
+      ]
+    }
+  });
+
+  if (activeGen) {
+    throw new Error('A generation is already in progress');
+  }
+
+  const latestGen = await prisma.contentGeneration.findFirst({
+    where: { contentItemId },
+    orderBy: { version: 'desc' }
+  });
+  
+  const newVersion = (latestGen?.version || 0) + 1;
+
+  const generation = await prisma.contentGeneration.create({
+    data: {
+      organizationId: session.organizationId,
+      brandId: item.brandId,
+      contentItemId,
+      version: newVersion,
+      textStatus: 'QUEUED',
+      imageStatus: 'NOT_CONFIGURED',
+      videoStatus: 'NOT_CONFIGURED',
+      generationSource: 'AI_REGENERATION',
+      generationInstruction: instruction,
+      parentVersionId: latestGen?.id,
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: session.organizationId,
+      userId: session.userId,
+      action: 'CONTENT_REGENERATED',
+      entityType: 'ContentGeneration',
+      entityId: generation.id,
+    }
+  });
+
+  await enqueueTextGeneration({
+    generationId: generation.id,
+    organizationId: session.organizationId,
+    brandId: item.brandId,
+    contentItemId,
+  });
+
+  return { success: true, generationId: generation.id };
+}
+
+export async function markContentReadyForReview(contentItemId: string) {
+  const session = await requireAuth();
+  await requirePermission('generate_content');
+
+  const item = await prisma.contentItem.findUnique({
+    where: { id: contentItemId }
+  });
+
+  if (!item || item.organizationId !== session.organizationId) {
+    throw new Error('Not found or tenant violation');
+  }
+
+  await prisma.contentItem.update({
+    where: { id: contentItemId },
+    data: { status: 'READY_FOR_REVIEW' }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: session.organizationId,
+      userId: session.userId,
+      action: 'CONTENT_STATUS_CHANGED',
+      entityType: 'ContentItem',
+      entityId: contentItemId,
+      metadata: { newStatus: 'READY_FOR_REVIEW' }
+    }
+  });
 
   return { success: true };
 }

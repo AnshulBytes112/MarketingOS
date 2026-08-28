@@ -214,12 +214,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   const personalityTags = rawPersonality.split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
 
   // Audience demographics
-  const audienceDemographics = [
-    { range: 'Age 25-34', percentage: 48, color: 'bg-purple-500', textColor: 'text-purple-400' },
-    { range: 'Age 35-44', percentage: 32, color: 'bg-blue-500', textColor: 'text-blue-400' },
-    { range: 'Age 18-24', percentage: 12, color: 'bg-emerald-500', textColor: 'text-emerald-400' },
-    { range: 'Age 45+', percentage: 8, color: 'bg-amber-500', textColor: 'text-amber-400' },
-  ];
+  const audienceDemographics: any[] = brandDna?.demographics as any[] || [];
 
   return (
     <div className="space-y-6 pb-12">
@@ -709,7 +704,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                 </div>
               ))}
               {audienceDemographics.length === 0 && (
-                <p className="text-xs text-gray-500 italic">No content pillar breakdown available.</p>
+                <p className="text-xs text-gray-500 italic">Demographic analysis will be generated automatically after competitor data ingestion.</p>
               )}
             </div>
           </div>

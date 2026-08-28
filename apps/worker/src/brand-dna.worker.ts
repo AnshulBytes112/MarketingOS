@@ -87,7 +87,12 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       "ctaPreferences": "string",
       "avoidList": ["string"],
       "claims": ["string"],
-      "constraints": ["string"]
+      "constraints": ["string"],
+      "demographics": [{"range": "string", "percentage": 30, "color": "bg-purple-500", "textColor": "text-purple-400"}],
+      "inferredIndustry": "string",
+      "inferredGeography": "string",
+      "inferredPriceSegment": "string",
+      "inferredWebsiteUrl": "string"
     }`;
       // Deterministic Chunk Selection instead of crude truncation
       const promptStartTime = performance.now();
@@ -182,13 +187,22 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
         avoidList: result.data.avoidList,
         claims: result.data.claims,
         constraints: result.data.constraints,
+        demographics: result.data.demographics,
       }
     });
 
-    // Update Brand status
+    // Update Brand status and inferred fields
     await prisma.brand.update({
       where: { id: brandId },
-      data: { onboardingStatus: 'ACTIVE' }
+      data: { 
+        onboardingStatus: 'ACTIVE',
+        industry: brand.industry || result.data.inferredIndustry,
+        geography: brand.geography || result.data.inferredGeography,
+        priceSegment: brand.priceSegment || result.data.inferredPriceSegment,
+        websiteUrl: brand.websiteUrl || result.data.inferredWebsiteUrl,
+        targetAudience: brand.targetAudience || result.data.audience,
+        positioning: brand.positioning || result.data.positioning,
+      }
     });
 
     // Create AuditLog if user triggered
