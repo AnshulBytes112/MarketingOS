@@ -2,21 +2,11 @@ import { requireAuth } from "@abge/auth";
 import { getUsers } from "./actions";
 import { UsersClient } from "./users-client";
 import { prisma } from "@abge/database";
-import { hasPermission } from "@abge/rbac";
 
 export default async function UsersPage() {
   const session = await requireAuth();
 
-  const membership = await prisma.organizationMember.findUnique({
-    where: {
-      organizationId_userId: {
-        organizationId: session.organizationId,
-        userId: session.userId,
-      },
-    },
-  });
-
-  const canView = membership ? hasPermission(membership.role, "user.view") : false;
+  const canView = session.effectivePermissions.includes("user.view");
   
   if (!canView) {
     return (
@@ -31,10 +21,11 @@ export default async function UsersPage() {
 
   const users = await getUsers();
 
-  const canCreate = hasPermission(membership!.role, "user.create");
-  const canEditRole = hasPermission(membership!.role, "user.edit_role");
-  const canDeactivate = hasPermission(membership!.role, "user.deactivate");
-  const canReactivate = hasPermission(membership!.role, "user.reactivate");
+  const canCreate = session.effectivePermissions.includes("user.create");
+  const canEditRole = session.effectivePermissions.includes("user.edit_role");
+  const canEditPermissions = session.effectivePermissions.includes("user.edit_permissions");
+  const canDeactivate = session.effectivePermissions.includes("user.deactivate");
+  const canReactivate = session.effectivePermissions.includes("user.reactivate");
 
   return (
     <div className="space-y-6">
@@ -47,7 +38,7 @@ export default async function UsersPage() {
       
       <UsersClient 
         initialUsers={users} 
-        permissions={{ canCreate, canEditRole, canDeactivate, canReactivate }} 
+        permissions={{ canCreate, canEditRole, canEditPermissions, canDeactivate, canReactivate }} 
       />
     </div>
   );

@@ -2,6 +2,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { requireAuth } from '@abge/auth';
 import { prisma } from '@abge/database';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
+import { PermissionsProvider } from '@/components/providers/PermissionsProvider';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         user={{ name: user?.name || 'User', role: session.role }} 
         organization={{ id: organization?.id || '', name: organization?.name || 'Org' }}
       >
-        {children}
+        <PermissionsProvider effectivePermissions={session.effectivePermissions}>
+          {children}
+        </PermissionsProvider>
       </AppShell>
     </>
   );

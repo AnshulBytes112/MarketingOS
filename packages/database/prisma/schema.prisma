@@ -88,12 +88,13 @@ model Organization {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String?
-  name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  passwordHash       String?
+  name               String?
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   memberships           OrganizationMember[]
   auditLogs             AuditLog[]
@@ -130,13 +131,14 @@ enum MemberStatus {
 }
 
 model OrganizationMember {
-  id             String       @id @default(cuid())
-  organizationId String
-  userId         String
-  role           Role
-  status         MemberStatus @default(ACTIVE)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                String       @id @default(cuid())
+  organizationId    String
+  userId            String
+  role              Role
+  status            MemberStatus @default(ACTIVE)
+  customPermissions Json?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)

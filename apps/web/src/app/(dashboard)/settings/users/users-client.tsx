@@ -12,10 +12,14 @@ type UsersClientProps = {
   permissions: {
     canCreate: boolean;
     canEditRole: boolean;
+    canEditPermissions: boolean;
     canDeactivate: boolean;
     canReactivate: boolean;
   };
 };
+
+import { EditPermissionsModal } from "./edit-permissions-modal";
+import { PERMISSION_REGISTRY, ROLE_PERMISSIONS } from "@abge/rbac";
 
 export function UsersClient({ initialUsers, permissions }: UsersClientProps) {
   const [users, setUsers] = useState(initialUsers);
@@ -26,15 +30,24 @@ export function UsersClient({ initialUsers, permissions }: UsersClientProps) {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("VIEWER");
   const [isInviting, setIsInviting] = useState(false);
+  
+  const [tempPassword, setTempPassword] = useState<{password: string; orgName: string; email: string} | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsInviting(true);
-      await inviteUser(inviteEmail, inviteName, inviteRole);
-      // In a real app we'd fetch the new user or have the action return the full user.
-      // For this demo we'll just reload the page to get fresh data.
-      window.location.reload();
+      const res = await inviteUser(inviteEmail, inviteName, inviteRole);
+      setTempPassword({ password: res.temporaryPassword as string, orgName: res.organizationName as string, email: inviteEmail });
+      
+      // Clear form
+      setInviteEmail("");
+      setInviteName("");
+      setInviteRole("VIEWER");
+      
+      // Optimistic reload or just fetch users. Reload is fine.
+      // Actually let's not reload immediately so they can see the password popup.
     } catch (e: any) {
       alert(e.message);
     } finally {
@@ -73,6 +86,54 @@ export function UsersClient({ initialUsers, permissions }: UsersClientProps) {
 
   return (
     <div className="space-y-6">
+      
+      {/* Temporary Password Modal */}
+      {tempPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-[#16151A] border border-white/10 rounded-2xl shadow-2xl p-6 relative">
+            <h2 className="text-xl font-bold text-emerald-400 mb-2">User Invited Successfully</h2>
+            <div className="text-sm text-gray-300 mb-6 space-y-2">
+              <p>Organization: <strong className="text-white">{tempPassword.orgName}</strong></p>
+              <p>Email: <strong className="text-white">{tempPassword.email}</strong></p>
+              <p className="text-yellow-400 mt-4 text-xs">
+                ⚠️ Share this temporary password securely. The user will be forced to change it upon first login. It will not be shown again.
+              </p>
+            </div>
+            
+            <div className="bg-[#0B0A11] border border-white/10 rounded-xl p-4 mb-6 flex items-center justify-between">
+              <code className="text-lg font-mono text-white">{tempPassword.password}</code>
+              <button 
+                onClick={() => navigator.clipboard.writeText(tempPassword.password)}
+                className="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Copy
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => { setTempPassword(null); window.location.reload(); }}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Permissions Modal */}
+      {editingUser && (
+        <EditPermissionsModal 
+          user={editingUser} 
+          registry={PERMISSION_REGISTRY}
+          rolePermissions={ROLE_PERMISSIONS}
+          onClose={() => setEditingUser(null)}
+          onSuccess={() => {
+            setEditingUser(null);
+            window.location.reload();
+          }}
+        />
+      )}
+
       {/* Invite Form */}
       {permissions.canCreate && (
         <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6">
@@ -137,7 +198,6 @@ export function UsersClient({ initialUsers, permissions }: UsersClientProps) {
               <th className="p-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">User</th>
               <th className="p-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Role</th>
               <th className="p-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="p-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Joined</th>
               <th className="p-4 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
@@ -150,14 +210,21 @@ export function UsersClient({ initialUsers, permissions }: UsersClientProps) {
                       {user.name?.substring(0, 2).toUpperCase() || "US"}
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-white">{user.name || "Unnamed"}</div>
+                      <div className="text-sm font-semibold text-white flex items-center gap-2">
+                        {user.name || "Unnamed"}
+                        {user.customPermissions && (
+                           <span className="text-[9px] uppercase font-bold text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20" title="This user has custom permission overrides">
+                             Custom
+                           </span>
+                        )}
+                      </div>
                       <div className="text-xs text-gray-500">{user.email}</div>
                     </div>
                   </div>
                 </td>
                 <td className="p-4">
                   <select 
-                    disabled={!permissions.canEditRole || loadingId === user.id}
+                    disabled={!permissions.canEditRole || loadingId === user.id || user.role === "OWNER"}
                     value={user.role}
                     onChange={e => handleRoleChange(user.id, e.target.value as Role)}
                     className="bg-[#0B0A11]/60 border border-white/10 rounded-lg py-1 px-2 text-xs text-white disabled:opacity-50 focus:outline-none"
@@ -169,7 +236,7 @@ export function UsersClient({ initialUsers, permissions }: UsersClientProps) {
                     <option value="CONTENT_MANAGER">Content Manager</option>
                     <option value="MARKETING_MANAGER">Marketing Manager</option>
                     <option value="ADMIN">Admin</option>
-                    <option value="OWNER">Owner</option>
+                    {user.role === "OWNER" && <option value="OWNER">Owner</option>}
                   </select>
                 </td>
                 <td className="p-4">
@@ -183,11 +250,17 @@ export function UsersClient({ initialUsers, permissions }: UsersClientProps) {
                     </span>
                   )}
                 </td>
-                <td className="p-4 text-sm text-gray-400">
-                  {format(new Date(user.joinedAt), "MMM d, yyyy")}
-                </td>
-                <td className="p-4 text-right">
-                  {user.status === "ACTIVE" && permissions.canDeactivate && (
+                <td className="p-4 text-right space-x-2">
+                  {user.role !== "OWNER" && permissions.canEditPermissions && (
+                    <button 
+                      onClick={() => setEditingUser(user)}
+                      disabled={loadingId === user.id}
+                      className="text-xs text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Edit Permissions
+                    </button>
+                  )}
+                  {user.status === "ACTIVE" && permissions.canDeactivate && user.role !== "OWNER" && (
                      <button 
                        onClick={() => handleToggleStatus(user.id, user.status)}
                        disabled={loadingId === user.id}

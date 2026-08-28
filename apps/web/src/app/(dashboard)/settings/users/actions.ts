@@ -20,6 +20,7 @@ export async function getUsers() {
     email: m.user.email,
     role: m.role,
     status: m.status,
+    customPermissions: m.customPermissions,
     joinedAt: m.createdAt,
   }));
 }
@@ -27,20 +28,27 @@ export async function getUsers() {
 export async function inviteUser(email: string, name: string, role: Role) {
   const session = await requirePermission("user.create");
 
-  // Verify not trying to create a duplicate user account
   let targetUser = await prisma.user.findUnique({ where: { email } });
+  
+  let temporaryPassword = null;
+  const org = await prisma.organization.findUnique({ where: { id: session.organizationId }});
 
   if (!targetUser) {
+    const crypto = await import("crypto");
+    const bcrypt = await import("bcryptjs");
+    temporaryPassword = crypto.randomBytes(8).toString("hex");
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
     targetUser = await prisma.user.create({
       data: {
         email,
         name,
-        // Using a placeholder or letting standard auth handle password later.
+        passwordHash,
+        mustChangePassword: true,
       },
     });
   }
 
-  // Check if they are already in the organization
   const existingMembership = await prisma.organizationMember.findUnique({
     where: {
       organizationId_userId: {
@@ -75,7 +83,74 @@ export async function inviteUser(email: string, name: string, role: Role) {
   });
 
   revalidatePath("/settings/users");
-  return membership;
+  return { 
+    membership, 
+    temporaryPassword,
+    organizationName: org?.name || "Organization"
+  };
+}
+
+export async function updateUserPermissions(targetUserId: string, customPermissions: { grant: string[], deny: string[] } | null) {
+  const session = await requirePermission("user.edit_permissions");
+
+  // Validate custom permissions against the registry
+  if (customPermissions) {
+    const { PERMISSION_REGISTRY } = await import("@abge/rbac");
+    const allRequested = [...(customPermissions.grant || []), ...(customPermissions.deny || [])];
+    for (const p of allRequested) {
+      if (!PERMISSION_REGISTRY[p as keyof typeof PERMISSION_REGISTRY]) {
+        throw new Error(`Invalid permission provided: ${p}`);
+      }
+      
+      // Admin must possess the permission they are trying to grant (unless OWNER)
+      if (customPermissions.grant?.includes(p) && session.role !== "OWNER") {
+        if (!session.effectivePermissions.includes(p)) {
+          throw new Error(`Cannot grant permission you do not possess: ${p}`);
+        }
+      }
+    }
+  }
+
+  // Ensure target user is in the organization
+  const membership = await prisma.organizationMember.findUnique({
+    where: {
+      organizationId_userId: {
+        organizationId: session.organizationId,
+        userId: targetUserId,
+      },
+    },
+  });
+
+  if (!membership) {
+    throw new Error("User is not a member of this organization.");
+  }
+
+  // Last owner protection
+  if (membership.role === "OWNER" && membership.status === "ACTIVE") {
+    // We shouldn't mess with OWNER permissions, they are unrestricted anyway
+    throw new Error("Cannot modify custom permissions for an OWNER.");
+  }
+
+  const updatedMembership = await prisma.organizationMember.update({
+    where: { id: membership.id },
+    data: {
+      customPermissions: customPermissions ? (customPermissions as any) : null,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: session.organizationId,
+      userId: session.userId,
+      action: "USER_PERMISSIONS_UPDATED",
+      entityType: "OrganizationMember",
+      entityId: membership.id,
+      metadata: { targetUserId, customPermissions },
+    },
+  });
+
+  revalidatePath("/settings/users");
+  return updatedMembership;
 }
 
 // Ensure last active OWNER protection
