@@ -170,3 +170,27 @@ export async function enqueueQualityScoring(params: {
     jobId: `quality-score:${params.contentVersionId}` // Deterministic jobId for idempotency
   });
 }
+
+let _publishingQueue: Queue | null = null;
+export const getPublishingQueue = () => {
+  if (!_publishingQueue) {
+    _publishingQueue = new Queue('publishing', { connection: redisConnection });
+  }
+  return _publishingQueue;
+};
+
+export async function enqueuePublishingJob(params: {
+  publishingJobId: string;
+}, delay?: number) {
+  const options: any = {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+    jobId: `publish:${params.publishingJobId}` // Deterministic
+  };
+  
+  if (delay) {
+    options.delay = delay;
+  }
+  
+  return getPublishingQueue().add(`publish`, params, options);
+}

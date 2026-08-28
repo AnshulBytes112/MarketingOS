@@ -85,6 +85,7 @@ model Organization {
   contentGenerations    ContentGeneration[]
   generatedAssets       GeneratedAsset[]
   approvals             Approval[]
+  publishingJobs        PublishingJob[]
 }
 
 model User {
@@ -107,6 +108,7 @@ model User {
   strategyEdits         StrategyEdit[]
   approvalsRequested    Approval[]             @relation("ApprovalRequestedBy")
   approvalsReviewed     Approval[]             @relation("ApprovalReviewedBy")
+  publishingJobs        PublishingJob[]
 }
 
 model Session {
@@ -183,6 +185,7 @@ model Brand {
   contentGenerations ContentGeneration[]
   generatedAssets    GeneratedAsset[]
   approvals          Approval[]
+  publishingJobs     PublishingJob[]
 
   @@index([organizationId])
 }
@@ -648,6 +651,7 @@ model ContentItem {
 
   generations  ContentGeneration[]
   approvals    Approval[]
+  publishingJobs PublishingJob[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -701,6 +705,7 @@ model ContentChannel {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   brand          Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
   contentItems   ContentItem[]
+  publishingJobs PublishingJob[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -746,6 +751,7 @@ model ContentGeneration {
   brand            Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
   assets           GeneratedAsset[]
   approvals        Approval[]
+  publishingJobs   PublishingJob[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -827,4 +833,50 @@ model Approval {
   @@index([brandId])
   @@index([contentItemId])
   @@index([contentVersionId])
+}
+
+enum PublishingJobStatus {
+  QUEUED
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+model PublishingJob {
+  id               String              @id @default(cuid())
+  organizationId   String
+  brandId          String
+  contentItemId    String
+  contentVersionId String
+  contentChannelId String
+  status           PublishingJobStatus @default(QUEUED)
+  scheduledAt      DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  publishedAt      DateTime?
+  provider         String
+  externalPostId   String?
+  externalUrl      String?
+  error            String?
+  attemptCount     Int                 @default(0)
+  createdById      String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand          Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItem    ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentVersion ContentGeneration @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
+  contentChannel ContentChannel    @relation(fields: [contentChannelId], references: [id], onDelete: Cascade)
+  createdBy      User              @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentItemId])
+  @@index([contentVersionId])
+  @@index([contentChannelId])
+  @@index([status])
+  @@index([scheduledAt])
 }

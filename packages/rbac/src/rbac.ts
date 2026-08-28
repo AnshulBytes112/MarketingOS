@@ -46,6 +46,7 @@ export type Permission =
   | 'publishing.schedule'
   | 'publishing.publish'
   | 'publishing.cancel'
+  | 'publishing.retry'
   // ANALYTICS
   | 'analytics.view'
   | 'analytics.export'
@@ -134,6 +135,7 @@ export const PERMISSION_REGISTRY: Record<Permission, { module: string; name: str
   'publishing.schedule': { module: 'Publishing', name: 'Schedule', description: 'Can schedule posts.' },
   'publishing.publish': { module: 'Publishing', name: 'Publish', description: 'Can publish posts immediately.' },
   'publishing.cancel': { module: 'Publishing', name: 'Cancel', description: 'Can cancel scheduled posts.' },
+  'publishing.retry': { module: 'Publishing', name: 'Retry', description: 'Can retry failed publishing jobs.' },
 
   // ANALYTICS
   'analytics.view': { module: 'Analytics', name: 'View Analytics', description: 'Can view analytics dashboards.' },

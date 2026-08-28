@@ -104,8 +104,9 @@ import { textGenerationWorker } from './text-generation.worker';
 import { imageGenerationWorker } from './image-generation.worker';
 import { videoGenerationWorker } from './video-generation.worker';
 import { qualityScoringWorker } from './quality/quality-scoring.worker';
+import { publishingWorker } from './publishing/publishing.worker';
 
-console.log('Worker is running for brand-asset, brand-dna, competitor-ingestion, strategy, content-plan, text-generation, image-generation, video-generation, quality-scoring queues...');
+console.log('Worker is running for brand-asset, brand-dna, competitor-ingestion, strategy, content-plan, text-generation, image-generation, video-generation, quality-scoring, publishing queues...');
 console.log('Registered brandDnaWorker:', !!brandDnaWorker);
 console.log('Registered competitorIngestionWorker:', !!competitorIngestionWorker);
 console.log('Registered schedulerWorker:', !!schedulerWorker);
@@ -115,6 +116,7 @@ console.log('Registered textGenerationWorker:', !!textGenerationWorker);
 console.log('Registered imageGenerationWorker:', !!imageGenerationWorker);
 console.log('Registered videoGenerationWorker:', !!videoGenerationWorker);
 console.log('Registered qualityScoringWorker:', !!qualityScoringWorker);
+console.log('Registered publishingWorker:', !!publishingWorker);
 
 initializeScheduler().then(() => {
   console.log('Scheduler initialization complete.');

@@ -86,6 +86,7 @@ export interface ContentItem {
   source: string;
   version: number;
   generations?: any[];
+  channel?: { id: string; name: string; platform: string; type: string } | null;
 }
 
 interface CalendarClientProps {
@@ -682,11 +683,55 @@ ${v}
                   )}
                   {latestGen.scoringStatus === 'SCORING' && <div className="text-[10px] text-blue-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Scoring...</div>}
                 </div>
-                {!isViewer && selectedItem.status === 'DRAFT' && (
-                  <button disabled={readyForReviewMutation.isPending} onClick={() => readyForReviewMutation.mutate(selectedItem.id)} className="text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20">
-                    Ready for Review
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {!isViewer && selectedItem.status === 'DRAFT' && (
+                    <button disabled={readyForReviewMutation.isPending} onClick={() => readyForReviewMutation.mutate(selectedItem.id)} className="text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20">
+                      Ready for Review
+                    </button>
+                  )}
+                  
+                  {latestGen.approvals && latestGen.approvals.some((a: any) => a.status === 'APPROVED') ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-emerald-400 text-xs font-bold uppercase flex items-center gap-1"><CheckCircle2 className="w-4 h-4"/> Approved</span>
+                      {selectedItem.channel?.id ? (
+                        <>
+                          <button onClick={() => {
+                            const dateStr = prompt("Enter scheduled time (YYYY-MM-DDTHH:mm)", format(new Date(selectedItem.scheduledDate), "yyyy-MM-dd'T'HH:mm"));
+                            if (dateStr) {
+                              const d = new Date(dateStr);
+                              if (!isNaN(d.getTime())) {
+                                import('../publishing/actions').then(m => {
+                                  m.scheduleContent(selectedItem.id, latestGen.id, selectedItem.channel!.id, d)
+                                    .then(() => alert("Scheduled successfully!"))
+                                    .catch(e => alert(e.message));
+                                });
+                              } else {
+                                alert("Invalid date");
+                              }
+                            }
+                          }} className="text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium">
+                            Schedule
+                          </button>
+                          <button onClick={() => {
+                            if (confirm("Are you sure you want to publish this immediately?")) {
+                              import('../publishing/actions').then(m => {
+                                m.publishContent(selectedItem.id, latestGen.id, selectedItem.channel!.id)
+                                  .then(() => alert("Publish job queued successfully!"))
+                                  .catch(e => alert(e.message));
+                              });
+                            }
+                          }} className="text-xs px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium">
+                            Publish Now
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-yellow-400">Assign a channel first</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-xs italic">Awaiting approval</span>
+                  )}
+                </div>
               </div>
             </div>
           )}

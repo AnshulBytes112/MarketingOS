@@ -38,8 +38,12 @@ export async function getContentItems({
     include: {
       generations: {
         orderBy: { version: 'desc' },
-        take: 5
-      }
+        take: 5,
+        include: {
+          approvals: true
+        }
+      },
+      channel: true
     }
   });
 
