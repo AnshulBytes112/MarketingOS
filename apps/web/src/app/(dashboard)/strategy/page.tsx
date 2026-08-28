@@ -1,7 +1,7 @@
 import { requireAuth } from '@abge/auth';
 import { prisma } from '@abge/database';
 import StrategyClient from './strategy-client';
-import { hasPermission } from '@abge/rbac';
+
 
 export default async function StrategyPage() {
   const session = await requireAuth();
@@ -21,10 +21,10 @@ export default async function StrategyPage() {
   }
 
   const permissions = {
-    canGenerate: hasPermission(session.role, 'strategy.generate'),
-    canEdit: hasPermission(session.role, 'strategy.edit'),
-    canApprove: hasPermission(session.role, 'strategy.approve'),
-    canApplyRecommendation: hasPermission(session.role, 'strategy.apply_recommendation'),
+    canGenerate: session.effectivePermissions.includes('strategy.generate'),
+    canEdit: session.effectivePermissions.includes('strategy.edit'),
+    canApprove: session.effectivePermissions.includes('strategy.approve'),
+    canApplyRecommendation: session.effectivePermissions.includes('strategy.apply_recommendation'),
   };
 
   return (

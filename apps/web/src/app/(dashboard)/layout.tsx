@@ -17,14 +17,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {session.isImpersonated && (
         <ImpersonationBanner userName={user?.name || user?.email || 'User'} />
       )}
-      <AppShell 
-        user={{ name: user?.name || 'User', role: session.role }} 
-        organization={{ id: organization?.id || '', name: organization?.name || 'Org' }}
-      >
-        <PermissionsProvider effectivePermissions={session.effectivePermissions}>
+      <PermissionsProvider effectivePermissions={session.effectivePermissions}>
+        <AppShell 
+          user={{ name: user?.name || 'User', role: session.role }} 
+          organization={{ id: organization?.id || '', name: organization?.name || 'Org' }}
+        >
           {children}
-        </PermissionsProvider>
-      </AppShell>
+        </AppShell>
+      </PermissionsProvider>
     </>
   );
 }

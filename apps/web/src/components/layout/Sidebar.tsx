@@ -9,22 +9,23 @@ import {
   Settings, Zap, ChevronRight, LogOut, Calendar, Check
 } from "lucide-react";
 import { getAvailableOrganizations, switchOrganization } from "./org-actions";
+import { usePermissions } from "../providers/PermissionsProvider";
 
 const nav = [
   { label: "Dashboard", href: "/overview", icon: LayoutDashboard },
-  { label: "Brand Intelligence", href: "/brand", icon: Brain },
-  { label: "Competitor Intel", href: "/competitors", icon: Users },
+  { label: "Brand Intelligence", href: "/brand", icon: Brain, perm: "brand_dna.view" },
+  { label: "Competitor Intel", href: "/competitors", icon: Users, perm: "competitor.view" },
   { label: "Market Intelligence", href: "/market", icon: TrendingUp },
-  { label: "Strategy Engine", href: "/strategy", icon: Lightbulb },
-  { label: "Content Calendar", href: "/calendar", icon: Calendar },
-  { label: "Content Engine", href: "/content", icon: Sparkles },
-  { label: "Approval Queue", href: "/approvals", icon: Check },
-  { label: "Campaign Engine", href: "/campaigns", icon: Megaphone },
-  { label: "Publishing", href: "/publishing", icon: Send },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "SEO Engine", href: "/seo", icon: Search },
-  { label: "AI Copilot", href: "/copilot", icon: MessageSquare },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Strategy Engine", href: "/strategy", icon: Lightbulb, perm: "strategy.view" },
+  { label: "Content Calendar", href: "/calendar", icon: Calendar, perm: "calendar.view" },
+  { label: "Content Engine", href: "/content", icon: Sparkles, perm: "content.view" },
+  { label: "Approval Queue", href: "/approvals", icon: Check, perm: "approval.view" },
+  { label: "Campaign Engine", href: "/campaigns", icon: Megaphone, perm: "campaign.view" },
+  { label: "Publishing", href: "/publishing", icon: Send, perm: "publishing.view" },
+  { label: "Analytics", href: "/analytics", icon: BarChart3, perm: "analytics.view" },
+  { label: "SEO Engine", href: "/seo", icon: Search, perm: "seo.view" },
+  { label: "AI Copilot", href: "/copilot", icon: MessageSquare, perm: "copilot.view" },
+  { label: "Settings", href: "/settings", icon: Settings, perm: "organization.view" },
 ];
 
 export function Sidebar({
@@ -40,6 +41,8 @@ export function Sidebar({
   const [orgs, setOrgs] = useState<any[]>([]);
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const { can } = usePermissions();
 
   useEffect(() => {
     getAvailableOrganizations().then(setOrgs).catch(console.error);
@@ -181,7 +184,7 @@ export function Sidebar({
       <nav style={{ flex: 1, padding: "0.75rem 0.625rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
         <div className="section-label" style={{ padding: "0.25rem 0.75rem 0.5rem" }}>Engines</div>
 
-        {nav.slice(0, 12).map(({ label, href, icon: Icon }) => {
+        {nav.slice(0, 12).filter(item => !item.perm || can(item.perm as any)).map(({ label, href, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href} className={`sidebar-item ${active ? "active" : ""}`}>
@@ -197,7 +200,7 @@ export function Sidebar({
         <div style={{ flex: 1 }} />
         <div className="section-label" style={{ padding: "0.75rem 0.75rem 0.5rem" }}>System</div>
 
-        {nav.slice(12).map(({ label, href, icon: Icon }) => {
+        {nav.slice(12).filter(item => !item.perm || can(item.perm as any)).map(({ label, href, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href} className={`sidebar-item ${active ? "active" : ""}`}>

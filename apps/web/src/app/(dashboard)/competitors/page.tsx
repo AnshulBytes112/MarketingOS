@@ -33,11 +33,9 @@ export default async function CompetitorsPage() {
     });
   }
 
-  const { hasPermission } = await import('@abge/rbac');
-  
   const permissions = {
-    canView: hasPermission(session.role, 'competitors.view'),
-    canEdit: hasPermission(session.role, 'competitors.edit'),
+    canView: session.effectivePermissions.includes('competitor.view'),
+    canEdit: session.effectivePermissions.includes('competitor.create'),
   };
 
   return <CompetitorsClient brandId={brand.id} organizationId={session.organizationId} permissions={permissions} />;

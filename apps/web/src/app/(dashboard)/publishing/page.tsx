@@ -7,17 +7,7 @@ import { getEffectivePermissions } from "@abge/rbac";
 export default async function PublishingPage() {
   const session = await requireAuth();
 
-  const membership = await prisma.organizationMember.findUnique({
-    where: {
-      organizationId_userId: {
-        organizationId: session.organizationId,
-        userId: session.userId,
-      },
-    },
-  });
-
-  const customPermissions = membership?.customPermissions as string[] | undefined;
-  const permissions = getEffectivePermissions(membership?.role || 'VIEWER', customPermissions);
+  const permissions = session.effectivePermissions;
   
   if (!permissions.includes('publishing.view')) {
     return (

@@ -61,12 +61,10 @@ export default async function Page() {
     orderBy: { scheduledDate: 'asc' },
   });
 
-  const { hasPermission } = await import('@abge/rbac');
-  
   const permissions = {
-    canView: hasPermission(session.role, 'calendar.view'),
-    canEdit: hasPermission(session.role, 'calendar.edit'),
-    canGenerate: hasPermission(session.role, 'calendar.create'),
+    canView: session.effectivePermissions.includes('calendar.view'),
+    canEdit: session.effectivePermissions.includes('calendar.edit'),
+    canGenerate: session.effectivePermissions.includes('calendar.create'),
   };
 
   return (

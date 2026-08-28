@@ -10,16 +10,7 @@ export default async function ApprovalsPage() {
   // If the user does not even have approval.view permission, block the page entirely or just show empty?
   // User instructions say: "A user may access and view a page while lacking permission for specific actions"
   // So we assume the user has `approval.view` if they are here. But let's be safe.
-  const membership = await prisma.organizationMember.findUnique({
-    where: {
-      organizationId_userId: {
-        organizationId: session.organizationId,
-        userId: session.userId,
-      },
-    },
-  });
-
-  const canView = membership ? hasPermission(membership.role, "approval.view") : false;
+  const canView = session.effectivePermissions.includes("approval.view");
   
   if (!canView) {
     return (
@@ -34,9 +25,9 @@ export default async function ApprovalsPage() {
 
   const approvals = await getApprovalQueue();
 
-  const canApprove = hasPermission(membership!.role, "approval.approve");
-  const canReject = hasPermission(membership!.role, "approval.reject");
-  const canRequestChanges = hasPermission(membership!.role, "approval.request_changes");
+  const canApprove = session.effectivePermissions.includes("approval.approve");
+  const canReject = session.effectivePermissions.includes("approval.reject");
+  const canRequestChanges = session.effectivePermissions.includes("approval.request_changes");
 
   return (
     <div className="space-y-6">
