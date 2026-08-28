@@ -189,5 +189,6 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 };
 
 export function hasPermission(role: Role, permission: Permission): boolean {
+  if (role === Role.OWNER) return true;
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
 }
