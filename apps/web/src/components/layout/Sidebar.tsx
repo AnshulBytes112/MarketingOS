@@ -149,26 +149,29 @@ export function Sidebar({
               boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
             }}>
               <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, padding: "0 0.5rem 0.5rem", textTransform: "uppercase" }}>Switch Organization</div>
-              {orgs.map((org) => (
-                <div 
-                  key={org.id} 
-                  onClick={() => handleSwitchOrg(org.id)}
-                  style={{
-                    padding: "0.5rem",
-                    borderRadius: "0.25rem",
-                    cursor: org.isCurrent ? "default" : "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    background: org.isCurrent ? "rgba(255,255,255,0.05)" : "transparent",
-                    color: org.isCurrent ? "white" : "var(--text-muted)",
-                    fontSize: "0.75rem",
-                  }}
-                  onMouseEnter={(e) => { if (!org.isCurrent) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
-                  onMouseLeave={(e) => { if (!org.isCurrent) e.currentTarget.style.background = "transparent"; }}
-                >
-                  <span>{org.name}</span>
-                  {org.isCurrent && <Check size={12} color="#10b981" />}
-                </div>
-              ))}
+              {orgs.map((org) => {
+                const isCurrent = org.id === organization?.id;
+                return (
+                  <div 
+                    key={org.id} 
+                    onClick={() => handleSwitchOrg(org.id)}
+                    style={{
+                      padding: "0.5rem",
+                      borderRadius: "0.25rem",
+                      cursor: isCurrent ? "default" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      background: isCurrent ? "rgba(255,255,255,0.05)" : "transparent",
+                      color: isCurrent ? "white" : "var(--text-muted)",
+                      fontSize: "0.75rem",
+                    }}
+                    onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+                    onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <span>{org.name}</span>
+                    {isCurrent && <Check size={12} color="#10b981" />}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
