@@ -11,23 +11,23 @@ import {
 import { getAvailableOrganizations, switchOrganization } from "./org-actions";
 
 const nav = [
-  { label: "Dashboard",          href: "/overview",   icon: LayoutDashboard },
-  { label: "Brand Intelligence",  href: "/brand",      icon: Brain },
-  { label: "Competitor Intel",    href: "/competitors",icon: Users },
-  { label: "Market Intelligence", href: "/market",     icon: TrendingUp },
-  { label: "Strategy Engine",     href: "/strategy",   icon: Lightbulb },
-  { label: "Content Calendar",    href: "/calendar",   icon: Calendar },
-  { label: "Content Engine",      href: "/content",    icon: Sparkles },
-  { label: "Approval Queue",      href: "/approvals",  icon: Check },
-  { label: "Campaign Engine",     href: "/campaigns",  icon: Megaphone },
-  { label: "Publishing",          href: "/publishing", icon: Send },
-  { label: "Analytics",           href: "/analytics",  icon: BarChart3 },
-  { label: "SEO Engine",          href: "/seo",        icon: Search },
-  { label: "AI Copilot",          href: "/copilot",    icon: MessageSquare },
-  { label: "Settings",            href: "/settings",   icon: Settings },
+  { label: "Dashboard", href: "/overview", icon: LayoutDashboard },
+  { label: "Brand Intelligence", href: "/brand", icon: Brain },
+  { label: "Competitor Intel", href: "/competitors", icon: Users },
+  { label: "Market Intelligence", href: "/market", icon: TrendingUp },
+  { label: "Strategy Engine", href: "/strategy", icon: Lightbulb },
+  { label: "Content Calendar", href: "/calendar", icon: Calendar },
+  { label: "Content Engine", href: "/content", icon: Sparkles },
+  { label: "Approval Queue", href: "/approvals", icon: Check },
+  { label: "Campaign Engine", href: "/campaigns", icon: Megaphone },
+  { label: "Publishing", href: "/publishing", icon: Send },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "SEO Engine", href: "/seo", icon: Search },
+  { label: "AI Copilot", href: "/copilot", icon: MessageSquare },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar({ 
+export function Sidebar({
   user,
   organization
 }: {
@@ -112,7 +112,7 @@ export function Sidebar({
 
         {/* Org badge / Switcher */}
         <div style={{ position: "relative" }} ref={dropdownRef}>
-          <div 
+          <div
             onClick={() => setShowOrgDropdown(!showOrgDropdown)}
             style={{
               marginTop: "0.75rem",
@@ -152,8 +152,8 @@ export function Sidebar({
               {orgs.map((org) => {
                 const isCurrent = org.id === organization?.id;
                 return (
-                  <div 
-                    key={org.id} 
+                  <div
+                    key={org.id}
                     onClick={() => handleSwitchOrg(org.id)}
                     style={{
                       padding: "0.5rem",
