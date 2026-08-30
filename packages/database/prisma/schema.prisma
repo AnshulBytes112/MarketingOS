@@ -88,6 +88,7 @@ model Organization {
   publishingJobs        PublishingJob[]
   campaigns             Campaign[]
   metricSnapshots       ContentMetricSnapshot[]
+  seoAnalyses           SEOAnalysis[]
 }
 
 model User {
@@ -190,6 +191,7 @@ model Brand {
   publishingJobs     PublishingJob[]
   campaigns          Campaign[]
   metricSnapshots    ContentMetricSnapshot[]
+  seoAnalyses        SEOAnalysis[]
 
   @@index([organizationId])
 }
@@ -742,6 +744,7 @@ model ContentItem {
   approvals       Approval[]
   publishingJobs  PublishingJob[]
   metricSnapshots ContentMetricSnapshot[]
+  seoAnalyses     SEOAnalysis[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -846,6 +849,7 @@ model ContentGeneration {
   approvals       Approval[]
   publishingJobs  PublishingJob[]
   metricSnapshots ContentMetricSnapshot[]
+  seoAnalyses     SEOAnalysis[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -1025,4 +1029,41 @@ model ContentMetricSnapshot {
   @@index([contentChannelId])
   @@index([campaignId])
   @@index([metricDate])
+}
+
+enum SEOAnalysisStatus {
+  ANALYZING
+  COMPLETED
+  FAILED
+}
+
+model SEOAnalysis {
+  id               String   @id @default(cuid())
+  organizationId   String
+  brandId          String
+  contentItemId    String
+  contentVersionId String
+  
+  keywordData      Json?
+  searchIntent     String?
+  seoScore         Int?
+  subScores        Json?
+  recommendations  Json?
+  flags            Json?
+  metadata         Json?
+  status           SEOAnalysisStatus @default(ANALYZING)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand          Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItem    ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentVersion ContentGeneration @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentItemId])
+  @@index([contentVersionId])
+  @@index([createdAt])
 }

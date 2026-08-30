@@ -24,6 +24,8 @@ import { DndContext, useDraggable, useDroppable, DragEndEvent, closestCenter } f
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getContentItems, rescheduleContentItem, bulkUpdateContentItems, createContentItem, requestContentGeneration, retryContentGeneration, retryQualityScoring, saveContentEdit, restoreContentVersion, regenerateContentWithInstruction, markContentReadyForReview } from './actions';
+import { requestSEOAnalysis, getLatestSEOAnalysis, applySEOOptimization } from '../seo/actions';
+import { requestSEOAnalysis, getLatestSEOAnalysis, applySEOOptimization } from '../seo/actions';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 
 const PlatformIcon = ({ platform, className = "w-4 h-4" }: { platform: string, className?: string }) => {
@@ -100,6 +102,8 @@ interface CalendarClientProps {
     canView: boolean;
     canEdit: boolean;
     canGenerate: boolean;
+    canAnalyzeSEO: boolean;
+    canOptimizeSEO: boolean;
   };
   initialStartDate: string;
   initialEndDate: string;
@@ -301,6 +305,8 @@ export default function CalendarClient({
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [comparingVersionId, setComparingVersionId] = useState<string | null>(null);
   const [regenerationInstruction, setRegenerationInstruction] = useState('');
+  const [showSEOAnalysis, setShowSEOAnalysis] = useState(false);
+  const [selectedRecommendations, setSelectedRecommendations] = useState<any[]>([]);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -331,6 +337,18 @@ export default function CalendarClient({
         )
       );
       return active ? 3000 : false;
+    }
+  });
+
+  const latestGen = selectedItem?.generations && selectedItem.generations.length > 0 ? selectedItem.generations[0] : null;
+
+  const seoQuery = useQuery({
+    queryKey: ['seo-analysis', latestGen?.id],
+    queryFn: () => getLatestSEOAnalysis(latestGen!.id),
+    enabled: !!latestGen && showSEOAnalysis,
+    refetchInterval: (query) => {
+      const data = query.state.data as any;
+      return data?.status === 'ANALYZING' ? 3000 : false;
     }
   });
 
@@ -429,6 +447,28 @@ export default function CalendarClient({
     },
     onError: (err: any) => {
       setErrorMsg(err.message || 'Retry quality request failed');
+    }
+  });
+
+  const analyzeSEOMutation = useMutation({
+    mutationFn: (versionId: string) => requestSEOAnalysis(versionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['seo-analysis', latestGen?.id] });
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message || 'SEO Analysis request failed');
+    }
+  });
+
+  const optimizeSEOMutation = useMutation({
+    mutationFn: ({ versionId, recommendations }: { versionId: string, recommendations: string }) => applySEOOptimization(versionId, recommendations),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content-items', organizationId, brandId] });
+      setShowSEOAnalysis(false);
+      setSelectedRecommendations([]);
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message || 'SEO Optimization request failed');
     }
   });
 
@@ -598,9 +638,159 @@ export default function CalendarClient({
              <span className="px-2 py-1 bg-white/5 rounded-lg text-gray-300">{selectedItem.format}</span>
              <span className={`px-2 py-1 rounded-lg uppercase font-semibold ${selectedItem.status === 'PUBLISHED' ? 'bg-emerald-500/10 text-emerald-400' : selectedItem.status === 'READY_FOR_REVIEW' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'}`}>{selectedItem.status}</span>
              {latestGen && <button onClick={() => setShowVersionHistory(true)} className="px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg flex items-center gap-1"><History className="w-3 h-3" /> Version History</button>}
+             {latestGen && permissions.canAnalyzeSEO && <button onClick={() => setShowSEOAnalysis(true)} className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-lg flex items-center gap-1"><Filter className="w-3 h-3" /> SEO</button>}
           </div>
 
-          {!latestGen && (
+          {showSEOAnalysis && latestGen ? (
+            <div className="bg-[#0B0A11]/60 border border-emerald-500/20 rounded-xl p-6 space-y-6">
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <div>
+                  <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Filter className="w-5 h-5 text-emerald-400" />
+                    SEO Intelligence
+                  </h4>
+                  <p className="text-xs text-gray-400 mt-1">Version {latestGen.version}</p>
+                </div>
+                <button onClick={() => setShowSEOAnalysis(false)} className="text-gray-400 hover:text-white px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-semibold">
+                  Back to Content
+                </button>
+              </div>
+
+              {!seoQuery.data && !seoQuery.isLoading && (
+                <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+                  <p className="text-sm text-gray-400">No SEO analysis found for this version.</p>
+                  <button 
+                    disabled={analyzeSEOMutation.isPending}
+                    onClick={() => analyzeSEOMutation.mutate(latestGen.id)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-medium flex items-center gap-2"
+                  >
+                    {analyzeSEOMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Analyze SEO
+                  </button>
+                </div>
+              )}
+
+              {seoQuery.isLoading || (seoQuery.data && seoQuery.data.status === 'ANALYZING') ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                  <p className="text-sm text-emerald-400 font-medium">Running SEO Analysis...</p>
+                  <p className="text-xs text-gray-400 max-w-sm">This is a deterministic analysis combined with AI semantic reasoning to evaluate search intent and keyword themes.</p>
+                </div>
+              ) : null}
+
+              {seoQuery.data && seoQuery.data.status === 'FAILED' && (
+                <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+                  <AlertCircle className="w-8 h-8 text-red-500" />
+                  <p className="text-sm text-red-400 font-medium">SEO Analysis Failed</p>
+                  <button 
+                    disabled={analyzeSEOMutation.isPending}
+                    onClick={() => analyzeSEOMutation.mutate(latestGen.id)}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-medium"
+                  >
+                    Retry Analysis
+                  </button>
+                </div>
+              )}
+
+              {seoQuery.data && seoQuery.data.status === 'COMPLETED' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                      <div className="text-[10px] text-gray-400 font-semibold uppercase mb-1">Composite Score</div>
+                      <div className={`text-3xl font-bold ${seoQuery.data.seoScore! >= 80 ? 'text-emerald-400' : seoQuery.data.seoScore! >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {seoQuery.data.seoScore}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                      <div className="text-[10px] text-gray-400 font-semibold uppercase mb-1">Search Intent</div>
+                      <div className="text-sm font-semibold text-white uppercase">{seoQuery.data.searchIntent}</div>
+                    </div>
+                    {(seoQuery.data.keywordData as any)?.primaryThemes && (
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 col-span-2">
+                        <div className="text-[10px] text-gray-400 font-semibold uppercase mb-2">Primary Themes</div>
+                        <div className="flex flex-wrap gap-2">
+                          {((seoQuery.data.keywordData as any).primaryThemes as string[]).map((theme, i) => (
+                            <span key={i} className="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] rounded uppercase font-semibold">{theme}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {((seoQuery.data.keywordData as any)?.missingEntities?.length > 0 || (seoQuery.data.keywordData as any)?.stuffedKeywords?.length > 0) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {((seoQuery.data.keywordData as any)?.missingEntities?.length > 0) && (
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                           <div className="text-xs text-blue-400 font-semibold mb-2">Missing Entities</div>
+                           <ul className="list-disc list-inside text-xs text-blue-300/80 space-y-1">
+                             {((seoQuery.data.keywordData as any).missingEntities as string[]).map((e, i) => <li key={i}>{e}</li>)}
+                           </ul>
+                        </div>
+                      )}
+                      {((seoQuery.data.keywordData as any)?.stuffedKeywords?.length > 0) && (
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                           <div className="text-xs text-red-400 font-semibold mb-2">Stuffed Keywords</div>
+                           <ul className="list-disc list-inside text-xs text-red-300/80 space-y-1">
+                             {((seoQuery.data.keywordData as any).stuffedKeywords as string[]).map((e, i) => <li key={i}>{e}</li>)}
+                           </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(seoQuery.data.recommendations as any[])?.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-end">
+                        <h5 className="text-sm font-semibold text-white">Recommendations</h5>
+                        {permissions.canOptimizeSEO && (
+                          <button
+                            disabled={selectedRecommendations.length === 0 || optimizeSEOMutation.isPending}
+                            onClick={() => {
+                              const recsText = selectedRecommendations.map(r => r.suggestedAction).join('\\n');
+                              optimizeSEOMutation.mutate({ versionId: latestGen.id, recommendations: recsText });
+                            }}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                          >
+                            {optimizeSEOMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                            Optimize Selected
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {(seoQuery.data.recommendations as any[]).map((rec, i) => {
+                          const isSelected = selectedRecommendations.includes(rec);
+                          return (
+                            <div 
+                              key={i} 
+                              onClick={() => {
+                                if (isSelected) setSelectedRecommendations(prev => prev.filter(r => r !== rec));
+                                else setSelectedRecommendations(prev => [...prev, rec]);
+                              }}
+                              className={`p-3 rounded-xl border ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/5 bg-white/5 hover:border-white/20'} cursor-pointer transition-colors`}
+                            >
+                              <div className="flex gap-3">
+                                <div className={`w-4 h-4 mt-0.5 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'border-emerald-500 bg-emerald-500' : 'border-white/20 bg-black/40'}`}>
+                                  {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase">{rec.category}</span>
+                                    <span className={`text-[10px] font-bold uppercase ${rec.severity === 'HIGH' ? 'text-red-400' : rec.severity === 'MEDIUM' ? 'text-yellow-400' : 'text-blue-400'}`}>{rec.severity} PRIORITY</span>
+                                  </div>
+                                  <p className="text-xs text-white font-medium mb-1">{rec.suggestedAction}</p>
+                                  <p className="text-[10px] text-gray-400">{rec.explanation}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          {!latestGen && !showSEOAnalysis && (
             <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center text-center space-y-3">
               <p className="text-xs text-gray-400">No content has been generated for this item yet.</p>
               {!isViewer && (
@@ -616,7 +806,7 @@ export default function CalendarClient({
             </div>
           )}
 
-          {latestGen && latestGen.textContent && (
+          {latestGen && latestGen.textContent && !showSEOAnalysis && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                  <h4 className="text-sm font-semibold text-white">Generated Content</h4>

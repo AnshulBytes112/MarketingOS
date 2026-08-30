@@ -240,3 +240,27 @@ export async function enqueueAnalyticsSync(params: {
     },
   });
 }
+
+let _seoAnalysisQueue: Queue | null = null;
+export const getSeoAnalysisQueue = () => {
+  if (!_seoAnalysisQueue) {
+    _seoAnalysisQueue = new Queue('seo-analysis', { connection: redisConnection });
+  }
+  return _seoAnalysisQueue;
+};
+
+export async function enqueueSeoAnalysis(params: {
+  organizationId: string;
+  brandId: string;
+  contentVersionId: string;
+  userId?: string;
+}) {
+  return getSeoAnalysisQueue().add('seo-analysis.run', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000,
+    },
+    jobId: `seo-analysis:${params.contentVersionId}` // Deterministic jobId for idempotency
+  });
+}

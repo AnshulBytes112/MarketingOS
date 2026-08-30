@@ -56,8 +56,9 @@ export type Permission =
   | 'analytics.export'
   // SEO
   | 'seo.view'
-  | 'seo.generate'
-  | 'seo.edit'
+  | 'seo.analyze'
+  | 'seo.optimize'
+  | 'seo.export'
   // AI COPILOT
   | 'copilot.view'
   | 'copilot.generate'
@@ -151,8 +152,9 @@ export const PERMISSION_REGISTRY: Record<Permission, { module: string; name: str
 
   // SEO
   'seo.view': { module: 'SEO', name: 'View SEO', description: 'Can view SEO data.' },
-  'seo.generate': { module: 'SEO', name: 'Generate SEO', description: 'Can generate SEO tags.' },
-  'seo.edit': { module: 'SEO', name: 'Edit SEO', description: 'Can edit SEO tags.' },
+  'seo.analyze': { module: 'SEO', name: 'Analyze SEO', description: 'Can trigger SEO analysis.' },
+  'seo.optimize': { module: 'SEO', name: 'Optimize SEO', description: 'Can apply SEO optimizations.' },
+  'seo.export': { module: 'SEO', name: 'Export SEO', description: 'Can export SEO data.' },
 
   // AI COPILOT
   'copilot.view': { module: 'AI Copilot', name: 'View Copilot', description: 'Can view AI Copilot interface.' },
@@ -245,8 +247,6 @@ const CONTENT_MANAGER_PERMISSIONS: Permission[] = [
   'publishing.schedule',
   'publishing.publish',
   'publishing.cancel',
-  'seo.generate',
-  'seo.edit',
   'copilot.generate',
   'manage_brand_dna',
   'manage_strategy',
@@ -267,6 +267,9 @@ const MARKETING_MANAGER_PERMISSIONS: Permission[] = [
   'campaign.archive',
   'campaign.generate_plan',
   'analytics.sync',
+  'seo.analyze',
+  'seo.optimize',
+  'seo.export',
   'manage_competitors',
   'manage_campaigns',
   'manage_social_connections',
