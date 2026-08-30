@@ -40,6 +40,9 @@ export type Permission =
   | 'campaign.view'
   | 'campaign.create'
   | 'campaign.edit'
+  | 'campaign.manage'
+  | 'campaign.archive'
+  | 'campaign.generate_plan'
   | 'campaign.approve'
   // PUBLISHING
   | 'publishing.view'
@@ -128,6 +131,9 @@ export const PERMISSION_REGISTRY: Record<Permission, { module: string; name: str
   'campaign.view': { module: 'Campaign', name: 'View Campaigns', description: 'Can view campaigns.' },
   'campaign.create': { module: 'Campaign', name: 'Create Campaign', description: 'Can create campaigns.' },
   'campaign.edit': { module: 'Campaign', name: 'Edit Campaign', description: 'Can edit campaigns.' },
+  'campaign.manage': { module: 'Campaign', name: 'Manage Campaign', description: 'Can manage campaigns entirely.' },
+  'campaign.archive': { module: 'Campaign', name: 'Archive Campaign', description: 'Can archive campaigns.' },
+  'campaign.generate_plan': { module: 'Campaign', name: 'Generate AI Plan', description: 'Can use AI to propose a campaign plan.' },
   'campaign.approve': { module: 'Campaign', name: 'Approve Campaign', description: 'Can approve campaigns.' },
 
   // PUBLISHING
@@ -255,6 +261,9 @@ const MARKETING_MANAGER_PERMISSIONS: Permission[] = [
   'competitor.sync',
   'campaign.create',
   'campaign.edit',
+  'campaign.manage',
+  'campaign.archive',
+  'campaign.generate_plan',
   'manage_competitors',
   'manage_campaigns',
   'manage_social_connections',

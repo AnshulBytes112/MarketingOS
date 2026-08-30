@@ -194,3 +194,26 @@ export async function enqueuePublishingJob(params: {
   
   return getPublishingQueue().add(`publish`, params, options);
 }
+
+let _campaignPlanningQueue: Queue | null = null;
+export const getCampaignPlanningQueue = () => {
+  if (!_campaignPlanningQueue) {
+    _campaignPlanningQueue = new Queue('campaign-planning', { connection: redisConnection });
+  }
+  return _campaignPlanningQueue;
+};
+
+export async function enqueueCampaignPlanning(params: {
+  campaignId: string;
+  organizationId: string;
+  brandId: string;
+  userId?: string;
+}) {
+  return getCampaignPlanningQueue().add('campaign-planning.generate', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000,
+    },
+  });
+}

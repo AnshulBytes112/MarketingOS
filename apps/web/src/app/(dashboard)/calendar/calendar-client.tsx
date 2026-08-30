@@ -103,6 +103,8 @@ interface CalendarClientProps {
   };
   initialStartDate: string;
   initialEndDate: string;
+  campaigns?: { id: string; name: string }[];
+  selectedCampaignId?: string;
 }
 
 // Helpers
@@ -278,9 +280,12 @@ export default function CalendarClient({
   strategyId, 
   permissions,
   initialStartDate,
-  initialEndDate
+  initialEndDate,
+  campaigns = [],
+  selectedCampaignId = '',
 }: CalendarClientProps) {
   const queryClient = useQueryClient();
+  const router = require('next/navigation').useRouter();
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [platformFilter, setPlatformFilter] = useState<string>('ALL');
   const [funnelFilter, setFunnelFilter] = useState<string>('ALL');
@@ -818,6 +823,25 @@ ${v}
           <option value="MOFU">Build Interest & Trust</option>
           <option value="BOFU">Drive Action</option>
         </select>
+        
+        {campaigns.length > 0 && (
+          <select 
+            value={selectedCampaignId || ''} 
+            onChange={(e) => {
+              if (e.target.value) {
+                router.push(`/calendar?campaignId=${e.target.value}`);
+              } else {
+                router.push('/calendar');
+              }
+            }} 
+            className="bg-[#0B0A11]/60 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-all cursor-pointer"
+          >
+            <option value="">All Campaigns</option>
+            {campaigns.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Calendar Area */}

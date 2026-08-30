@@ -2,7 +2,11 @@ import { requireAuth } from '@abge/auth';
 import { prisma } from '@abge/database';
 import CalendarClient from './calendar-client';
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: { campaignId?: string };
+}) {
   const session = await requireAuth();
 
   // Find the active brand
@@ -48,16 +52,30 @@ export default async function Page() {
   const end = endOfMonth(today);
 
   // Fetch items for that content plan (with tenant security isolation)
-  const items = await prisma.contentItem.findMany({
-    where: {
-      contentPlanId: latestPlan.id,
-      brandId: brand.id,
-      organizationId: session.organizationId,
-      scheduledDate: {
-        gte: start,
-        lte: end,
-      },
+  const campaigns = await prisma.campaign.findMany({
+    where: { organizationId: session.organizationId, brandId: brand.id },
+    select: { id: true, name: true },
+  });
+
+  const queryWhere: any = {
+    brandId: brand.id,
+    organizationId: session.organizationId,
+    scheduledDate: {
+      gte: start,
+      lte: end,
     },
+  };
+
+  // If a campaign is selected, filter by it.
+  // Otherwise, default to latest plan or show all depending on preference.
+  if (searchParams.campaignId) {
+    queryWhere.campaignId = searchParams.campaignId;
+  } else if (latestPlan) {
+    queryWhere.contentPlanId = latestPlan.id;
+  }
+
+  const items = await prisma.contentItem.findMany({
+    where: queryWhere,
     orderBy: { scheduledDate: 'asc' },
   });
 
@@ -78,6 +96,8 @@ export default async function Page() {
       permissions={permissions}
       initialStartDate={start.toISOString()}
       initialEndDate={end.toISOString()}
+      campaigns={campaigns}
+      selectedCampaignId={searchParams.campaignId}
     />
   );
 }
