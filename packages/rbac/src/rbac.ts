@@ -52,6 +52,7 @@ export type Permission =
   | 'publishing.retry'
   // ANALYTICS
   | 'analytics.view'
+  | 'analytics.sync'
   | 'analytics.export'
   // SEO
   | 'seo.view'
@@ -145,6 +146,7 @@ export const PERMISSION_REGISTRY: Record<Permission, { module: string; name: str
 
   // ANALYTICS
   'analytics.view': { module: 'Analytics', name: 'View Analytics', description: 'Can view analytics dashboards.' },
+  'analytics.sync': { module: 'Analytics', name: 'Sync Analytics', description: 'Can trigger analytics synchronization.' },
   'analytics.export': { module: 'Analytics', name: 'Export Analytics', description: 'Can export analytics data.' },
 
   // SEO
@@ -264,6 +266,7 @@ const MARKETING_MANAGER_PERMISSIONS: Permission[] = [
   'campaign.manage',
   'campaign.archive',
   'campaign.generate_plan',
+  'analytics.sync',
   'manage_competitors',
   'manage_campaigns',
   'manage_social_connections',

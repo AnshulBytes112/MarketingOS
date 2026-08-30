@@ -87,6 +87,7 @@ model Organization {
   approvals             Approval[]
   publishingJobs        PublishingJob[]
   campaigns             Campaign[]
+  metricSnapshots       ContentMetricSnapshot[]
 }
 
 model User {
@@ -168,7 +169,7 @@ model Brand {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   assets             BrandAsset[]
   products           BrandProduct[]
   competitors        BrandCompetitor[]
@@ -188,6 +189,7 @@ model Brand {
   approvals          Approval[]
   publishingJobs     PublishingJob[]
   campaigns          Campaign[]
+  metricSnapshots    ContentMetricSnapshot[]
 
   @@index([organizationId])
 }
@@ -634,10 +636,11 @@ model Campaign {
   strategy     Strategy?    @relation(fields: [strategyId], references: [id], onDelete: SetNull)
   createdBy    User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
-  kpis         CampaignKPI[]
-  channels     CampaignChannel[]
-  contentPlans ContentPlan[]
-  contentItems ContentItem[]
+  kpis            CampaignKPI[]
+  channels        CampaignChannel[]
+  contentPlans    ContentPlan[]
+  contentItems    ContentItem[]
+  metricSnapshots ContentMetricSnapshot[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -735,9 +738,10 @@ model ContentItem {
   campaignRecord Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   channel        ContentChannel? @relation(fields: [contentChannelId], references: [id], onDelete: SetNull)
 
-  generations    ContentGeneration[]
-  approvals      Approval[]
-  publishingJobs PublishingJob[]
+  generations     ContentGeneration[]
+  approvals       Approval[]
+  publishingJobs  PublishingJob[]
+  metricSnapshots ContentMetricSnapshot[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -789,11 +793,12 @@ model ContentChannel {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand            Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand            Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
   contentItems     ContentItem[]
   publishingJobs   PublishingJob[]
   campaignChannels CampaignChannel[]
+  metricSnapshots  ContentMetricSnapshot[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -834,12 +839,13 @@ model ContentGeneration {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  contentItem    ContentItem      @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand          Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  assets         GeneratedAsset[]
-  approvals      Approval[]
-  publishingJobs PublishingJob[]
+  contentItem     ContentItem             @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand           Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  assets          GeneratedAsset[]
+  approvals       Approval[]
+  publishingJobs  PublishingJob[]
+  metricSnapshots ContentMetricSnapshot[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -953,12 +959,13 @@ model PublishingJob {
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brand          Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  contentItem    ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  contentVersion ContentGeneration @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
-  contentChannel ContentChannel    @relation(fields: [contentChannelId], references: [id], onDelete: Cascade)
-  createdBy      User              @relation(fields: [createdById], references: [id])
+  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand           Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItem     ContentItem             @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentVersion  ContentGeneration       @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
+  contentChannel  ContentChannel          @relation(fields: [contentChannelId], references: [id], onDelete: Cascade)
+  createdBy       User                    @relation(fields: [createdById], references: [id])
+  metricSnapshots ContentMetricSnapshot[]
 
   @@index([organizationId])
   @@index([brandId])
@@ -967,4 +974,55 @@ model PublishingJob {
   @@index([contentChannelId])
   @@index([status])
   @@index([scheduledAt])
+}
+
+model ContentMetricSnapshot {
+  id               String   @id @default(cuid())
+  organizationId   String
+  brandId          String
+  contentItemId    String
+  contentVersionId String
+  publishingJobId  String
+  contentChannelId String
+  campaignId       String?
+  externalPostId   String
+  platform         String
+  metricDate       DateTime
+
+  // Normalized Metrics
+  reach           Int?
+  impressions     Int?
+  likes           Int?
+  comments        Int?
+  shares          Int?
+  saves           Int?
+  clicks          Int?
+  videoViews      Int?
+  watchTime       Int?
+  followersGained Int?
+  followersLost   Int?
+  engagementRate  Float?
+
+  rawMetrics Json?
+  provider   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand          Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItem    ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentVersion ContentGeneration @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
+  publishingJob  PublishingJob     @relation(fields: [publishingJobId], references: [id], onDelete: Cascade)
+  contentChannel ContentChannel    @relation(fields: [contentChannelId], references: [id], onDelete: Cascade)
+  campaign       Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, externalPostId, metricDate, provider])
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentItemId])
+  @@index([contentVersionId])
+  @@index([contentChannelId])
+  @@index([campaignId])
+  @@index([metricDate])
 }

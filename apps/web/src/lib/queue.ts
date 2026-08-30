@@ -217,3 +217,26 @@ export async function enqueueCampaignPlanning(params: {
     },
   });
 }
+
+let _analyticsSyncQueue: Queue | null = null;
+export const getAnalyticsSyncQueue = () => {
+  if (!_analyticsSyncQueue) {
+    _analyticsSyncQueue = new Queue('analytics-sync', { connection: redisConnection });
+  }
+  return _analyticsSyncQueue;
+};
+
+export async function enqueueAnalyticsSync(params: {
+  organizationId: string;
+  contentChannelId?: string; // Optional: sync a specific channel, or all for org
+  dateRange?: { from: Date; to: Date }; // Optional: specific date range
+  userId?: string;
+}) {
+  return getAnalyticsSyncQueue().add('analytics-sync.run', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 5000,
+    },
+  });
+}
