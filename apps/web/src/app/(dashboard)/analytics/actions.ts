@@ -11,7 +11,7 @@ export async function syncAnalytics(channelId?: string, dateRange?: { from: stri
     throw new Error('No active organization');
   }
 
-  requirePermission(session, 'analytics.sync');
+  await requirePermission('analytics.sync');
 
   // Verify channel ownership if provided
   if (channelId) {
@@ -59,7 +59,7 @@ export async function syncAnalytics(channelId?: string, dateRange?: { from: stri
 
 // Data Fetching Helpers for Server Components
 export async function getAnalyticsOverview(organizationId: string, dateRange?: { from: Date; to: Date }) {
-  requirePermission(await requireAuth(), 'analytics.view');
+  await requirePermission('analytics.view');
 
   const dateFilter = dateRange ? {
     metricDate: {
@@ -125,7 +125,7 @@ export async function getAnalyticsOverview(organizationId: string, dateRange?: {
 }
 
 export async function getContentPerformance(organizationId: string, dateRange?: { from: Date; to: Date }) {
-  requirePermission(await requireAuth(), 'analytics.view');
+  await requirePermission('analytics.view');
 
   const dateFilter = dateRange ? {
     metricDate: {
@@ -176,7 +176,7 @@ export async function getContentPerformance(organizationId: string, dateRange?: 
 }
 
 export async function getCampaignPerformance(organizationId: string, campaignId: string, dateRange?: { from: Date; to: Date }) {
-  requirePermission(await requireAuth(), 'analytics.view');
+  await requirePermission('analytics.view');
 
   const dateFilter = dateRange ? {
     metricDate: {

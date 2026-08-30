@@ -278,7 +278,7 @@ export async function applyCampaignPlan(campaignId: string) {
   // Clear proposal
   await prisma.campaign.update({
     where: { id: campaignId },
-    data: { aiProposal: null },
+    data: { aiProposal: null as any },
   });
 
   await prisma.auditLog.create({

@@ -83,7 +83,10 @@ export default async function Page({
     canView: session.effectivePermissions.includes('calendar.view'),
     canEdit: session.effectivePermissions.includes('calendar.edit'),
     canGenerate: session.effectivePermissions.includes('calendar.create'),
+    canAnalyzeSEO: session.effectivePermissions.includes('seo.analyze'),
+    canOptimizeSEO: session.effectivePermissions.includes('seo.optimize'),
   };
+
 
   return (
     <CalendarClient
