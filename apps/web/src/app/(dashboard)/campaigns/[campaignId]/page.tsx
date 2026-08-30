@@ -6,13 +6,14 @@ import { CampaignDetailClient } from "./campaign-detail-client";
 export default async function CampaignDetailPage({
   params,
 }: {
-  params: { campaignId: string };
+  params: Promise<{ campaignId: string }>;
 }) {
+  const { campaignId } = await params;
   const session = await requireAuth();
 
   const campaign = await prisma.campaign.findUnique({
     where: {
-      id: params.campaignId,
+      id: campaignId,
       organizationId: session.organizationId,
     },
     include: {
