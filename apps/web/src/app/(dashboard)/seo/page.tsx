@@ -1,5 +1,4 @@
-import { requireAuth } from '@abge/auth';
-import { requirePermission } from '@abge/auth/guard';
+import { requireAuth, requirePermission } from '@abge/auth';
 import SeoClient from './seo-client';
 import { getSeoOverview } from './actions';
 import { Suspense } from 'react';
@@ -20,7 +19,7 @@ export default async function SeoPage({
     return <div className="p-8 text-center text-white">No active organization selected.</div>;
   }
 
-  requirePermission(session, 'seo.view');
+  await requirePermission('seo.view' as any);
 
   const canAnalyze = session.effectivePermissions.includes('seo.analyze');
   const canOptimize = session.effectivePermissions.includes('seo.optimize');

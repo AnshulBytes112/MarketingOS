@@ -1,8 +1,7 @@
 'use server';
 
 import { prisma } from '@abge/database';
-import { requireAuth } from '@abge/auth';
-import { requirePermission } from '@abge/auth/guard';
+import { requireAuth, requirePermission } from '@abge/auth';
 import { enqueueAnalyticsSync } from '@/lib/queue';
 
 export async function syncAnalytics(channelId?: string, dateRange?: { from: string; to: string }) {

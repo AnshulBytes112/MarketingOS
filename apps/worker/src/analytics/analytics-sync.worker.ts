@@ -1,8 +1,6 @@
 import { Worker } from 'bullmq';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@abge/database';
 import { analyticsProviderRegistry } from './provider-registry';
-
-const prisma = new PrismaClient();
 
 const redisConnection = {
   host: process.env.REDIS_HOST || '127.0.0.1',

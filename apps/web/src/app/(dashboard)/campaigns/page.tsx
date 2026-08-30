@@ -20,13 +20,18 @@ export default async function CampaignsPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  const brands = await prisma.brand.findMany({
+    where: { organizationId: session.organizationId },
+    select: { id: true, name: true },
+  });
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Campaign Engine</h1>
         <p className="text-muted-foreground">Manage your coordinated marketing initiatives.</p>
       </div>
-      <CampaignsClient campaigns={campaigns} />
+      <CampaignsClient campaigns={campaigns} brands={brands} />
     </div>
   );
 }

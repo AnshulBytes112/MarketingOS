@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
 import { prisma } from '@abge/database';
-import { ModelGateway } from '@abge/ai';
+import { ModelGateway } from './ai/gateway';
 import { CampaignProposalSchema } from './campaign-planning.schema';
 
 const redisConnection = {

@@ -25,7 +25,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getContentItems, rescheduleContentItem, bulkUpdateContentItems, createContentItem, requestContentGeneration, retryContentGeneration, retryQualityScoring, saveContentEdit, restoreContentVersion, regenerateContentWithInstruction, markContentReadyForReview } from './actions';
 import { requestSEOAnalysis, getLatestSEOAnalysis, applySEOOptimization } from '../seo/actions';
-import { requestSEOAnalysis, getLatestSEOAnalysis, applySEOOptimization } from '../seo/actions';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 
 const PlatformIcon = ({ platform, className = "w-4 h-4" }: { platform: string, className?: string }) => {
@@ -50,7 +49,7 @@ const PlatformIcon = ({ platform, className = "w-4 h-4" }: { platform: string, c
     case 'x':
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
         </svg>
       );
     case 'youtube':
@@ -142,16 +141,16 @@ const getFunnelLabel = (stage: string) => {
 };
 
 // --- DRAGGABLE ITEM ---
-function DraggableContentCard({ 
-  item, 
-  onClick, 
-  isSelected, 
+function DraggableContentCard({
+  item,
+  onClick,
+  isSelected,
   onSelectToggle,
-  isViewer 
-}: { 
-  item: ContentItem; 
-  onClick: () => void; 
-  isSelected: boolean; 
+  isViewer
+}: {
+  item: ContentItem;
+  onClick: () => void;
+  isSelected: boolean;
   onSelectToggle: () => void;
   isViewer: boolean;
 }) {
@@ -175,7 +174,7 @@ function DraggableContentCard({
     >
       <div className="absolute top-3 right-3 flex gap-2 z-10">
         {!isViewer && (
-          <div 
+          <div
             className="w-5 h-5 rounded border border-white/20 flex items-center justify-center cursor-pointer bg-black/40 hover:bg-white/10"
             onClick={(e) => { e.stopPropagation(); onSelectToggle(); }}
           >
@@ -184,10 +183,10 @@ function DraggableContentCard({
         )}
       </div>
 
-      <div 
-        className="space-y-3 cursor-pointer h-full flex flex-col" 
+      <div
+        className="space-y-3 cursor-pointer h-full flex flex-col"
         onClick={onClick}
-        {...listeners} 
+        {...listeners}
         {...attributes}
       >
         <div className="flex justify-between items-center gap-2 pr-8">
@@ -232,9 +231,9 @@ function DraggableContentCard({
 }
 
 // --- DROPPABLE ROW ---
-function DroppableDateRow({ date, items, selectedIds, onSelectItem, onOpenItem, isViewer }: { 
-  date: Date; 
-  items: ContentItem[]; 
+function DroppableDateRow({ date, items, selectedIds, onSelectItem, onOpenItem, isViewer }: {
+  date: Date;
+  items: ContentItem[];
   selectedIds: Set<string>;
   onSelectItem: (id: string) => void;
   onOpenItem: (item: ContentItem) => void;
@@ -252,7 +251,7 @@ function DroppableDateRow({ date, items, selectedIds, onSelectItem, onOpenItem, 
         </h3>
         <span className="text-xs text-gray-500">{items.length} post{items.length !== 1 ? 's' : ''}</span>
       </div>
-      
+
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-white/5 rounded-xl bg-white/5 opacity-50">
           <p className="text-xs text-gray-500">No content scheduled.</p>
@@ -260,9 +259,9 @@ function DroppableDateRow({ date, items, selectedIds, onSelectItem, onOpenItem, 
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {items.map(item => (
-            <DraggableContentCard 
-              key={item.id} 
-              item={item} 
+            <DraggableContentCard
+              key={item.id}
+              item={item}
               isSelected={selectedIds.has(item.id)}
               onSelectToggle={() => onSelectItem(item.id)}
               onClick={() => onOpenItem(item)}
@@ -275,13 +274,13 @@ function DroppableDateRow({ date, items, selectedIds, onSelectItem, onOpenItem, 
   );
 }
 
-export default function CalendarClient({ 
-  initialItems, 
-  brandName, 
-  brandId, 
+export default function CalendarClient({
+  initialItems,
+  brandName,
+  brandId,
   organizationId,
-  contentPlanId, 
-  strategyId, 
+  contentPlanId,
+  strategyId,
   permissions,
   initialStartDate,
   initialEndDate,
@@ -294,10 +293,10 @@ export default function CalendarClient({
   const [platformFilter, setPlatformFilter] = useState<string>('ALL');
   const [funnelFilter, setFunnelFilter] = useState<string>('ALL');
   const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
-  
+
   const [currentStart, setCurrentStart] = useState(new Date(initialStartDate));
   const [currentEnd, setCurrentEnd] = useState(new Date(initialEndDate));
-  
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [isEditing, setIsEditing] = useState(false);
@@ -328,8 +327,8 @@ export default function CalendarClient({
     refetchInterval: (query) => {
       const data = query.state.data as ContentItem[];
       const itemsToCheck = data || initialItems;
-      const active = itemsToCheck.some(item => 
-        item.generations?.some(gen => 
+      const active = itemsToCheck.some(item =>
+        item.generations?.some(gen =>
           gen.textStatus === 'QUEUED' || gen.textStatus === 'GENERATING' ||
           gen.imageStatus === 'QUEUED' || gen.imageStatus === 'GENERATING' ||
           gen.videoStatus === 'QUEUED' || gen.videoStatus === 'GENERATING' ||
@@ -359,18 +358,18 @@ export default function CalendarClient({
       // Optimistic update
       const qKey = ['content-items', brandId, currentStart.toISOString(), currentEnd.toISOString(), platformFilter, funnelFilter];
       await queryClient.cancelQueries({ queryKey: qKey });
-      
+
       const previousItems = queryClient.getQueryData<ContentItem[]>(qKey);
-      
+
       queryClient.setQueryData<ContentItem[]>(qKey, (old) => {
         if (!old) return [];
-        return old.map(item => 
-          item.id === newInfo.contentItemId 
+        return old.map(item =>
+          item.id === newInfo.contentItemId
             ? { ...item, scheduledDate: new Date(newInfo.newScheduledDate) }
             : item
         );
       });
-      
+
       return { previousItems, qKey };
     },
     onError: (err, newInfo, context) => {
@@ -418,7 +417,7 @@ export default function CalendarClient({
     }
   });
 
-  
+
   const saveEditMutation = useMutation({
     mutationFn: (data: { generationId: string, newContent: string }) => saveContentEdit(data.generationId, data.newContent),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['calendar-items'] }); setIsEditing(false); },
@@ -476,21 +475,21 @@ export default function CalendarClient({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || !active) return;
-    
+
     const targetDateStr = over.id as string;
     const draggedItemId = active.id as string;
     const item = items.find(i => i.id === draggedItemId);
-    
+
     if (!item) return;
 
     // Construct a new date keeping the original time
     const oldDateObj = new Date(item.scheduledDate);
     const targetDateObj = new Date(targetDateStr);
-    
+
     targetDateObj.setHours(oldDateObj.getHours());
     targetDateObj.setMinutes(oldDateObj.getMinutes());
     targetDateObj.setSeconds(oldDateObj.getSeconds());
-    
+
     if (oldDateObj.getTime() !== targetDateObj.getTime()) {
       rescheduleMutation.mutate({
         contentItemId: draggedItemId,
@@ -548,14 +547,14 @@ export default function CalendarClient({
   // --- RENDER HELPERS ---
   const renderItemModal = () => {
     if (!selectedItem) return null;
-    const latestGen = selectedItem.generations && selectedItem.generations.length > 0 
-      ? [...selectedItem.generations].sort((a: any, b: any) => b.version - a.version)[0] 
+    const latestGen = selectedItem.generations && selectedItem.generations.length > 0
+      ? [...selectedItem.generations].sort((a: any, b: any) => b.version - a.version)[0]
       : null;
 
     if (showVersionHistory) {
       const sortedGens = [...(selectedItem.generations || [])].sort((a: any, b: any) => b.version - a.version);
       const compareGen = comparingVersionId ? sortedGens.find((g: any) => g.id === comparingVersionId) : null;
-      
+
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#12111A] border border-white/10 rounded-2xl p-6 max-w-4xl w-full space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -566,7 +565,7 @@ export default function CalendarClient({
               </h3>
               <button onClick={() => { setShowVersionHistory(false); setComparingVersionId(null); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-            
+
             {comparingVersionId && compareGen ? (
               <div className="space-y-4">
                 <button onClick={() => setComparingVersionId(null)} className="text-xs text-purple-400 flex items-center gap-1 hover:text-purple-300">
@@ -594,8 +593,8 @@ export default function CalendarClient({
                         <span className="text-[10px] text-gray-400 font-mono">{gen.generationSource || 'AI_GENERATION'}</span>
                       </div>
                       <div className="text-xs text-gray-400 mt-1 flex items-center gap-4">
-                        <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {new Date(gen.createdAt).toLocaleString()}</span>
-                        {gen.qualityScore && <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-yellow-400"/> Score: {gen.qualityScore.composite}</span>}
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(gen.createdAt).toLocaleString()}</span>
+                        {gen.qualityScore && <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-yellow-400" /> Score: {gen.qualityScore.composite}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -605,7 +604,7 @@ export default function CalendarClient({
                         </button>
                       )}
                       {idx !== 0 && !isViewer && (
-                        <button onClick={() => { if(confirm('Restore this version? This creates a new version from this content. This will not overwrite history.')) restoreMutation.mutate({ oldGenId: gen.id, itemId: selectedItem.id }) }} className="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg flex items-center gap-1.5">
+                        <button onClick={() => { if (confirm('Restore this version? This creates a new version from this content. This will not overwrite history.')) restoreMutation.mutate({ oldGenId: gen.id, itemId: selectedItem.id }) }} className="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg flex items-center gap-1.5">
                           Restore
                         </button>
                       )}
@@ -634,14 +633,14 @@ export default function CalendarClient({
           </div>
 
           <div className="flex flex-wrap gap-2 text-[10px]">
-             <span className="px-2 py-1 bg-white/5 rounded-lg text-gray-300 font-semibold uppercase">{selectedItem.platform}</span>
-             <span className="px-2 py-1 bg-white/5 rounded-lg text-gray-300">{selectedItem.format}</span>
-             <span className={`px-2 py-1 rounded-lg uppercase font-semibold ${selectedItem.status === 'PUBLISHED' ? 'bg-emerald-500/10 text-emerald-400' : selectedItem.status === 'READY_FOR_REVIEW' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'}`}>{selectedItem.status}</span>
-             {latestGen && <button onClick={() => setShowVersionHistory(true)} className="px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg flex items-center gap-1"><History className="w-3 h-3" /> Version History</button>}
-             {latestGen && permissions.canAnalyzeSEO && <button onClick={() => setShowSEOAnalysis(true)} className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-lg flex items-center gap-1"><Filter className="w-3 h-3" /> SEO</button>}
+            <span className="px-2 py-1 bg-white/5 rounded-lg text-gray-300 font-semibold uppercase">{selectedItem.platform}</span>
+            <span className="px-2 py-1 bg-white/5 rounded-lg text-gray-300">{selectedItem.format}</span>
+            <span className={`px-2 py-1 rounded-lg uppercase font-semibold ${selectedItem.status === 'PUBLISHED' ? 'bg-emerald-500/10 text-emerald-400' : selectedItem.status === 'READY_FOR_REVIEW' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'}`}>{selectedItem.status}</span>
+            {latestGen && <button onClick={() => setShowVersionHistory(true)} className="px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg flex items-center gap-1"><History className="w-3 h-3" /> Version History</button>}
+            {latestGen && permissions.canAnalyzeSEO && <button onClick={() => setShowSEOAnalysis(true)} className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-lg flex items-center gap-1"><Filter className="w-3 h-3" /> SEO</button>}
           </div>
 
-          {showSEOAnalysis && latestGen ? (
+          {showSEOAnalysis && latestGen && (
             <div className="bg-[#0B0A11]/60 border border-emerald-500/20 rounded-xl p-6 space-y-6">
               <div className="flex justify-between items-center border-b border-white/10 pb-4">
                 <div>
@@ -659,7 +658,7 @@ export default function CalendarClient({
               {!seoQuery.data && !seoQuery.isLoading && (
                 <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
                   <p className="text-sm text-gray-400">No SEO analysis found for this version.</p>
-                  <button 
+                  <button
                     disabled={analyzeSEOMutation.isPending}
                     onClick={() => analyzeSEOMutation.mutate(latestGen.id)}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-medium flex items-center gap-2"
@@ -682,7 +681,7 @@ export default function CalendarClient({
                 <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
                   <AlertCircle className="w-8 h-8 text-red-500" />
                   <p className="text-sm text-red-400 font-medium">SEO Analysis Failed</p>
-                  <button 
+                  <button
                     disabled={analyzeSEOMutation.isPending}
                     onClick={() => analyzeSEOMutation.mutate(latestGen.id)}
                     className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-medium"
@@ -716,23 +715,23 @@ export default function CalendarClient({
                       </div>
                     )}
                   </div>
-                  
+
                   {((seoQuery.data.keywordData as any)?.missingEntities?.length > 0 || (seoQuery.data.keywordData as any)?.stuffedKeywords?.length > 0) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {((seoQuery.data.keywordData as any)?.missingEntities?.length > 0) && (
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                           <div className="text-xs text-blue-400 font-semibold mb-2">Missing Entities</div>
-                           <ul className="list-disc list-inside text-xs text-blue-300/80 space-y-1">
-                             {((seoQuery.data.keywordData as any).missingEntities as string[]).map((e, i) => <li key={i}>{e}</li>)}
-                           </ul>
+                          <div className="text-xs text-blue-400 font-semibold mb-2">Missing Entities</div>
+                          <ul className="list-disc list-inside text-xs text-blue-300/80 space-y-1">
+                            {((seoQuery.data.keywordData as any).missingEntities as string[]).map((e, i) => <li key={i}>{e}</li>)}
+                          </ul>
                         </div>
                       )}
                       {((seoQuery.data.keywordData as any)?.stuffedKeywords?.length > 0) && (
                         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                           <div className="text-xs text-red-400 font-semibold mb-2">Stuffed Keywords</div>
-                           <ul className="list-disc list-inside text-xs text-red-300/80 space-y-1">
-                             {((seoQuery.data.keywordData as any).stuffedKeywords as string[]).map((e, i) => <li key={i}>{e}</li>)}
-                           </ul>
+                          <div className="text-xs text-red-400 font-semibold mb-2">Stuffed Keywords</div>
+                          <ul className="list-disc list-inside text-xs text-red-300/80 space-y-1">
+                            {((seoQuery.data.keywordData as any).stuffedKeywords as string[]).map((e, i) => <li key={i}>{e}</li>)}
+                          </ul>
                         </div>
                       )}
                     </div>
@@ -760,8 +759,8 @@ export default function CalendarClient({
                         {(seoQuery.data.recommendations as any[]).map((rec, i) => {
                           const isSelected = selectedRecommendations.includes(rec);
                           return (
-                            <div 
-                              key={i} 
+                            <div
+                              key={i}
                               onClick={() => {
                                 if (isSelected) setSelectedRecommendations(prev => prev.filter(r => r !== rec));
                                 else setSelectedRecommendations(prev => [...prev, rec]);
@@ -790,6 +789,8 @@ export default function CalendarClient({
                 </div>
               )}
             </div>
+          )}
+
           {!latestGen && !showSEOAnalysis && (
             <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center text-center space-y-3">
               <p className="text-xs text-gray-400">No content has been generated for this item yet.</p>
@@ -809,35 +810,35 @@ export default function CalendarClient({
           {latestGen && latestGen.textContent && !showSEOAnalysis && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                 <h4 className="text-sm font-semibold text-white">Generated Content</h4>
-                 {!isViewer && (
-                   <div className="flex items-center gap-2">
-                     {isEditing ? (
-                       <>
-                         <button onClick={() => setIsEditing(false)} className="text-xs px-3 py-1.5 text-gray-400 hover:text-white">Cancel</button>
-                         <button disabled={saveEditMutation.isPending} onClick={() => saveEditMutation.mutate({ generationId: latestGen.id, newContent: editContent })} className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center gap-1.5">
-                           <Save className="w-3 h-3" /> Save
-                         </button>
-                       </>
-                     ) : (
-                       <button onClick={() => { setEditContent(JSON.stringify(latestGen.textContent, null, 2)); setIsEditing(true); }} className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg flex items-center gap-1.5">
-                         <Edit className="w-3 h-3" /> Edit
-                       </button>
-                     )}
-                   </div>
-                 )}
+                <h4 className="text-sm font-semibold text-white">Generated Content</h4>
+                {!isViewer && (
+                  <div className="flex items-center gap-2">
+                    {isEditing ? (
+                      <>
+                        <button onClick={() => setIsEditing(false)} className="text-xs px-3 py-1.5 text-gray-400 hover:text-white">Cancel</button>
+                        <button disabled={saveEditMutation.isPending} onClick={() => saveEditMutation.mutate({ generationId: latestGen.id, newContent: editContent })} className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center gap-1.5">
+                          <Save className="w-3 h-3" /> Save
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => { setEditContent(JSON.stringify(latestGen.textContent, null, 2)); setIsEditing(true); }} className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg flex items-center gap-1.5">
+                        <Edit className="w-3 h-3" /> Edit
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-              
+
               {isEditing ? (
-                <textarea 
-                  value={editContent} 
+                <textarea
+                  value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   className="w-full h-64 bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white font-mono focus:border-purple-500 focus:outline-none"
                 />
               ) : (
                 <div className="bg-[#0B0A11]/60 border border-white/5 rounded-xl p-4">
                   <pre className="text-xs text-gray-300 whitespace-pre-wrap font-sans">
-                    {typeof latestGen.textContent === 'string' ? latestGen.textContent : 
+                    {typeof latestGen.textContent === 'string' ? latestGen.textContent :
                       Object.entries(latestGen.textContent).map(([k, v]) => v ? `[${k.toUpperCase()}]
 ${v}
 
@@ -850,15 +851,15 @@ ${v}
               {!isEditing && !isViewer && (
                 <div className="bg-purple-900/10 border border-purple-500/20 rounded-xl p-3 flex items-center gap-3">
                   <Sparkles className="w-5 h-5 text-purple-400 shrink-0" />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={regenerationInstruction}
                     onChange={(e) => setRegenerationInstruction(e.target.value)}
                     placeholder="Tell AI how you want this version changed (e.g. 'Make it shorter')..."
                     className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white placeholder:text-purple-300/50"
                   />
-                  <button 
-                    disabled={regenerateInstructionMutation.isPending || !regenerationInstruction} 
+                  <button
+                    disabled={regenerateInstructionMutation.isPending || !regenerationInstruction}
                     onClick={() => regenerateInstructionMutation.mutate({ itemId: selectedItem.id, instruction: regenerationInstruction })}
                     className="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-lg whitespace-nowrap"
                   >
@@ -872,11 +873,11 @@ ${v}
                 <div className="flex items-center gap-4">
                   {latestGen.qualityScore && (
                     <div className="flex items-center gap-2">
-                       <span className="text-[10px] text-gray-400 uppercase font-semibold">Quality</span>
-                       <span className={`text-sm font-bold ${latestGen.qualityScore.composite >= 90 ? 'text-emerald-400' : latestGen.qualityScore.composite >= 75 ? 'text-blue-400' : 'text-yellow-400'}`}>{latestGen.qualityScore.composite}</span>
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold">Quality</span>
+                      <span className={`text-sm font-bold ${latestGen.qualityScore.composite >= 90 ? 'text-emerald-400' : latestGen.qualityScore.composite >= 75 ? 'text-blue-400' : 'text-yellow-400'}`}>{latestGen.qualityScore.composite}</span>
                     </div>
                   )}
-                  {latestGen.scoringStatus === 'SCORING' && <div className="text-[10px] text-blue-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Scoring...</div>}
+                  {latestGen.scoringStatus === 'SCORING' && <div className="text-[10px] text-blue-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Scoring...</div>}
                 </div>
                 <div className="flex items-center gap-3">
                   {!isViewer && selectedItem.status === 'DRAFT' && (
@@ -884,10 +885,10 @@ ${v}
                       Ready for Review
                     </button>
                   )}
-                  
+
                   {latestGen.approvals && latestGen.approvals.some((a: any) => a.status === 'APPROVED') ? (
                     <div className="flex items-center gap-3">
-                      <span className="text-emerald-400 text-xs font-bold uppercase flex items-center gap-1"><CheckCircle2 className="w-4 h-4"/> Approved</span>
+                      <span className="text-emerald-400 text-xs font-bold uppercase flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Approved</span>
                       {selectedItem.channel?.id ? (
                         <>
                           <button onClick={() => {
@@ -976,10 +977,10 @@ ${v}
           </div>
 
           {!isViewer && (
-             <button onClick={() => alert('Manual creation modal placeholder. Hook this to a real modal and call createContentItem.')} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-medium flex items-center gap-2">
-               <Plus className="w-4 h-4" />
-               New Post
-             </button>
+            <button onClick={() => alert('Manual creation modal placeholder. Hook this to a real modal and call createContentItem.')} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              New Post
+            </button>
           )}
         </div>
       </div>
@@ -987,7 +988,7 @@ ${v}
       {/* Error state */}
       {errorMsg && (
         <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 text-rose-300 text-sm flex justify-between items-center">
-          <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4"/> {errorMsg}</div>
+          <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {errorMsg}</div>
           <button onClick={() => setErrorMsg(null)} className="text-xs font-semibold text-rose-400 hover:text-rose-300">Dismiss</button>
         </div>
       )}
@@ -1013,17 +1014,17 @@ ${v}
           <option value="MOFU">Build Interest & Trust</option>
           <option value="BOFU">Drive Action</option>
         </select>
-        
+
         {campaigns.length > 0 && (
-          <select 
-            value={selectedCampaignId || ''} 
+          <select
+            value={selectedCampaignId || ''}
             onChange={(e) => {
               if (e.target.value) {
                 router.push(`/calendar?campaignId=${e.target.value}`);
               } else {
                 router.push('/calendar');
               }
-            }} 
+            }}
             className="bg-[#0B0A11]/60 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-all cursor-pointer"
           >
             <option value="">All Campaigns</option>
@@ -1037,8 +1038,8 @@ ${v}
       {/* Calendar Area */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20">
-           <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
-           <p className="text-gray-400 text-sm">Loading calendar...</p>
+          <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
+          <p className="text-gray-400 text-sm">Loading calendar...</p>
         </div>
       ) : view === 'grid' ? (
         <DndContext id="calendar-dnd-context" onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
@@ -1048,10 +1049,10 @@ ${v}
               // Only render rows that have items, or all days if we want a full calendar feel.
               // We'll render all days in the month to allow dropping on empty days.
               return (
-                <DroppableDateRow 
-                  key={date.toISOString()} 
-                  date={date} 
-                  items={dayItems} 
+                <DroppableDateRow
+                  key={date.toISOString()}
+                  date={date}
+                  items={dayItems}
                   selectedIds={selectedIds}
                   onSelectItem={toggleSelection}
                   onOpenItem={setSelectedItem}

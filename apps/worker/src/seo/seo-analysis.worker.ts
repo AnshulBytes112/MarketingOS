@@ -1,9 +1,7 @@
 import { Worker, Job } from 'bullmq';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@abge/database';
 import { ModelGateway } from '../ai/gateway';
 import { SEOAnalysisOutputSchema } from './seo-analysis.schema';
-
-const prisma = new PrismaClient();
 const ai = new ModelGateway();
 
 const redisConnection = {

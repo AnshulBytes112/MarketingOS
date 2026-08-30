@@ -1,5 +1,4 @@
-import { requireAuth } from '@abge/auth';
-import { requirePermission } from '@abge/auth/guard';
+import { requireAuth, requirePermission } from '@abge/auth';
 import AnalyticsClient from './analytics-client';
 import { getAnalyticsOverview, getContentPerformance } from './actions';
 import { prisma } from '@abge/database';
@@ -21,7 +20,7 @@ export default async function AnalyticsPage({
     return <div className="p-8 text-center text-white">No active organization selected.</div>;
   }
 
-  requirePermission(session, 'analytics.view');
+  await requirePermission('analytics.view' as any);
 
   const canSync = session.effectivePermissions.includes('analytics.sync');
   const canExport = session.effectivePermissions.includes('analytics.export');
