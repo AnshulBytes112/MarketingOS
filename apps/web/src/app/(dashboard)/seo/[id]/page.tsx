@@ -33,7 +33,11 @@ export default async function SeoReportPage(props: {
   const flags = (report.flags as any) || [];
   const metadataInfo = (report.metadata as any) || {};
 
-  const analyzedText = report.contentVersion?.textContent || '';
+  const analyzedText = typeof report.contentVersion?.textContent === 'string' 
+    ? report.contentVersion.textContent 
+    : report.contentVersion?.textContent 
+      ? JSON.stringify(report.contentVersion.textContent, null, 2) 
+      : '';
 
   return (
     <div className="flex-1 overflow-y-auto bg-black p-8 text-white">
@@ -64,7 +68,7 @@ export default async function SeoReportPage(props: {
           <div className="flex items-center gap-4 shrink-0">
             <div className="bg-[#12111A] border border-white/5 rounded-2xl p-4 flex items-center gap-4">
               <div className="text-center">
-                <div className={`text-4xl font-extrabold ${report.seoScore >= 80 ? 'text-emerald-400' : report.seoScore >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                <div className={`text-4xl font-extrabold ${(report.seoScore ?? 0) >= 80 ? 'text-emerald-400' : (report.seoScore ?? 0) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
                   {report.seoScore || '—'}
                 </div>
                 <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mt-1">SEO Score</div>

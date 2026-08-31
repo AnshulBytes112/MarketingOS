@@ -89,6 +89,8 @@ model Organization {
   campaigns             Campaign[]
   metricSnapshots       ContentMetricSnapshot[]
   seoAnalyses           SEOAnalysis[]
+  marketInsights        MarketInsight[]
+  marketIntelligenceRuns MarketIntelligenceRun[]
 }
 
 model User {
@@ -194,6 +196,8 @@ model Brand {
   seoAnalyses        SEOAnalysis[]
 
   @@index([organizationId])
+  marketInsights        MarketInsight[]
+  marketIntelligenceRuns MarketIntelligenceRun[]
 }
 
 model BrandProduct {
@@ -647,6 +651,7 @@ model Campaign {
   @@index([organizationId])
   @@index([brandId])
   @@index([strategyId])
+  marketInsights        MarketInsight[]
 }
 
 model CampaignKPI {
@@ -1066,4 +1071,77 @@ model SEOAnalysis {
   @@index([contentItemId])
   @@index([contentVersionId])
   @@index([createdAt])
+}
+
+model MarketInsight {
+  id                  String             @id @default(cuid())
+  organizationId      String
+  brandId             String
+  type                MarketInsightType
+  title               String
+  summary             String
+  description         String?
+  source              String
+  sourceUrl           String?
+  observedAt          DateTime           @default(now())
+  relevanceScore      Int                @default(0)
+  confidence          InsightConfidence  @default(MEDIUM)
+  data                Json?
+  implications        Json?
+  opportunities       Json?
+  risks               Json?
+  contentOpportunities Json?
+  relatedCompetitorIds Json?             // JSON array of competitor IDs
+  relatedCampaignId   String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  organization        Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand               Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  relatedCampaign     Campaign?          @relation(fields: [relatedCampaignId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([relatedCampaignId])
+  @@index([createdAt])
+}
+
+model MarketIntelligenceRun {
+  id             String                   @id @default(cuid())
+  organizationId String
+  brandId        String
+  status         MarketIntelligenceStatus @default(QUEUED)
+  error          String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand          Brand                    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([brandId])
+}
+
+enum MarketInsightType {
+  TREND
+  INDUSTRY_SIGNAL
+  COMPETITOR_MOVEMENT
+  AUDIENCE_SIGNAL
+  OPPORTUNITY
+  RISK
+  CONTENT_OPPORTUNITY
+}
+
+enum InsightConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum MarketIntelligenceStatus {
+  QUEUED
+  ANALYZING
+  COMPLETED
+  FAILED
+  NOT_CONFIGURED
 }

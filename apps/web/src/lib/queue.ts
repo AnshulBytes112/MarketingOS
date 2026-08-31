@@ -266,3 +266,27 @@ export async function enqueueSeoAnalysis(params: {
     jobId: `seo-analysis-${params.contentVersionId}` // Deterministic jobId for idempotency
   });
 }
+
+let _marketIntelligenceQueue: Queue | null = null;
+export const getMarketIntelligenceQueue = () => {
+  if (!_marketIntelligenceQueue) {
+    _marketIntelligenceQueue = new Queue('market-intelligence', { connection: redisConnection });
+  }
+  return _marketIntelligenceQueue;
+};
+
+export async function enqueueMarketIntelligence(params: {
+  organizationId: string;
+  brandId: string;
+  userId?: string;
+  runId: string;
+}) {
+  return getMarketIntelligenceQueue().add('market-intelligence.run', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000,
+    },
+    jobId: `market-intel-run-${params.runId}`
+  });
+}

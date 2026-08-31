@@ -187,7 +187,7 @@ export default function SeoClient({
                       )}
                     </td>
                     <td className="p-4 text-xs text-gray-400">
-                      {new Date(item.date).toLocaleDateString(undefined, {
+                      {new Date(item.date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',

@@ -15,7 +15,7 @@ const nav = [
   { label: "Dashboard", href: "/overview", icon: LayoutDashboard },
   { label: "Brand Intelligence", href: "/brand", icon: Brain, perm: "brand_dna.view" },
   { label: "Competitor Intel", href: "/competitors", icon: Users, perm: "competitor.view" },
-  { label: "Market Intelligence", href: "/market", icon: TrendingUp },
+  { label: "Market Intelligence", href: "/market-intelligence", icon: TrendingUp, perm: "market.view" },
   { label: "Strategy Engine", href: "/strategy", icon: Lightbulb, perm: "strategy.view" },
   { label: "Content Calendar", href: "/calendar", icon: Calendar, perm: "calendar.view" },
   { label: "Content Engine", href: "/content", icon: Sparkles, perm: "content.view" },

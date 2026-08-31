@@ -1,0 +1,455 @@
+﻿
+========================================
+MODEL: Brand
+========================================
+model Brand {
+  id               String           @id @default(cuid())
+  organizationId   String
+  name             String
+  industry         String?
+  websiteUrl       String?
+  targetAudience   String?
+  geography        String?
+  priceSegment     String?
+  positioning      String?
+  usp              String?
+  onboardingStatus OnboardingStatus @default(DRAFT)
+  onboardingStep   Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets             BrandAsset[]
+  products           BrandProduct[]
+  competitors        BrandCompetitor[]
+  competitorAccounts CompetitorAccount[]
+  competitorPosts    CompetitorPost[]
+  aiRecommendations  AIRecommendation[]
+  dnaVersions        BrandDNAVersion[]
+  dnaEdits           BrandDNAEdit[]
+  aiUsage            AIUsage[]
+  strategies         Strategy[]
+  strategyEdits      StrategyEdit[]
+  contentPlans       ContentPlan[]
+  contentItems       ContentItem[]
+  contentChannels    ContentChannel[]
+  contentGenerations ContentGeneration[]
+  generatedAssets    GeneratedAsset[]
+  approvals          Approval[]
+  publishingJobs     PublishingJob[]
+  campaigns          Campaign[]
+  metricSnapshots    ContentMetricSnapshot[]
+  seoAnalyses        SEOAnalysis[]
+
+  @@index([organizationId])
+}
+
+========================================
+MODEL: BrandCompetitor
+========================================
+model BrandCompetitor {
+  id             String   @id @default(cuid())
+  brandId        String
+  organizationId String
+  name           String
+  websiteUrl     String?
+  instagram      String?
+  facebook       String?
+  linkedin       String?
+  twitter        String?
+  youtube        String?
+  tiktok         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  accounts        CompetitorAccount[]
+  posts           CompetitorPost[]
+  recommendations AIRecommendation[]
+
+  @@index([brandId])
+  @@index([organizationId])
+}
+
+========================================
+MODEL: CompetitorAccount
+========================================
+model CompetitorAccount {
+  id             String    @id @default(cuid())
+  organizationId String
+  brandId        String
+  competitorId   String
+  platform       String
+  handle         String
+  profileUrl     String?
+  displayName    String?
+  bio            String?
+  followerCount  Int?
+  followingCount Int?
+  postCount      Int?
+  lastSyncedAt   DateTime?
+  syncStatus     String
+  sourceType     String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  brand        Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  competitor   BrandCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  posts CompetitorPost[]
+
+  @@unique([organizationId, competitorId, platform])
+  @@index([brandId])
+  @@index([organizationId])
+  @@index([competitorId])
+}
+
+========================================
+MODEL: CompetitorPost
+========================================
+model CompetitorPost {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  brandId             String
+  competitorId        String
+  competitorAccountId String
+  platform            String
+  externalPostId      String?
+  url                 String?
+  publishedAt         DateTime
+  captionText         String?
+  mediaType           String?
+  likeCount           Int?
+  commentCount        Int?
+  shareCount          Int?
+  viewCount           Int?
+  engagementRate      Float?
+  collectedAt         DateTime @default(now())
+  sourceType          String
+  rawMetadata         Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  brand             Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  competitor        BrandCompetitor   @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  competitorAccount CompetitorAccount @relation(fields: [competitorAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, competitorAccountId, externalPostId])
+  @@index([brandId])
+  @@index([organizationId])
+  @@index([competitorId])
+  @@index([competitorAccountId])
+}
+
+========================================
+MODEL: Strategy
+========================================
+model Strategy {
+  id                String                    @id @default(cuid())
+  organizationId    String
+  brandId           String
+  version           Int
+  status            String // "GENERATING", "COMPLETED", "FAILED"
+  publicationStatus StrategyPublicationStatus @default(DRAFT)
+  source            String                    @default("AI_GENERATION")
+  createdById       String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  completedAt       DateTime?
+
+  // Structured fields
+  goal                  Json?
+  audienceSegments      Json?
+  contentPillars        Json?
+  contentMix            Json?
+  funnelMapping         Json?
+  platformStrategy      Json?
+  formats               Json?
+  cadence               Json?
+  themes                Json?
+  campaignOpportunities Json?
+  reasoning             Json?
+  sources               Json?
+  dataLimitations       Json?
+  experiments           Json?
+
+  approvalStatus StrategyApprovalStatus @default(PENDING)
+  approvedAt     DateTime?
+  approvedById   String?
+  lockedAt       DateTime?
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdBy    User?          @relation("StrategyCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  approvedBy   User?          @relation("StrategyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  edits        StrategyEdit[]
+  contentPlans ContentPlan[]
+  contentItems ContentItem[]
+  campaigns    Campaign[]
+
+  @@index([organizationId])
+  @@index([brandId])
+}
+
+========================================
+MODEL: Campaign
+========================================
+model Campaign {
+  id              String         @id @default(cuid())
+  organizationId  String
+  brandId         String
+  name            String
+  description     String?
+  objective       String?
+  primaryGoal     String?
+  status          CampaignStatus @default(DRAFT)
+  startDate       DateTime?
+  endDate         DateTime?
+  strategyId      String?
+  strategyVersion Int?
+  audience        Json?
+  aiProposal      Json?
+  createdById     String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  strategy     Strategy?    @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  createdBy    User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  kpis            CampaignKPI[]
+  channels        CampaignChannel[]
+  contentPlans    ContentPlan[]
+  contentItems    ContentItem[]
+  metricSnapshots ContentMetricSnapshot[]
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([strategyId])
+}
+
+========================================
+MODEL: ContentItem
+========================================
+model ContentItem {
+  id               String            @id
+  organizationId   String
+  brandId          String
+  contentPlanId    String
+  strategyId       String
+  campaignId       String?
+  contentChannelId String?
+  title            String
+  platform         String
+  type             String?
+  format           String
+  scheduledDate    DateTime
+  funnelStage      String
+  contentPillar    String
+  theme            String?
+  hook             String?
+  cta              String?
+  campaign         String?
+  aiScore          Float?
+  reason           String?
+  source           String            @default("AI_GENERATION")
+  version          Int               @default(1)
+  status           ContentItemStatus @default(DRAFT)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand          Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentPlan    ContentPlan     @relation(fields: [contentPlanId], references: [id], onDelete: Cascade)
+  strategy       Strategy        @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  campaignRecord Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  channel        ContentChannel? @relation(fields: [contentChannelId], references: [id], onDelete: SetNull)
+
+  generations     ContentGeneration[]
+  approvals       Approval[]
+  publishingJobs  PublishingJob[]
+  metricSnapshots ContentMetricSnapshot[]
+  seoAnalyses     SEOAnalysis[]
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentPlanId])
+  @@index([strategyId])
+  @@index([campaignId])
+  @@index([contentChannelId])
+  @@index([scheduledDate])
+}
+
+========================================
+MODEL: ContentGeneration
+========================================
+model ContentGeneration {
+  id             String @id @default(cuid())
+  organizationId String
+  brandId        String
+  contentItemId  String
+  version        Int    @default(1)
+
+  textStatus  GenerationStatus @default(NOT_CONFIGURED)
+  imageStatus GenerationStatus @default(NOT_CONFIGURED)
+  videoStatus GenerationStatus @default(NOT_CONFIGURED)
+
+  textContent      Json?
+  errorLog         Json?
+  metadata         Json?
+  textRequestId    String?
+  imageRequestId   String?
+  videoRequestId   String?
+  videoOperationId String?
+
+  brandDnaVersionId String?
+  strategyVersion   Int?
+  sourceIds         Json?
+
+  generationSource      String?
+  generationInstruction String?
+  parentVersionId       String?
+  parentVersion         ContentGeneration?  @relation("VersionHistory", fields: [parentVersionId], references: [id], onDelete: SetNull)
+  childVersions         ContentGeneration[] @relation("VersionHistory")
+
+  qualityScore  Json?
+  scoringStatus ScoringStatus @default(NOT_SCORED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contentItem     ContentItem             @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand           Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  assets          GeneratedAsset[]
+  approvals       Approval[]
+  publishingJobs  PublishingJob[]
+  metricSnapshots ContentMetricSnapshot[]
+  seoAnalyses     SEOAnalysis[]
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentItemId])
+  @@index([brandDnaVersionId])
+}
+
+========================================
+MODEL: ContentMetricSnapshot
+========================================
+model ContentMetricSnapshot {
+  id               String   @id @default(cuid())
+  organizationId   String
+  brandId          String
+  contentItemId    String
+  contentVersionId String
+  publishingJobId  String
+  contentChannelId String
+  campaignId       String?
+  externalPostId   String
+  platform         String
+  metricDate       DateTime
+
+  // Normalized Metrics
+  reach           Int?
+  impressions     Int?
+  likes           Int?
+  comments        Int?
+  shares          Int?
+  saves           Int?
+  clicks          Int?
+  videoViews      Int?
+  watchTime       Int?
+  followersGained Int?
+  followersLost   Int?
+  engagementRate  Float?
+
+  rawMetrics Json?
+  provider   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand          Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItem    ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentVersion ContentGeneration @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
+  publishingJob  PublishingJob     @relation(fields: [publishingJobId], references: [id], onDelete: Cascade)
+  contentChannel ContentChannel    @relation(fields: [contentChannelId], references: [id], onDelete: Cascade)
+  campaign       Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, externalPostId, metricDate, provider])
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentItemId])
+  @@index([contentVersionId])
+  @@index([contentChannelId])
+  @@index([campaignId])
+  @@index([metricDate])
+}
+
+========================================
+MODEL: SEOAnalysis
+========================================
+model SEOAnalysis {
+  id               String   @id @default(cuid())
+  organizationId   String
+  brandId          String
+  contentItemId    String
+  contentVersionId String
+  
+  keywordData      Json?
+  searchIntent     String?
+  seoScore         Int?
+  subScores        Json?
+  recommendations  Json?
+  flags            Json?
+  metadata         Json?
+  status           SEOAnalysisStatus @default(ANALYZING)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand          Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  contentItem    ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentVersion ContentGeneration @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([contentItemId])
+  @@index([contentVersionId])
+  @@index([createdAt])
+}
+
+========================================
+MODEL: AIRecommendation
+========================================
+model AIRecommendation {
+  id             String   @id @default(cuid())
+  organizationId String
+  brandId        String
+  competitorId   String
+  type           String
+  observation    String
+  likelyCause    String
+  recommendation String
+  action         String
+  confidence     Float
+  sources        Json
+  status         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  brand        Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  competitor   BrandCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+  @@index([organizationId])
+  @@index([competitorId])
+}

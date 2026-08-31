@@ -74,7 +74,7 @@ export const analyticsSyncWorker = new Worker(
               if (result.success && result.metrics) {
                 // Calculate engagement deterministically
                 let engagement = null;
-                const m = result.metrics;
+                const m = result.metrics as any;
                 if (m.likes !== undefined || m.comments !== undefined || m.shares !== undefined || m.saves !== undefined) {
                   engagement = 
                     (m.likes || 0) + 

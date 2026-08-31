@@ -59,6 +59,11 @@ export type Permission =
   | 'seo.analyze'
   | 'seo.optimize'
   | 'seo.export'
+  // MARKET INTELLIGENCE
+  | 'market.view'
+  | 'market.analyze'
+  | 'market.refresh'
+  | 'market.export'
   // AI COPILOT
   | 'copilot.view'
   | 'copilot.generate'
@@ -156,6 +161,12 @@ export const PERMISSION_REGISTRY: Record<Permission, { module: string; name: str
   'seo.optimize': { module: 'SEO', name: 'Optimize SEO', description: 'Can apply SEO optimizations.' },
   'seo.export': { module: 'SEO', name: 'Export SEO', description: 'Can export SEO data.' },
 
+  // MARKET INTELLIGENCE
+  'market.view': { module: 'Market Intelligence', name: 'View Market Intelligence', description: 'Can view market intelligence.' },
+  'market.analyze': { module: 'Market Intelligence', name: 'Analyze Market', description: 'Can run market intelligence analysis.' },
+  'market.refresh': { module: 'Market Intelligence', name: 'Refresh Market Intelligence', description: 'Can refresh market intelligence data.' },
+  'market.export': { module: 'Market Intelligence', name: 'Export Market Intelligence', description: 'Can export market intelligence reports.' },
+
   // AI COPILOT
   'copilot.view': { module: 'AI Copilot', name: 'View Copilot', description: 'Can view AI Copilot interface.' },
   'copilot.generate': { module: 'AI Copilot', name: 'Use Copilot', description: 'Can generate with AI Copilot.' },
@@ -204,12 +215,14 @@ const VIEWER_PERMISSIONS: Permission[] = [
   'organization.view',
   'organization.switch',
   'view_analytics',
+  'market.view',
 ];
 
 const ANALYST_PERMISSIONS: Permission[] = [
   ...VIEWER_PERMISSIONS,
   'competitor.analyze',
   'analytics.export',
+  'market.export',
 ];
 
 const DESIGNER_PERMISSIONS: Permission[] = [
@@ -272,6 +285,9 @@ const MARKETING_MANAGER_PERMISSIONS: Permission[] = [
   'seo.export',
   'manage_competitors',
   'manage_campaigns',
+  'market.analyze',
+  'market.refresh',
+  'market.export',
   'manage_social_connections',
 ];
 
