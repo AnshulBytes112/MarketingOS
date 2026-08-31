@@ -88,7 +88,7 @@ export function Sidebar({
       width: "220px",
       minWidth: "220px",
       background: "var(--bg-sidebar)",
-      borderRight: "1px solid var(--sidebar-border)",
+      borderRight: "1px solid var(--border)",
       display: "flex",
       flexDirection: "column",
       height: "100vh",
@@ -144,12 +144,12 @@ export function Sidebar({
               position: "absolute",
               top: "100%", left: 0, right: 0,
               marginTop: "0.5rem",
-              background: "#12111A",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "var(--bg-solid)",
+              border: "1px solid var(--border)",
               borderRadius: "0.5rem",
               padding: "0.5rem",
               zIndex: 50,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+              boxShadow: "var(--card-shadow)",
             }}>
               <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, padding: "0 0.5rem 0.5rem", textTransform: "uppercase" }}>Switch Organization</div>
               {orgs.map((org) => {
@@ -163,11 +163,11 @@ export function Sidebar({
                       borderRadius: "0.25rem",
                       cursor: isCurrent ? "default" : "pointer",
                       display: "flex", alignItems: "center", justifyContent: "space-between",
-                      background: isCurrent ? "rgba(255,255,255,0.05)" : "transparent",
-                      color: isCurrent ? "white" : "var(--text-muted)",
+                      background: isCurrent ? "var(--surface-3)" : "transparent",
+                      color: isCurrent ? "var(--text-primary)" : "var(--text-secondary)",
                       fontSize: "0.75rem",
                     }}
-                    onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+                    onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.background = "var(--surface-hover)"; }}
                     onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.background = "transparent"; }}
                   >
                     <span>{org.name}</span>

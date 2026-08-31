@@ -104,7 +104,7 @@ export async function enqueueTextGeneration(params: {
   brandId: string;
   contentItemId: string;
 }) {
-  return getTextGenerationQueue().add(`text:${params.generationId}`, params, {
+  return getTextGenerationQueue().add(`text-${params.generationId}`, params, {
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },
   });
@@ -124,7 +124,7 @@ export async function enqueueImageGeneration(params: {
   brandId: string;
   contentItemId: string;
 }) {
-  return getImageGenerationQueue().add(`image:${params.generationId}`, params, {
+  return getImageGenerationQueue().add(`image-${params.generationId}`, params, {
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },
   });
@@ -144,7 +144,7 @@ export async function enqueueVideoGeneration(params: {
   brandId: string;
   contentItemId: string;
 }) {
-  return getVideoGenerationQueue().add(`video:${params.generationId}`, params, {
+  return getVideoGenerationQueue().add(`video-${params.generationId}`, params, {
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },
   });
@@ -164,10 +164,10 @@ export async function enqueueQualityScoring(params: {
   brandId: string;
   contentVersionId: string;
 }) {
-  return getQualityScoringQueue().add(`quality-score:${params.contentVersionId}`, params, {
+  return getQualityScoringQueue().add(`quality-score-${params.contentVersionId}`, params, {
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },
-    jobId: `quality-score:${params.contentVersionId}` // Deterministic jobId for idempotency
+    jobId: `quality-score-${params.contentVersionId}` // Deterministic jobId for idempotency
   });
 }
 
@@ -185,7 +185,7 @@ export async function enqueuePublishingJob(params: {
   const options: any = {
     attempts: 3,
     backoff: { type: 'exponential', delay: 5000 },
-    jobId: `publish:${params.publishingJobId}` // Deterministic
+    jobId: `publish-${params.publishingJobId}` // Deterministic
   };
   
   if (delay) {
@@ -253,7 +253,9 @@ export async function enqueueSeoAnalysis(params: {
   organizationId: string;
   brandId: string;
   contentVersionId: string;
+  contentItemId: string;
   userId?: string;
+  analysisId?: string;
 }) {
   return getSeoAnalysisQueue().add('seo-analysis.run', params, {
     attempts: 3,
@@ -261,6 +263,6 @@ export async function enqueueSeoAnalysis(params: {
       type: 'exponential',
       delay: 2000,
     },
-    jobId: `seo-analysis:${params.contentVersionId}` // Deterministic jobId for idempotency
+    jobId: `seo-analysis-${params.contentVersionId}` // Deterministic jobId for idempotency
   });
 }

@@ -109,7 +109,11 @@ export function ApprovalsClient({ initialApprovals, permissions }: ApprovalsClie
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="bg-[#0B0A11]/60 rounded-xl p-4 border border-white/5">
               <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Content Draft</h4>
-              <p className="text-sm text-gray-200 whitespace-pre-wrap">{approval.contentVersion?.textContent?.content || "No text content available."}</p>
+              <p className="text-sm text-gray-200 whitespace-pre-wrap">
+                {typeof approval.contentVersion?.textContent === 'string' 
+                  ? approval.contentVersion.textContent 
+                  : (approval.contentVersion?.textContent?.content || JSON.stringify(approval.contentVersion?.textContent, null, 2) || "No text content available.")}
+              </p>
             </div>
             
             <div className="space-y-4">
@@ -117,10 +121,14 @@ export function ApprovalsClient({ initialApprovals, permissions }: ApprovalsClie
                 <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Quality Score</h4>
                 {approval.contentVersion?.qualityScore ? (
                   <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm mb-2 pb-2 border-b border-white/10">
+                      <span className="text-gray-300 font-bold text-yellow-400 uppercase text-xs tracking-wider">Composite Score</span>
+                      <span className="font-bold text-yellow-400">{approval.contentVersion.qualityScore.composite}/100</span>
+                    </div>
                     {/* Render score breakdown simply */}
-                    {Object.entries(approval.contentVersion.qualityScore.scores || {}).map(([key, val]: any) => (
-                      <div key={key} className="flex justify-between items-center text-sm">
-                        <span className="text-gray-300 capitalize">{key}</span>
+                    {Object.entries(approval.contentVersion.qualityScore.subScores || approval.contentVersion.qualityScore.scores || {}).map(([key, val]: any) => (
+                      <div key={key} className="flex justify-between items-center text-xs">
+                        <span className="text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                         <span className="font-semibold text-white">{val}/100</span>
                       </div>
                     ))}
@@ -128,7 +136,7 @@ export function ApprovalsClient({ initialApprovals, permissions }: ApprovalsClie
                       <div className="pt-2 mt-2 border-t border-white/10">
                         <p className="text-xs text-rose-400 font-medium mb-1">Flags Detected:</p>
                         <ul className="text-xs text-gray-400 list-disc pl-4">
-                          {approval.contentVersion.qualityScore.flags.map((f: any, i: number) => <li key={i}>{f.description}</li>)}
+                          {approval.contentVersion.qualityScore.flags.map((f: any, i: number) => <li key={i}>{f.description || f}</li>)}
                         </ul>
                       </div>
                     )}

@@ -25,12 +25,25 @@ export async function requestSEOAnalysis(contentVersionId: string) {
     throw new Error('An SEO analysis is already running for this version.');
   }
 
+  // Create the SEO Analysis record with ANALYZING status
+  const analysis = await prisma.sEOAnalysis.create({
+    data: {
+      organizationId: session.organizationId,
+      brandId: version.brandId,
+      contentItemId: version.contentItemId,
+      contentVersionId,
+      status: 'ANALYZING'
+    }
+  });
+
   // Enqueue job
   await enqueueSeoAnalysis({
     organizationId: session.organizationId,
     brandId: version.brandId,
     contentVersionId,
+    contentItemId: version.contentItemId,
     userId: session.userId,
+    analysisId: analysis.id,
   });
 
   await prisma.auditLog.create({

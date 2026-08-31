@@ -10,59 +10,65 @@ const redisConnection = {
 };
 
 export const seoAnalysisWorker = new Worker('seo-analysis', async (job: Job) => {
-  const { organizationId, brandId, contentVersionId, userId } = job.data;
+  const { organizationId, brandId, contentVersionId, userId, analysisId } = job.data;
   console.log(`[SEO Analysis] Processing job ${job.id} for version ${contentVersionId}`);
 
-  // 1. Idempotency Check & Creation
-  // Try to find if an analysis already exists for this version
-  let analysis = await prisma.sEOAnalysis.findFirst({
-    where: { contentVersionId, organizationId, brandId },
-    orderBy: { createdAt: 'desc' }
+  // 1. Load context first so we have the contentItemId
+  const version = await prisma.contentGeneration.findUnique({
+    where: { id: contentVersionId },
+    include: {
+      contentItem: {
+        include: {
+          brand: { include: { dnaVersions: { where: { publicationStatus: 'ACTIVE' } } } },
+          strategy: true,
+          channel: true,
+        }
+      }
+    }
   });
 
-  if (analysis && analysis.status === 'ANALYZING') {
-    console.log(`[SEO Analysis] Job ${job.id}: Already analyzing, skipping duplicate.`);
+  if (!version || version.organizationId !== organizationId) {
+    console.error(`[SEO Analysis] Job ${job.id}: ContentGeneration ${contentVersionId} not found or tenant mismatch.`);
     return;
   }
 
-  // If completed, we shouldn't run again unless requested explicitly (in which case a new one is made or the old is failed?)
-  // The requirements say "create an SEO analysis model", we can just create a new one each time to keep history, or update.
-  // The schema has `@@index([contentVersionId])`, but not a unique constraint. So we can create a new record.
-  
-  analysis = await prisma.sEOAnalysis.create({
-    data: {
-      organizationId,
-      brandId,
-      contentItemId: job.data.contentItemId || '', // We will patch this below
-      contentVersionId,
-      status: 'ANALYZING'
-    }
-  });
-
+  let analysis: any;
   try {
-    // 2. Load context
-    const version = await prisma.contentGeneration.findUnique({
-      where: { id: contentVersionId },
-      include: {
-        contentItem: {
-          include: {
-            brand: { include: { dnaVersions: { where: { publicationStatus: 'ACTIVE' } } } },
-            strategy: true,
-            channel: true,
-          }
-        }
-      }
-    });
-
-    if (!version || version.organizationId !== organizationId) {
-      throw new Error(`ContentGeneration ${contentVersionId} not found or tenant mismatch.`);
+    // 2. Fetch or create SEOAnalysis record
+    if (analysisId) {
+      analysis = await prisma.sEOAnalysis.findUnique({
+        where: { id: analysisId }
+      });
     }
 
-    // Patch contentItemId
-    await prisma.sEOAnalysis.update({
-      where: { id: analysis.id },
-      data: { contentItemId: version.contentItemId }
-    });
+    if (!analysis) {
+      analysis = await prisma.sEOAnalysis.findFirst({
+        where: { contentVersionId, organizationId, brandId },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (analysis && analysis.status === 'ANALYZING') {
+        console.log(`[SEO Analysis] Job ${job.id}: Already analyzing, skipping duplicate.`);
+        return;
+      }
+    }
+
+    if (analysis && analysis.status === 'COMPLETED') {
+      console.log(`[SEO Analysis] Job ${job.id}: Already completed, skipping.`);
+      return;
+    }
+
+    if (!analysis) {
+      analysis = await prisma.sEOAnalysis.create({
+        data: {
+          organizationId,
+          brandId,
+          contentItemId: version.contentItemId,
+          contentVersionId,
+          status: 'ANALYZING'
+        }
+      });
+    }
 
     const contentItem = version.contentItem;
     const brand = contentItem.brand;
@@ -88,6 +94,11 @@ Brand Target Audience: ${brand.targetAudience || 'Unknown'}
 Platform: ${contentItem.platform}
 Format: ${contentItem.format}
 Goal/Objective: ${contentItem.campaign || strategy?.goal ? JSON.stringify(strategy?.goal) : 'Unknown'}
+
+CRITICAL FORMATTING RULES:
+1. "searchIntent" MUST be exactly one of the following uppercase options: "INFORMATIONAL", "NAVIGATIONAL", "COMMERCIAL", "TRANSACTIONAL".
+2. In the "recommendations" array, each recommendation's "category" MUST be exactly one of: "TITLE", "META", "KEYWORD", "STRUCTURE", "INTENT", "READABILITY", "OTHER".
+3. In the "recommendations" array, each recommendation's "severity" MUST be exactly one of: "LOW", "MEDIUM", "HIGH".
 `;
 
     const userPrompt = `Please analyze the following content for SEO.
@@ -98,11 +109,15 @@ CONTENT TEXT:
 ${textContent}
 
 INSTRUCTIONS:
-1. Identify the primary Search Intent.
+1. Identify the primary Search Intent. It MUST be one of: "INFORMATIONAL" | "NAVIGATIONAL" | "COMMERCIAL" | "TRANSACTIONAL".
 2. Identify core Keyword Themes and any Missing Entities that should be mentioned.
 3. Check for Keyword Stuffing (list stuffed keywords if any).
 4. Evaluate a composite SEO Score (0-100) and Sub-scores.
-5. Provide specific, actionable Recommendations (category, severity, explanation, suggestedAction).
+5. Provide specific, actionable Recommendations. For each:
+   - "category" MUST be one of: "TITLE" | "META" | "KEYWORD" | "STRUCTURE" | "INTENT" | "READABILITY" | "OTHER"
+   - "severity" MUST be one of: "LOW" | "MEDIUM" | "HIGH"
+   - "explanation"
+   - "suggestedAction"
 6. Provide any Flags (warnings).
 Be highly analytical and realistic. Do NOT fabricate search volume or rankings.`;
 
@@ -136,7 +151,6 @@ Be highly analytical and realistic. Do NOT fabricate search volume or rankings.`
     });
 
     // 5. Deterministic scoring augmentations (if any)
-    // We trust the AI for semantic sub-scores, but we could cap or adjust them here.
     const finalScore = data.seoScore;
 
     // 6. Persist SEOAnalysis
@@ -173,21 +187,23 @@ Be highly analytical and realistic. Do NOT fabricate search volume or rankings.`
   } catch (error: any) {
     console.error(`[SEO Analysis] Job ${job.id} failed:`, error.message);
     
-    await prisma.sEOAnalysis.update({
-      where: { id: analysis.id },
-      data: { status: 'FAILED' }
-    });
+    if (analysis?.id) {
+      await prisma.sEOAnalysis.update({
+        where: { id: analysis.id },
+        data: { status: 'FAILED' }
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        organizationId,
-        userId: userId || null,
-        action: 'SEO_ANALYSIS_FAILED',
-        entityType: 'SEOAnalysis',
-        entityId: analysis.id,
-        metadata: { contentVersionId, error: error.message }
-      }
-    });
+      await prisma.auditLog.create({
+        data: {
+          organizationId,
+          userId: userId || null,
+          action: 'SEO_ANALYSIS_FAILED',
+          entityType: 'SEOAnalysis',
+          entityId: analysis.id,
+          metadata: { contentVersionId, error: error.message }
+        }
+      });
+    }
 
     throw error;
   }

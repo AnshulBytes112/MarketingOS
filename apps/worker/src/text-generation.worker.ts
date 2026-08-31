@@ -123,7 +123,7 @@ Campaign: ${item.campaign || 'N/A'}`;
           port: parseInt(process.env.REDIS_PORT || '6379'),
         }
       });
-      await qualityQueue.add(`quality-score:${generationId}`, {
+      await qualityQueue.add(`quality-score-${generationId}`, {
         generationId,
         organizationId,
         brandId,
@@ -131,7 +131,7 @@ Campaign: ${item.campaign || 'N/A'}`;
       }, {
         attempts: 3,
         backoff: { type: 'exponential', delay: 2000 },
-        jobId: `quality-score:${generationId}`
+        jobId: `quality-score-${generationId}`
       });
       await qualityQueue.close();
 

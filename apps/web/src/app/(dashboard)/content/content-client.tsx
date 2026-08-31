@@ -29,7 +29,8 @@ import {
   saveContentEdit,
   restoreContentVersion,
   regenerateContentWithInstruction,
-  markContentReadyForReview
+  markContentReadyForReview,
+  approveContentItem
 } from '../calendar/actions';
 import {
   requestSEOAnalysis,
@@ -293,6 +294,13 @@ export default function ContentClient({
 
   const readyForReviewMutation = useMutation({
     mutationFn: (itemId: string) => markContentReadyForReview(itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content-engine-items', organizationId, brandId] });
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (data: { itemId: string, genId: string }) => approveContentItem(data.itemId, data.genId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['content-engine-items', organizationId, brandId] });
     },
@@ -696,6 +704,15 @@ export default function ContentClient({
                         <span className="text-xs text-yellow-400">Assign a channel first</span>
                       )}
                     </div>
+                  ) : selectedItem.status === 'READY_FOR_REVIEW' && !isViewer ? (
+                    <button
+                      disabled={approveMutation.isPending}
+                      onClick={() => approveMutation.mutate({ itemId: selectedItem.id, genId: latestGen.id })}
+                      className="text-xs px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/20 flex items-center gap-2"
+                    >
+                      {approveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      Approve
+                    </button>
                   ) : (
                     <span className="text-gray-400 text-xs italic">Awaiting approval</span>
                   )}

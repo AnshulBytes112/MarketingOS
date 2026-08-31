@@ -49,10 +49,22 @@ export async function createCampaign(data: {
     throw new Error("Brand not found or access denied.");
   }
 
+  let { strategyId, strategyVersion } = data;
+
+  if (!strategyId) {
+    const activeStrategy = await prisma.strategy.findFirst({
+      where: { brandId: data.brandId, organizationId: session.organizationId, publicationStatus: 'ACTIVE', status: 'COMPLETED' },
+    });
+    if (activeStrategy) {
+      strategyId = activeStrategy.id;
+      strategyVersion = activeStrategy.version;
+    }
+  }
+
   // Validate strategy ownership
-  if (data.strategyId) {
+  if (strategyId) {
     const strategy = await prisma.strategy.findUnique({
-      where: { id: data.strategyId, organizationId: session.organizationId, brandId: data.brandId },
+      where: { id: strategyId, organizationId: session.organizationId, brandId: data.brandId },
     });
     if (!strategy) throw new Error("Strategy not found or access denied.");
   }
@@ -65,8 +77,8 @@ export async function createCampaign(data: {
       objective: data.objective,
       startDate: data.startDate,
       endDate: data.endDate,
-      strategyId: data.strategyId,
-      strategyVersion: data.strategyVersion,
+      strategyId: strategyId,
+      strategyVersion: strategyVersion,
       createdById: session.userId,
       kpis: data.kpis ? {
         create: data.kpis.map(k => ({
@@ -228,43 +240,77 @@ export async function applyCampaignPlan(campaignId: string) {
 
   if (!contentPlan) {
     // Requires a strategy linkage in the campaign
-    if (!campaign.strategyId) throw new Error("Campaign must be linked to a strategy to apply plans.");
+    let targetStrategyId = campaign.strategyId;
+    if (!targetStrategyId) {
+      const activeStrategy = await prisma.strategy.findFirst({
+        where: { brandId: campaign.brandId, organizationId: session.organizationId, publicationStatus: 'ACTIVE', status: 'COMPLETED' },
+      });
+      if (!activeStrategy) {
+        throw new Error("Campaign must be linked to a strategy to apply plans, and no active strategy was found.");
+      }
+      targetStrategyId = activeStrategy.id;
+      await prisma.campaign.update({
+        where: { id: campaign.id },
+        data: { strategyId: targetStrategyId, strategyVersion: activeStrategy.version }
+      });
+    }
     
     contentPlan = await prisma.contentPlan.create({
       data: {
         organizationId: session.organizationId,
         brandId: campaign.brandId,
-        strategyId: campaign.strategyId,
+        strategyId: targetStrategyId,
         campaignId: campaign.id,
         status: "COMPLETED",
       }
     });
   }
 
+  // Fetch valid channels to prevent AI hallucinations causing FK errors
+  const validChannels = await prisma.contentChannel.findMany({
+    where: { brandId: campaign.brandId, organizationId: session.organizationId },
+    select: { id: true }
+  });
+  const validChannelIds = new Set(validChannels.map(c => c.id));
+
   // Create content items based on the proposal
   const contentItemsData = [];
   let itemCounter = 1;
 
+  // Calculate total items to space them evenly
+  let totalItems = 0;
+  for (const channelItem of proposal.channelPlan) {
+    totalItems += channelItem.suggestedContentCount || 1;
+  }
+
+  const start = campaign.startDate ? new Date(campaign.startDate) : new Date();
+  const end = campaign.endDate ? new Date(campaign.endDate) : start;
+  const durationMs = end.getTime() - start.getTime();
+  const stepMs = totalItems > 1 && durationMs > 0 ? durationMs / (totalItems - 1) : 0;
+
+  let itemIndex = 0;
   for (const channelItem of proposal.channelPlan) {
     const count = channelItem.suggestedContentCount || 1;
     for (let i = 0; i < count; i++) {
+      const scheduledDate = new Date(start.getTime() + itemIndex * stepMs);
       contentItemsData.push({
         id: `ci_${crypto.randomBytes(12).toString("hex")}`,
         organizationId: session.organizationId,
         brandId: campaign.brandId,
         contentPlanId: contentPlan.id,
-        strategyId: campaign.strategyId!,
+        strategyId: contentPlan.strategyId,
         campaignId: campaign.id,
-        contentChannelId: channelItem.contentChannelId,
+        contentChannelId: validChannelIds.has(channelItem.contentChannelId) ? channelItem.contentChannelId : null,
         title: `${campaign.name} Content ${itemCounter}`,
         platform: channelItem.platform || "Platform",
         format: channelItem.format || "Post",
-        scheduledDate: campaign.startDate || new Date(),
+        scheduledDate,
         funnelStage: channelItem.purpose || "Awareness",
         contentPillar: proposal.suggestedThemes?.[0]?.name || "Theme",
         status: "DRAFT",
         source: "AI_PLANNING",
       });
+      itemIndex++;
       itemCounter++;
     }
   }

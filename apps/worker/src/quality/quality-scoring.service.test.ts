@@ -1,39 +1,66 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { QualityScoringService } from './quality-scoring.service';
-import { prisma } from '@abge/database';
-import { ModelGateway } from '../ai/gateway';
-import { DirectDatabaseContextProvider } from '../ai/content-context.provider';
 
-jest.mock('@abge/database', () => ({
-  prisma: {
-    contentGeneration: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-    aIUsage: {
-      create: jest.fn(),
-    }
+const mockPrismaClient = {
+  contentGeneration: {
+    findUnique: vi.fn(),
+    update: vi.fn(),
   },
-}));
+  aIUsage: {
+    create: vi.fn(),
+  }
+};
 
-jest.mock('../ai/gateway');
-jest.mock('../ai/content-context.provider');
+vi.mock('@abge/database', () => {
+  return {
+    get prisma() {
+      return mockPrismaClient;
+    }
+  };
+});
+
+const mockGenerateStructured = vi.fn();
+vi.mock('../ai/gateway', () => {
+  return {
+    ModelGateway: vi.fn(function() {
+      return {
+        get generateStructured() {
+          return mockGenerateStructured;
+        },
+      };
+    })
+  };
+});
+
+const mockGetContext = vi.fn();
+vi.mock('../ai/content-context.provider', () => {
+  return {
+    DirectDatabaseContextProvider: vi.fn(function() {
+      return {
+        get getContext() {
+          return mockGetContext;
+        },
+      };
+    })
+  };
+});
 
 describe('QualityScoringService', () => {
   let service: QualityScoringService;
 
   beforeEach(() => {
     service = new QualityScoringService();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    (DirectDatabaseContextProvider.prototype.getContext as jest.Mock).mockResolvedValue({
+    mockGetContext.mockResolvedValue({
       context: 'Brand DNA: Friendly. Sources: Sales went up by 50%.'
     });
 
-    (prisma.aIUsage.create as jest.Mock).mockResolvedValue({ id: 'usage-1' });
+    mockPrismaClient.aIUsage.create.mockResolvedValue({ id: 'usage-1' });
   });
 
   it('should enforce the safety floor when Factual Safety is very low', async () => {
-    (prisma.contentGeneration.findUnique as jest.Mock).mockResolvedValue({
+    mockPrismaClient.contentGeneration.findUnique.mockResolvedValue({
       id: 'gen-1',
       organizationId: 'org-1',
       brandId: 'brand-1',
@@ -42,7 +69,7 @@ describe('QualityScoringService', () => {
       contentItem: { platform: 'INSTAGRAM', format: 'POST' }
     });
 
-    (ModelGateway.prototype.generateStructured as jest.Mock).mockResolvedValue({
+    mockGenerateStructured.mockResolvedValue({
       data: {
         brandVoice: { score: 95, reason: 'Matches tone', flags: [] },
         factualSafety: { 
@@ -67,7 +94,7 @@ describe('QualityScoringService', () => {
   });
 
   it('should penalize complex jargon deterministically', async () => {
-    (prisma.contentGeneration.findUnique as jest.Mock).mockResolvedValue({
+    mockPrismaClient.contentGeneration.findUnique.mockResolvedValue({
       id: 'gen-2',
       organizationId: 'org-1',
       brandId: 'brand-1',
@@ -76,7 +103,7 @@ describe('QualityScoringService', () => {
       contentItem: { platform: 'LINKEDIN', format: 'POST' }
     });
 
-    (ModelGateway.prototype.generateStructured as jest.Mock).mockResolvedValue({
+    mockGenerateStructured.mockResolvedValue({
       data: {
         brandVoice: { score: 90, reason: '', flags: [] },
         factualSafety: { score: 100, reason: '', flags: [] },
@@ -93,7 +120,7 @@ describe('QualityScoringService', () => {
   });
 
   it('should penalize platform mismatch deterministically (e.g. extremely long tweet)', async () => {
-    (prisma.contentGeneration.findUnique as jest.Mock).mockResolvedValue({
+    mockPrismaClient.contentGeneration.findUnique.mockResolvedValue({
       id: 'gen-3',
       organizationId: 'org-1',
       brandId: 'brand-1',
@@ -102,7 +129,7 @@ describe('QualityScoringService', () => {
       contentItem: { platform: 'TWITTER', format: 'POST' }
     });
 
-    (ModelGateway.prototype.generateStructured as jest.Mock).mockResolvedValue({
+    mockGenerateStructured.mockResolvedValue({
       data: {
         brandVoice: { score: 90, reason: '', flags: [] },
         factualSafety: { score: 100, reason: '', flags: [] },

@@ -61,7 +61,7 @@ export default async function OverviewPage() {
 
   // Total Active AI Recommendations
   const activeRecsCount = await prisma.aIRecommendation.count({
-    where: { organizationId: session.organizationId, brandId: brand.id, status: 'PENDING' }
+    where: { organizationId: session.organizationId, brandId: brand.id, status: 'OPEN' }
   });
 
   // Real-time Follower (Audience) sum
@@ -158,7 +158,7 @@ export default async function OverviewPage() {
     where: {
       organizationId: session.organizationId,
       brandId: brand.id,
-      status: 'PENDING',
+      status: 'OPEN',
     },
     take: 3,
     include: {

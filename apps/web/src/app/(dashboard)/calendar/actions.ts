@@ -661,3 +661,49 @@ export async function markContentReadyForReview(contentItemId: string) {
 
   return { success: true };
 }
+
+export async function approveContentItem(contentItemId: string, generationId: string) {
+  const session = await requireAuth();
+  await requirePermission('calendar.edit');
+
+  const item = await prisma.contentItem.findUnique({
+    where: { id: contentItemId }
+  });
+
+  if (!item || item.organizationId !== session.organizationId) {
+    throw new Error('Not found or tenant violation');
+  }
+
+  // Create approval record
+  await prisma.approval.create({
+    data: {
+      organizationId: session.organizationId,
+      brandId: item.brandId,
+      contentItemId: item.id,
+      contentVersionId: generationId,
+      status: 'APPROVED',
+      requestedById: session.userId,
+      reviewedById: session.userId,
+      reviewedAt: new Date()
+    }
+  });
+
+  // Update item status to SCHEDULED (or PUBLISHED if it's already scheduled)
+  await prisma.contentItem.update({
+    where: { id: contentItemId },
+    data: { status: 'SCHEDULED' }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: session.organizationId,
+      userId: session.userId,
+      action: 'CONTENT_APPROVED',
+      entityType: 'ContentItem',
+      entityId: contentItemId,
+      metadata: { newStatus: 'SCHEDULED', version: generationId }
+    }
+  });
+
+  return { success: true };
+}

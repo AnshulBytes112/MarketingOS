@@ -8,11 +8,10 @@ export const metadata = {
   title: 'SEO Intelligence | AI Brand Growth Engine',
 };
 
-export default async function SeoPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
+export default async function SeoPage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const searchParams = await props.searchParams;
   const session = await requireAuth();
   
   if (!session.organizationId) {

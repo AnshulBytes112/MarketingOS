@@ -8,10 +8,13 @@ const redisConnection = {
   port: parseInt(process.env.REDIS_PORT || '6379'),
 };
 
+const gateway = new ModelGateway();
+
 export const campaignPlanningWorker = new Worker(
   'campaign-planning',
   async (job: Job) => {
     const { campaignId, organizationId, brandId, userId } = job.data;
+    const requestId = `campaign-plan-${campaignId}-${Date.now()}`;
 
     console.log(`[Campaign Planning Worker] Processing job for campaign: ${campaignId}`);
 
@@ -51,8 +54,6 @@ ${JSON.stringify(strategy.audienceSegments, null, 2)}
     ).join('\n');
 
     const prompt = `
-You are an expert marketing strategist. Create a structured campaign plan based on the following details.
-
 Brand: ${brand?.name}
 Campaign Name: ${campaign.name}
 Objective: ${campaign.objective || "Not specified"}
@@ -68,24 +69,38 @@ Propose a detailed campaign plan with phases, suggested themes, KPIs, and a spec
 `;
 
     try {
-      const result = await ModelGateway.generateStructured(
+      const result = await gateway.generateStructured(
+        process.env.AI_MODEL || 'gpt-4o',
+        "You are an expert marketing strategist. Create a structured campaign plan based on the provided details.",
         prompt,
         CampaignProposalSchema,
-        {
-          provider: process.env.AI_PROVIDER as any || 'openai',
-          model: process.env.AI_MODEL || 'gpt-4o',
-          requestId: `campaign-plan-${campaignId}-${Date.now()}`
-        }
+        "CampaignProposal",
+        "Proposed campaign plan phases, channels, and KPIs",
+        requestId
       );
 
-      // Record AI usage (handled internally by ModelGateway or explicitly here if needed)
-      // Usually ModelGateway logs usage, but if we need to do it manually we can.
+      // Record AI Usage
+      await prisma.aIUsage.create({
+        data: {
+          organizationId,
+          brandId,
+          requestId,
+          provider: process.env.AI_PROVIDER || 'openai',
+          model: process.env.AI_MODEL || 'gpt-4o',
+          inputTokens: result.usage.inputTokens,
+          outputTokens: result.usage.outputTokens,
+          totalTokens: result.usage.totalTokens,
+          latencyMs: result.usage.latencyMs,
+          estimatedCost: result.usage.estimatedCost,
+          status: 'SUCCESS',
+        },
+      });
 
       // Update the campaign with the proposal
       await prisma.campaign.update({
         where: { id: campaignId },
         data: {
-          aiProposal: result,
+          aiProposal: result.data as any,
         },
       });
 
@@ -109,3 +124,4 @@ campaignPlanningWorker.on('completed', (job) => {
 campaignPlanningWorker.on('failed', (job, err) => {
   console.error(`[Campaign Planning] Job ${job?.id} failed:`, err);
 });
+
