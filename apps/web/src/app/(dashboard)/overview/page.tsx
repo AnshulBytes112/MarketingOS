@@ -17,6 +17,7 @@ export default async function OverviewPage() {
   // Fetch or auto-provision real brand record from DB
   let brand = await prisma.brand.findFirst({
     where: { organizationId: session.organizationId },
+    orderBy: { createdAt: 'desc' },
   });
 
   if (!brand) {

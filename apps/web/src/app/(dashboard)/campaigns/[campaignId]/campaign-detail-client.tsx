@@ -6,12 +6,25 @@ import { Button } from "@abge/ui/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@abge/ui/components/ui/card";
 import { ArrowLeft, Play, Pause, CheckCircle, Wand2, Check } from "lucide-react";
 import Link from "next/link";
-import { generateCampaignPlan, applyCampaignPlan, updateCampaignStatus } from "../actions";
+import { generateCampaignPlan, applyCampaignPlan, updateCampaignStatus, linkActiveStrategy } from "../actions";
 import { toast } from "sonner";
 
 export function CampaignDetailClient({ campaign, progress }: { campaign: any, progress: any }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+
+  const handleLinkStrategy = async () => {
+    try {
+      setIsLinking(true);
+      await linkActiveStrategy(campaign.id);
+      toast.success("Successfully linked to active strategy!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to link strategy.");
+    } finally {
+      setIsLinking(false);
+    }
+  };
 
   const handleGeneratePlan = async () => {
     try {
@@ -107,9 +120,22 @@ export function CampaignDetailClient({ campaign, progress }: { campaign: any, pr
               </div>
               <div>
                 <h4 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Strategy</h4>
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                  {campaign.strategyId ? `v${campaign.strategyVersion || "1.0"}` : "None"}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    {campaign.strategyId ? `v${campaign.strategyVersion || "1.0"}` : "None"}
+                  </p>
+                  {!campaign.strategyId && (
+                    <Button 
+                      onClick={handleLinkStrategy} 
+                      disabled={isLinking}
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 text-[10px] px-2 py-0 border-purple-200 text-purple-600 hover:bg-purple-50 hover:text-purple-700 dark:border-purple-500/30 dark:text-purple-400 dark:hover:bg-purple-500/10"
+                    >
+                      {isLinking ? "Linking..." : "Link Strategy"}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
             {campaign.audience && (

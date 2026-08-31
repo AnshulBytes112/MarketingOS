@@ -340,3 +340,29 @@ export async function applyCampaignPlan(campaignId: string) {
   revalidatePath(`/campaigns/${campaignId}`);
   return { success: true, createdCount: contentItemsData.length };
 }
+
+export async function linkActiveStrategy(campaignId: string) {
+  const session = await requirePermission("campaign.edit");
+
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId, organizationId: session.organizationId },
+  });
+
+  if (!campaign) throw new Error("Campaign not found.");
+
+  const activeStrategy = await prisma.strategy.findFirst({
+    where: { brandId: campaign.brandId, organizationId: session.organizationId, publicationStatus: 'ACTIVE', status: 'COMPLETED' },
+  });
+
+  if (!activeStrategy) {
+    throw new Error("No active completed strategy found for this brand. Please generate and approve a strategy first.");
+  }
+
+  await prisma.campaign.update({
+    where: { id: campaignId },
+    data: { strategyId: activeStrategy.id, strategyVersion: activeStrategy.version }
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  return { success: true, version: activeStrategy.version };
+}

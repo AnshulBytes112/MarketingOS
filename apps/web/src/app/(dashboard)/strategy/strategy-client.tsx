@@ -123,7 +123,7 @@ export default function StrategyClient({ brandId, brandName, organizationId, per
   const approveMutation = useMutation({
     mutationFn: () => approveStrategy(brandId, activeStrategy?.id || ''),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['active-strategy', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['active-strategy', organizationId, brandId] });
       setErrorMsg(null);
     },
     onError: (err: any) => {
@@ -141,7 +141,7 @@ export default function StrategyClient({ brandId, brandName, organizationId, per
   const generateCalendarMutation = useMutation({
     mutationFn: () => generateContentCalendar(activeStrategy?.id || ''),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['latest-content-plan', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['latest-content-plan', organizationId, brandId] });
       setHasJustGeneratedCalendar(true);
       setErrorMsg(null);
     },
@@ -325,7 +325,7 @@ export default function StrategyClient({ brandId, brandName, organizationId, per
             </div>
           </div>
           <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['generating-strategy', brandId] })}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['generating-strategy', organizationId, brandId] })}
             className="px-3 py-1 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-medium"
           >
             Dismiss

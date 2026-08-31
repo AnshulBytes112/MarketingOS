@@ -250,8 +250,18 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
   }
 });
 
-brandDnaWorker.on('failed', (job, err) => {
+brandDnaWorker.on('failed', async (job, err) => {
   console.error(`Job ${job?.id} failed:`, err.message);
+  if (job?.data?.brandId) {
+    try {
+      await prisma.brandDNAVersion.updateMany({
+        where: { brandId: job.data.brandId, status: 'GENERATING' },
+        data: { status: 'FAILED' }
+      });
+    } catch (e) {
+      console.error('Failed to reset Brand DNA status on worker failure:', e);
+    }
+  }
 });
 
 brandDnaWorker.on('error', err => {

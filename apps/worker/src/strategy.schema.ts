@@ -153,13 +153,45 @@ export const NewStrategyAIReasoningItemSchema = z.object({
 });
 
 export const StrategySourceSchema = z.preprocess((raw: any) => {
+  // 1. If the entire source was returned as a JSON string, try parsing it
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        raw = parsed;
+      }
+    } catch (e) {
+      // It's a standard string, not JSON
+    }
+  }
+
   if (typeof raw === 'string') {
     return { type: 'BRAND_DNA', id: raw, label: 'Source Document' };
   }
+  
   if (!raw || typeof raw !== 'object') return raw;
+
+  // 2. Extract ID
+  let extractedId = raw.id ?? raw.sourceId ?? raw.entityId ?? '';
+  
+  // 3. Robustness: If the AI hallucinates a stringified object INSIDE the ID field
+  if (typeof extractedId === 'string' && extractedId.trim().startsWith('{')) {
+    try {
+      const parsedIdObj = JSON.parse(extractedId);
+      if (parsedIdObj && typeof parsedIdObj === 'object') {
+        extractedId = parsedIdObj.id ?? parsedIdObj.sourceId ?? parsedIdObj.entityId ?? extractedId;
+      }
+    } catch (e) {
+      // Not JSON
+    }
+  } else if (typeof extractedId === 'object' && extractedId !== null) {
+    // If the AI put an actual object inside the ID field
+    extractedId = (extractedId as any).id ?? (extractedId as any).sourceId ?? (extractedId as any).entityId ?? '';
+  }
+
   return {
     type: normalizeSourceType(raw.type ?? raw.sourceType ?? raw.category ?? ''),
-    id: String(raw.id ?? raw.sourceId ?? raw.entityId ?? ''),
+    id: String(extractedId),
     label: String(raw.label ?? raw.name ?? raw.title ?? raw.type ?? ''),
   };
 }, z.object({

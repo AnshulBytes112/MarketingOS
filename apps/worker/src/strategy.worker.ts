@@ -37,6 +37,7 @@ export const strategyWorker = new Worker(
         activeDna,
         brand,
         products,
+        brandCompetitors,
         competitorAccounts,
         competitorPosts,
         aiRecommendations,
@@ -53,6 +54,9 @@ export const strategyWorker = new Worker(
           where: { id: brandId, organizationId },
         }),
         prisma.brandProduct.findMany({
+          where: { brandId, organizationId },
+        }),
+        prisma.brandCompetitor.findMany({
           where: { brandId, organizationId },
         }),
         prisma.competitorAccount.findMany({
@@ -80,6 +84,8 @@ export const strategyWorker = new Worker(
         } else if (hasCompletedSync) {
           competitorDataAvailability = 'WEBSITE_ONLY';
         }
+      } else if (brandCompetitors && brandCompetitors.length > 0) {
+        competitorDataAvailability = 'WEBSITE_ONLY';
       }
 
       const dataLimitations = {
@@ -109,6 +115,7 @@ export const strategyWorker = new Worker(
         activeDna.id,
         brand.id,
         ...products.map((p) => p.id),
+        ...brandCompetitors.map((bc) => bc.id),
         ...competitorAccounts.map((a) => a.id),
         ...competitorPosts.map((p) => p.id),
         ...aiRecommendations.map((r) => r.id),
@@ -145,7 +152,7 @@ export const strategyWorker = new Worker(
       let competitorAggregate = null;
       let competitorContext = null;
 
-      if (competitorAccounts.length > 0) {
+      if (competitorAccounts.length > 0 || brandCompetitors.length > 0) {
         let totalLikes = 0;
         let totalComments = 0;
         const platformCounts: Record<string, number> = {};
@@ -160,6 +167,7 @@ export const strategyWorker = new Worker(
         const avgComments = competitorPosts.length > 0 ? (totalComments / competitorPosts.length).toFixed(1) : '0';
 
         competitorAggregate = {
+          totalBrands: brandCompetitors.length,
           totalAccounts: competitorAccounts.length,
           analyzedPostsLimit: maxPosts,
           postsSelected: competitorPosts.length,
@@ -171,6 +179,11 @@ export const strategyWorker = new Worker(
         };
 
         competitorContext = {
+          brands: brandCompetitors.map((bc) => ({
+            id: bc.id,
+            name: bc.name,
+            websiteUrl: bc.websiteUrl,
+          })),
           accounts: competitorAccounts.map((a) => ({
             id: a.id,
             platform: a.platform,

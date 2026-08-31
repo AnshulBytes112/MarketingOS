@@ -282,6 +282,16 @@ UNAVAILABLE. No historical performance analytics are available for this brand.
   }
 );
 
-contentPlanWorker.on('failed', (job, err) => {
+contentPlanWorker.on('failed', async (job, err) => {
   console.error(`ContentPlan Job ${job?.id} failed:`, err.message);
+  if (job?.data?.strategyId) {
+    try {
+      await prisma.contentPlan.updateMany({
+        where: { strategyId: job.data.strategyId, status: 'GENERATING' },
+        data: { status: 'FAILED' }
+      });
+    } catch (e) {
+      console.error('Failed to reset ContentPlan status on worker failure:', e);
+    }
+  }
 });

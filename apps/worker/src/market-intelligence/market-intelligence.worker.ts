@@ -220,6 +220,16 @@ Please output a set of high-quality structured market insights based on the abov
   concurrency: 2
 });
 
-marketIntelligenceWorker.on('failed', (job, err) => {
+marketIntelligenceWorker.on('failed', async (job, err) => {
   console.error(`[Market Intelligence Worker] Job ${job?.id} permanently failed: ${err.message}`);
+  if (job?.data?.runId) {
+    try {
+      await prisma.marketIntelligenceRun.updateMany({
+        where: { id: job.data.runId, status: { in: ['QUEUED', 'ANALYZING'] } },
+        data: { status: 'FAILED', error: err.message }
+      });
+    } catch (e) {
+      console.error('Failed to reset Market Intelligence status on worker failure:', e);
+    }
+  }
 });

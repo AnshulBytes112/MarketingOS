@@ -22,6 +22,7 @@ export default async function CampaignsPage() {
 
   const brands = await prisma.brand.findMany({
     where: { organizationId: session.organizationId },
+    orderBy: { createdAt: "desc" },
     select: { id: true, name: true },
   });
 
