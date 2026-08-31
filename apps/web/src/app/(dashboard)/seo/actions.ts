@@ -144,11 +144,10 @@ export async function getSeoOverview(organizationId: string, filters: { from: Da
     throw new Error('Tenant isolation violation');
   }
 
-  // Get all completed analyses for the time period
+  // Get all analyses for the time period (regardless of status)
   const analyses = await prisma.sEOAnalysis.findMany({
     where: {
       organizationId,
-      status: 'COMPLETED',
       createdAt: {
         gte: filters.from,
         lte: filters.to
@@ -162,11 +161,11 @@ export async function getSeoOverview(organizationId: string, filters: { from: Da
     orderBy: { createdAt: 'desc' }
   });
 
-  // Calculate aggregates
-  const total = analyses.length;
-  const averageScore = total > 0 ? Math.round(analyses.reduce((acc, curr) => acc + (curr.seoScore || 0), 0) / total) : 0;
+  const completed = analyses.filter(a => a.status === 'COMPLETED');
+  const total = completed.length;
+  const averageScore = total > 0 ? Math.round(completed.reduce((acc, curr) => acc + (curr.seoScore || 0), 0) / total) : 0;
   
-  const needsOptimization = analyses.filter(a => (a.seoScore || 0) < 70).map(a => ({
+  const needsOptimization = completed.filter(a => (a.seoScore || 0) < 70).map(a => ({
     id: a.id,
     contentItemId: a.contentItem.id,
     title: a.contentItem.title,
@@ -177,7 +176,7 @@ export async function getSeoOverview(organizationId: string, filters: { from: Da
     date: a.createdAt
   }));
 
-  const topPerforming = analyses.filter(a => (a.seoScore || 0) >= 80).map(a => ({
+  const topPerforming = completed.filter(a => (a.seoScore || 0) >= 80).map(a => ({
     id: a.id,
     contentItemId: a.contentItem.id,
     title: a.contentItem.title,
@@ -185,13 +184,53 @@ export async function getSeoOverview(organizationId: string, filters: { from: Da
     format: a.contentItem.format,
     score: a.seoScore,
     searchIntent: a.searchIntent,
+    date: a.createdAt
+  }));
+
+  const allAnalyses = analyses.map(a => ({
+    id: a.id,
+    contentItemId: a.contentItem.id,
+    title: a.contentItem.title,
+    platform: a.contentItem.platform,
+    format: a.contentItem.format,
+    score: a.seoScore,
+    searchIntent: a.searchIntent,
+    status: a.status,
     date: a.createdAt
   }));
 
   return {
-    totalAnalyzed: total,
+    totalAnalyzed: analyses.length,
+    totalCompleted: total,
     averageScore,
     needsOptimization,
-    topPerforming
+    topPerforming,
+    allAnalyses
   };
 }
+
+export async function getSEOAnalysisById(analysisId: string) {
+  const session = await requireAuth();
+  await requirePermission('seo.view');
+
+  const analysis = await prisma.sEOAnalysis.findUnique({
+    where: {
+      id: analysisId
+    },
+    include: {
+      contentItem: true,
+      contentVersion: true
+    }
+  });
+
+  if (!analysis) {
+    throw new Error('Analysis not found');
+  }
+
+  if (analysis.organizationId !== session.organizationId) {
+    throw new Error('Tenant isolation violation');
+  }
+
+  return analysis;
+}
+
