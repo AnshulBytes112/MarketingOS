@@ -17,6 +17,7 @@ export default async function OverviewPage() {
   // Fetch or auto-provision real brand record from DB
   let brand = await prisma.brand.findFirst({
     where: { organizationId: session.organizationId },
+    orderBy: { createdAt: 'desc' },
   });
 
   if (!brand) {
@@ -27,14 +28,14 @@ export default async function OverviewPage() {
     brand = await prisma.brand.create({
       data: {
         organizationId: session.organizationId,
-        name: org?.name ? `${org.name} Brand` : 'NovaBrew Coffee',
-        industry: 'Food & Beverage',
-        geography: 'United States',
-        priceSegment: 'Premium',
-        websiteUrl: 'novabrew.com',
-        positioning: 'Sustainable specialty coffee for the modern professional',
-        usp: 'Single-origin, ethically sourced beans with AI-powered roast profiles',
-        targetAudience: 'Urban professionals 25-40',
+        name: org?.name ? `${org.name} Brand` : 'My Brand',
+        industry: '',
+        geography: '',
+        priceSegment: '',
+        websiteUrl: '',
+        positioning: '',
+        usp: '',
+        targetAudience: '',
         onboardingStatus: 'ACTIVE',
       },
     });
@@ -61,7 +62,7 @@ export default async function OverviewPage() {
 
   // Total Active AI Recommendations
   const activeRecsCount = await prisma.aIRecommendation.count({
-    where: { organizationId: session.organizationId, brandId: brand.id, status: 'PENDING' }
+    where: { organizationId: session.organizationId, brandId: brand.id, status: 'OPEN' }
   });
 
   // Real-time Follower (Audience) sum
@@ -158,7 +159,7 @@ export default async function OverviewPage() {
     where: {
       organizationId: session.organizationId,
       brandId: brand.id,
-      status: 'PENDING',
+      status: 'OPEN',
     },
     take: 3,
     include: {

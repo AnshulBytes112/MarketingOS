@@ -14,7 +14,11 @@ import { BrandCompetitor } from '@prisma/client';
 
 interface CompetitorsClientProps {
   brandId: string;
-  userRole: string;
+  organizationId: string;
+  permissions: {
+    canView: boolean;
+    canEdit: boolean;
+  };
 }
 
 // Custom Premium Social Icon SVGs
@@ -86,9 +90,9 @@ const getSocialUrl = (platform: string, handle: string): string => {
   }
 };
 
-export default function CompetitorsClient({ brandId, userRole }: CompetitorsClientProps) {
+export default function CompetitorsClient({ brandId, organizationId, permissions }: CompetitorsClientProps) {
   const queryClient = useQueryClient();
-  const isViewer = userRole === 'VIEWER';
+  const isViewer = !permissions.canEdit;
 
   // State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -110,7 +114,7 @@ export default function CompetitorsClient({ brandId, userRole }: CompetitorsClie
 
   // Queries
   const { data: competitors = [], isLoading, error } = useQuery<BrandCompetitor[]>({
-    queryKey: ['competitors', brandId],
+    queryKey: ['competitors', organizationId, brandId],
     queryFn: () => getCompetitors(brandId),
   });
 
@@ -118,7 +122,7 @@ export default function CompetitorsClient({ brandId, userRole }: CompetitorsClie
   const createMutation = useMutation({
     mutationFn: (data: Parameters<typeof createCompetitor>[1]) => createCompetitor(brandId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitors', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['competitors', organizationId, brandId] });
       closeModal();
     },
     onError: (err: Error) => {
@@ -129,7 +133,7 @@ export default function CompetitorsClient({ brandId, userRole }: CompetitorsClie
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string, data: Parameters<typeof updateCompetitor>[2] }) => updateCompetitor(id, brandId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitors', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['competitors', organizationId, brandId] });
       closeModal();
     },
     onError: (err: Error) => {
@@ -140,7 +144,7 @@ export default function CompetitorsClient({ brandId, userRole }: CompetitorsClie
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCompetitor(id, brandId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitors', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['competitors', organizationId, brandId] });
     },
     onError: (err: Error) => {
       alert(err.message || 'Failed to delete competitor');

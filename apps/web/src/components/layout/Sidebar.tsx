@@ -2,29 +2,33 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, Brain, Users, TrendingUp, Lightbulb,
   Sparkles, Megaphone, Send, BarChart3, Search, MessageSquare,
-  Settings, Zap, ChevronRight, LogOut, Calendar
+  Settings, Zap, ChevronRight, LogOut, Calendar, Check
 } from "lucide-react";
+import { getAvailableOrganizations, switchOrganization } from "./org-actions";
+import { usePermissions } from "../providers/PermissionsProvider";
 
 const nav = [
-  { label: "Dashboard",          href: "/overview",   icon: LayoutDashboard },
-  { label: "Brand Intelligence",  href: "/brand",      icon: Brain },
-  { label: "Competitor Intel",    href: "/competitors",icon: Users },
-  { label: "Market Intelligence", href: "/market",     icon: TrendingUp },
-  { label: "Strategy Engine",     href: "/strategy",   icon: Lightbulb },
-  { label: "Content Calendar",    href: "/calendar",   icon: Calendar },
-  { label: "Content Engine",      href: "/content",    icon: Sparkles },
-  { label: "Campaign Engine",     href: "/campaigns",  icon: Megaphone },
-  { label: "Publishing",          href: "/publishing", icon: Send },
-  { label: "Analytics",           href: "/analytics",  icon: BarChart3 },
-  { label: "SEO Engine",          href: "/seo",        icon: Search },
-  { label: "AI Copilot",          href: "/copilot",    icon: MessageSquare },
-  { label: "Settings",            href: "/settings",   icon: Settings },
+  { label: "Dashboard", href: "/overview", icon: LayoutDashboard },
+  { label: "Brand Intelligence", href: "/brand", icon: Brain, perm: "brand_dna.view" },
+  { label: "Competitor Intel", href: "/competitors", icon: Users, perm: "competitor.view" },
+  { label: "Market Intelligence", href: "/market-intelligence", icon: TrendingUp, perm: "market.view" },
+  { label: "Strategy Engine", href: "/strategy", icon: Lightbulb, perm: "strategy.view" },
+  { label: "Content Calendar", href: "/calendar", icon: Calendar, perm: "calendar.view" },
+  { label: "Content Engine", href: "/content", icon: Sparkles, perm: "content.view" },
+  { label: "Approval Queue", href: "/approvals", icon: Check, perm: "approval.view" },
+  { label: "Campaign Engine", href: "/campaigns", icon: Megaphone, perm: "campaign.view" },
+  { label: "Publishing", href: "/publishing", icon: Send, perm: "publishing.view" },
+  { label: "Analytics", href: "/analytics", icon: BarChart3, perm: "analytics.view" },
+  { label: "SEO Engine", href: "/seo", icon: Search, perm: "seo.view" },
+  { label: "AI Copilot", href: "/copilot", icon: MessageSquare, perm: "copilot.view" },
+  { label: "Settings", href: "/settings", icon: Settings, perm: "organization.view" },
 ];
 
-export function Sidebar({ 
+export function Sidebar({
   user,
   organization
 }: {
@@ -33,6 +37,41 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const [orgs, setOrgs] = useState<any[]>([]);
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const { can } = usePermissions();
+
+  useEffect(() => {
+    getAvailableOrganizations().then(setOrgs).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowOrgDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSwitchOrg = async (orgId: string) => {
+    setShowOrgDropdown(false);
+    try {
+      await switchOrganization(orgId);
+      // Let the router refresh the app shell and server components
+      router.refresh();
+      // To ensure all client side react-query caches are invalidated, we might do a full reload
+      // But server actions with revalidatePath usually handle Next's side.
+      // If we want a hard reload: window.location.reload();
+      // We'll try router.refresh() first.
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -49,7 +88,7 @@ export function Sidebar({
       width: "220px",
       minWidth: "220px",
       background: "var(--bg-sidebar)",
-      borderRight: "1px solid var(--sidebar-border)",
+      borderRight: "1px solid var(--border)",
       display: "flex",
       flexDirection: "column",
       height: "100vh",
@@ -74,25 +113,70 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Org badge */}
-        <div style={{
-          marginTop: "0.75rem",
-          background: "rgba(124,58,237,0.08)",
-          border: "1px solid rgba(124,58,237,0.18)",
-          borderRadius: "0.5rem",
-          padding: "0.375rem 0.625rem",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-            <div style={{
-              width: 20, height: 20, borderRadius: "4px",
-              background: "linear-gradient(135deg,#7c3aed,#2563eb)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "0.5rem", fontWeight: 700, color: "white",
-            }}>{organization?.name?.substring(0, 2).toUpperCase() || 'OG'}</div>
-            <span style={{ fontSize: "0.75rem", color: "#7c3aed", fontWeight: 500 }}>{organization?.name || 'Organization'}</span>
+        {/* Org badge / Switcher */}
+        <div style={{ position: "relative" }} ref={dropdownRef}>
+          <div
+            onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+            style={{
+              marginTop: "0.75rem",
+              background: "rgba(124,58,237,0.08)",
+              border: "1px solid rgba(124,58,237,0.18)",
+              borderRadius: "0.5rem",
+              padding: "0.375rem 0.625rem",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              cursor: "pointer",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: "4px",
+                background: "linear-gradient(135deg,#7c3aed,#2563eb)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "0.5rem", fontWeight: 700, color: "white",
+              }}>{organization?.name?.substring(0, 2).toUpperCase() || 'OG'}</div>
+              <span style={{ fontSize: "0.75rem", color: "#7c3aed", fontWeight: 500 }}>{organization?.name || 'Organization'}</span>
+            </div>
+            <ChevronRight size={12} color="#7c3aed" style={{ transform: showOrgDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
           </div>
-          <ChevronRight size={12} color="#7c3aed" />
+
+          {showOrgDropdown && orgs.length > 0 && (
+            <div style={{
+              position: "absolute",
+              top: "100%", left: 0, right: 0,
+              marginTop: "0.5rem",
+              background: "var(--bg-solid)",
+              border: "1px solid var(--border)",
+              borderRadius: "0.5rem",
+              padding: "0.5rem",
+              zIndex: 50,
+              boxShadow: "var(--card-shadow)",
+            }}>
+              <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, padding: "0 0.5rem 0.5rem", textTransform: "uppercase" }}>Switch Organization</div>
+              {orgs.map((org) => {
+                const isCurrent = org.id === organization?.id;
+                return (
+                  <div
+                    key={org.id}
+                    onClick={() => handleSwitchOrg(org.id)}
+                    style={{
+                      padding: "0.5rem",
+                      borderRadius: "0.25rem",
+                      cursor: isCurrent ? "default" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      background: isCurrent ? "var(--surface-3)" : "transparent",
+                      color: isCurrent ? "var(--text-primary)" : "var(--text-secondary)",
+                      fontSize: "0.75rem",
+                    }}
+                    onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.background = "var(--surface-hover)"; }}
+                    onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <span>{org.name}</span>
+                    {isCurrent && <Check size={12} color="#10b981" />}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -100,7 +184,7 @@ export function Sidebar({
       <nav style={{ flex: 1, padding: "0.75rem 0.625rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
         <div className="section-label" style={{ padding: "0.25rem 0.75rem 0.5rem" }}>Engines</div>
 
-        {nav.slice(0, 12).map(({ label, href, icon: Icon }) => {
+        {nav.slice(0, 12).filter(item => !item.perm || can(item.perm as any)).map(({ label, href, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href} className={`sidebar-item ${active ? "active" : ""}`}>
@@ -116,7 +200,7 @@ export function Sidebar({
         <div style={{ flex: 1 }} />
         <div className="section-label" style={{ padding: "0.75rem 0.75rem 0.5rem" }}>System</div>
 
-        {nav.slice(12).map(({ label, href, icon: Icon }) => {
+        {nav.slice(12).filter(item => !item.perm || can(item.perm as any)).map(({ label, href, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href} className={`sidebar-item ${active ? "active" : ""}`}>

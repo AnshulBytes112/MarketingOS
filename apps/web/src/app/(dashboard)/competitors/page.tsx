@@ -20,18 +20,23 @@ export default async function CompetitorsPage() {
     brand = await prisma.brand.create({
       data: {
         organizationId: session.organizationId,
-        name: org?.name ? `${org.name} Coffee` : 'NovaBrew Coffee',
-        industry: 'Food & Beverage',
-        geography: 'United States',
-        priceSegment: 'Premium',
-        websiteUrl: 'novabrew.com',
-        positioning: 'Sustainable specialty coffee for the modern professional',
-        usp: 'Single-origin, ethically sourced beans with AI-powered roast profiles',
-        targetAudience: 'Urban professionals 25-40',
+        name: org?.name ? `${org.name} Brand` : 'My Brand',
+        industry: '',
+        geography: '',
+        priceSegment: '',
+        websiteUrl: '',
+        positioning: '',
+        usp: '',
+        targetAudience: '',
         onboardingStatus: 'ACTIVE',
       },
     });
   }
 
-  return <CompetitorsClient brandId={brand.id} userRole={session.role} />;
+  const permissions = {
+    canView: session.effectivePermissions.includes('competitor.view'),
+    canEdit: session.effectivePermissions.includes('competitor.create'),
+  };
+
+  return <CompetitorsClient brandId={brand.id} organizationId={session.organizationId} permissions={permissions} />;
 }

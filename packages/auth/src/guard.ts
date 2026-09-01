@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { prisma } from '@abge/database';
 import { Role } from '@prisma/client';
-import { hasPermission, Permission } from '@abge/rbac';
-import { redirect } from 'next/navigation';
+import { getEffectivePermissions, Permission } from '@abge/rbac';
 
 export type AuthenticatedContext = {
   userId: string;
@@ -11,6 +11,9 @@ export type AuthenticatedContext = {
   isImpersonated: boolean;
   impersonatorId?: string;
   readOnly?: boolean;
+  isSuspended?: boolean;
+  effectivePermissions: string[];
+  mustChangePassword?: boolean;
 };
 
 export async function getCurrentSession(): Promise<AuthenticatedContext | null> {
@@ -34,7 +37,8 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
         },
       });
 
-      if (membership) {
+      if (membership && membership.status === 'ACTIVE') {
+        const effectivePermissions = getEffectivePermissions(membership.role, membership.customPermissions);
         return {
           userId: impSession.targetUserId,
           organizationId: impSession.targetOrganizationId,
@@ -42,6 +46,7 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
           isImpersonated: true,
           impersonatorId: impSession.platformAdminId,
           readOnly: impSession.readOnly,
+          effectivePermissions,
         };
       }
     }
@@ -67,9 +72,7 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
     return null;
   }
 
-  if (session.organization.status === 'SUSPENDED') {
-    return null;
-  }
+  const isSuspended = session.organization.status === 'SUSPENDED';
 
   // Get user's role in the active organization
   const membership = await prisma.organizationMember.findUnique({
@@ -81,23 +84,37 @@ export async function getCurrentSession(): Promise<AuthenticatedContext | null> 
     },
   });
 
-  if (!membership) {
+  if (!membership || membership.status !== 'ACTIVE') {
     return null;
   }
+
+  const effectivePermissions = getEffectivePermissions(membership.role, membership.customPermissions);
 
   return {
     userId: session.userId,
     organizationId: session.activeOrganizationId,
     role: membership.role,
     isImpersonated: false,
+    isSuspended,
+    effectivePermissions,
+    mustChangePassword: session.user.mustChangePassword,
   };
 }
 
-export async function requireAuth(): Promise<AuthenticatedContext> {
+export async function requireAuth(options?: { allowSuspended?: boolean; allowForcePasswordReset?: boolean }): Promise<AuthenticatedContext> {
   const session = await getCurrentSession();
   if (!session) {
-    redirect('/login');
+    redirect('/api/auth/logout');
   }
+  
+  if (session.mustChangePassword && !options?.allowForcePasswordReset) {
+    redirect('/force-password-reset');
+  }
+
+  if (session.isSuspended && !options?.allowSuspended) {
+    redirect('/suspended');
+  }
+
   return session;
 }
 
@@ -111,7 +128,7 @@ export async function requirePermission(permission: Permission): Promise<Authent
      throw new Error('FORBIDDEN_READ_ONLY_IMPERSONATION');
   }
   
-  if (!hasPermission(session.role, permission)) {
+  if (!session.effectivePermissions.includes(permission)) {
     throw new Error('FORBIDDEN');
   }
 

@@ -69,7 +69,7 @@ export async function getStrategyGenerationStatus(brandId: string) {
 }
 
 export async function regenerateStrategy(brandId: string) {
-  const session = await requirePermission('manage_strategy');
+  const session = await requirePermission('strategy.generate');
 
   // Verify brand ownership
   const brand = await prisma.brand.findFirst({
@@ -166,7 +166,7 @@ export async function applyRecommendationToStrategyAction(
   recommendationId: string,
   operationInput: unknown
 ) {
-  const session = await requirePermission('manage_strategy');
+  const session = await requirePermission('strategy.apply_recommendation');
 
   // Perform Apply mutation inside a database transaction
   return prisma.$transaction(async (tx) => {
@@ -282,10 +282,7 @@ export async function applyRecommendationToStrategyAction(
 }
 
 export async function approveStrategy(brandId: string, strategyId: string) {
-  const session = await requirePermission('approve_content');
-  if (session.role !== 'OWNER' && session.role !== 'APPROVER') {
-    throw new Error('FORBIDDEN');
-  }
+  const session = await requirePermission('strategy.approve');
 
   // Verify the Strategy belongs to the authenticated user's organization and brand.
   const strategy = await prisma.strategy.findFirst({
@@ -357,7 +354,7 @@ export async function approveStrategy(brandId: string, strategyId: string) {
 }
 
 export async function generateContentCalendar(strategyId: string) {
-  const session = await requirePermission('manage_strategy');
+  const session = await requirePermission('calendar.create');
 
   // Verify ownership of Strategy
   const strategy = await prisma.strategy.findFirst({
@@ -429,7 +426,7 @@ export async function generateContentCalendar(strategyId: string) {
 }
 
 export async function getContentPlanStatus(contentPlanId: string) {
-  const session = await requirePermission('view_analytics');
+  const session = await requirePermission('calendar.view');
 
   const plan = await prisma.contentPlan.findFirst({
     where: {
@@ -446,7 +443,7 @@ export async function getContentPlanStatus(contentPlanId: string) {
 }
 
 export async function getLatestContentPlan(brandId: string) {
-  const session = await requirePermission('view_analytics');
+  const session = await requirePermission('calendar.view');
 
   const plan = await prisma.contentPlan.findFirst({
     where: {

@@ -100,13 +100,31 @@ import { competitorIngestionWorker } from './competitor-ingestion.worker';
 import { schedulerWorker, initializeScheduler } from './scheduler';
 import { strategyWorker } from './strategy.worker';
 import { contentPlanWorker } from './content-plan.worker';
+import { textGenerationWorker } from './text-generation.worker';
+import { imageGenerationWorker } from './image-generation.worker';
+import { videoGenerationWorker } from './video-generation.worker';
+import { qualityScoringWorker } from './quality/quality-scoring.worker';
+import { publishingWorker } from './publishing/publishing.worker';
+import { campaignPlanningWorker } from './campaign-planning.worker';
+import { analyticsSyncWorker } from './analytics/analytics-sync.worker';
+import { seoAnalysisWorker } from './seo/seo-analysis.worker';
+import { marketIntelligenceWorker } from './market-intelligence/market-intelligence.worker';
 
-console.log('Worker is running for brand-asset, brand-dna, competitor-ingestion, strategy, content-plan queues...');
+console.log('Worker is running for brand-asset, brand-dna, competitor-ingestion, strategy, content-plan, text-generation, image-generation, video-generation, quality-scoring, publishing queues...');
 console.log('Registered brandDnaWorker:', !!brandDnaWorker);
 console.log('Registered competitorIngestionWorker:', !!competitorIngestionWorker);
 console.log('Registered schedulerWorker:', !!schedulerWorker);
 console.log('Registered strategyWorker:', !!strategyWorker);
 console.log('Registered contentPlanWorker:', !!contentPlanWorker);
+console.log('Registered textGenerationWorker:', !!textGenerationWorker);
+console.log('Registered imageGenerationWorker:', !!imageGenerationWorker);
+console.log('Registered videoGenerationWorker:', !!videoGenerationWorker);
+console.log('Registered qualityScoringWorker:', !!qualityScoringWorker);
+console.log('Registered publishingWorker:', !!publishingWorker);
+console.log('Registered campaignPlanningWorker:', !!campaignPlanningWorker);
+console.log('Registered analyticsSyncWorker:', !!analyticsSyncWorker);
+console.log('Registered seoAnalysisWorker:', !!seoAnalysisWorker);
+console.log('Registered marketIntelligenceWorker:', !!marketIntelligenceWorker);
 
 initializeScheduler().then(() => {
   console.log('Scheduler initialization complete.');

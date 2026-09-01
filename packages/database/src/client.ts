@@ -16,6 +16,21 @@ console.log('DB URL loaded:', !!connectionString);
 const pool = new Pool({ connectionString })
 const adapter = new PrismaPg(pool)
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter })
+export function recreatePrismaClient() {
+  console.log('[Prisma Client] Instantiating fallback database client with driver adapter');
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
+  const newClient = new PrismaClient({ adapter });
+  if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = newClient;
+  return newClient;
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+export const prisma = (() => {
+  const client = globalForPrisma.prisma ?? new PrismaClient({ adapter });
+  // If the cached client does not have the new marketInsight model, create a new one
+  if (!('marketInsight' in client)) {
+    console.log('[Prisma Client] Recreating client to support newly migrated Market Intelligence models');
+    return recreatePrismaClient();
+  }
+  return client;
+})();

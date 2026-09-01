@@ -29,10 +29,16 @@ import { useRouter } from 'next/navigation';
 interface StrategyClientProps {
   brandId: string;
   brandName: string;
-  userRole: string;
+  organizationId: string;
+  permissions: {
+    canGenerate: boolean;
+    canEdit: boolean;
+    canApprove: boolean;
+    canApplyRecommendation: boolean;
+  };
 }
 
-export default function StrategyClient({ brandId, brandName, userRole }: StrategyClientProps) {
+export default function StrategyClient({ brandId, brandName, organizationId, permissions }: StrategyClientProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -41,13 +47,13 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
 
   // 1. Fetch active strategy
   const { data: activeStrategy, isLoading: isLoadingActive } = useQuery({
-    queryKey: ['active-strategy', brandId],
+    queryKey: ['active-strategy', organizationId, brandId],
     queryFn: () => getActiveStrategy(brandId),
   });
 
   // 2. Fetch currently generating strategy (if any)
   const { data: generatingStrategy } = useQuery({
-    queryKey: ['generating-strategy', brandId],
+    queryKey: ['generating-strategy', organizationId, brandId],
     queryFn: () => getStrategyGenerationStatus(brandId),
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -60,7 +66,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
 
   // Latest content plan query (polls if status is GENERATING)
   const { data: latestContentPlan } = useQuery({
-    queryKey: ['latest-content-plan', brandId],
+    queryKey: ['latest-content-plan', organizationId, brandId],
     queryFn: () => getLatestContentPlan(brandId),
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -86,8 +92,8 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
   if (prevGeneratingId && prevGeneratingStatus !== 'GENERATING') {
     // If it was generating but now it has transitioned to COMPLETED or FAILED
     setTimeout(() => {
-      queryClient.invalidateQueries({ queryKey: ['active-strategy', brandId] });
-      queryClient.invalidateQueries({ queryKey: ['generating-strategy', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['active-strategy', organizationId, brandId] });
+      queryClient.invalidateQueries({ queryKey: ['generating-strategy', organizationId, brandId] });
     }, 500);
   }
 
@@ -96,7 +102,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
     mutationFn: () => regenerateStrategy(brandId),
     onSuccess: (data) => {
       if (data.success) {
-        queryClient.invalidateQueries({ queryKey: ['generating-strategy', brandId] });
+        queryClient.invalidateQueries({ queryKey: ['generating-strategy', organizationId, brandId] });
         setErrorMsg(null);
       } else {
         setErrorMsg(data.error || 'Failed to start strategy generation');
@@ -117,7 +123,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
   const approveMutation = useMutation({
     mutationFn: () => approveStrategy(brandId, activeStrategy?.id || ''),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['active-strategy', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['active-strategy', organizationId, brandId] });
       setErrorMsg(null);
     },
     onError: (err: any) => {
@@ -135,7 +141,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
   const generateCalendarMutation = useMutation({
     mutationFn: () => generateContentCalendar(activeStrategy?.id || ''),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['latest-content-plan', brandId] });
+      queryClient.invalidateQueries({ queryKey: ['latest-content-plan', organizationId, brandId] });
       setHasJustGeneratedCalendar(true);
       setErrorMsg(null);
     },
@@ -150,7 +156,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
 
   const isPlanGenerating = (latestContentPlan?.status === 'GENERATING') || generateCalendarMutation.isPending;
   const isGenerating = generatingStrategy?.status === 'GENERATING' || regenerateMutation.isPending;
-  const isViewer = userRole === 'VIEWER';
+  const isViewer = !permissions.canGenerate && !permissions.canEdit && !permissions.canApprove;
 
   // Render loading state if initially loading active strategy and no data exists yet
   if (isLoadingActive && !activeStrategy) {
@@ -199,7 +205,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
           )}
 
           {/* Approve Button */}
-          {activeStrategy && activeStrategy.approvalStatus !== 'APPROVED' && !isGenerating && (userRole === 'OWNER' || userRole === 'APPROVER') && (
+          {activeStrategy && activeStrategy.approvalStatus !== 'APPROVED' && !isGenerating && permissions.canApprove && (
             <button
               onClick={handleApprove}
               disabled={approveMutation.isPending}
@@ -215,7 +221,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
           )}
 
           {/* Generate Calendar Button */}
-          {activeStrategy?.approvalStatus === 'APPROVED' && (
+          {activeStrategy?.approvalStatus === 'APPROVED' && permissions.canGenerate && (
             <button
               onClick={handleGenerateCalendar}
               disabled={isPlanGenerating}
@@ -230,18 +236,20 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
             </button>
           )}
 
-          <button
-            onClick={handleRegenerate}
-            disabled={isGenerating || isViewer}
-            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-medium text-white transition-all flex items-center gap-2 shadow-lg shadow-purple-600/30"
-          >
-            {isGenerating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
-            <span>{isGenerating ? 'Generating Strategy...' : activeStrategy ? 'Regenerate Strategy' : 'Generate Strategy'}</span>
-          </button>
+          {permissions.canGenerate && (
+            <button
+              onClick={handleRegenerate}
+              disabled={isGenerating}
+              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-medium text-white transition-all flex items-center gap-2 shadow-lg shadow-purple-600/30"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              <span>{isGenerating ? 'Generating Strategy...' : activeStrategy ? 'Regenerate Strategy' : 'Generate Strategy'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -317,7 +325,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
             </div>
           </div>
           <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['generating-strategy', brandId] })}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['generating-strategy', organizationId, brandId] })}
             className="px-3 py-1 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-medium"
           >
             Dismiss
@@ -539,7 +547,9 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                   <div key={stage} className="p-5 bg-white/5 border border-white/5 rounded-xl space-y-3 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl" />
                     <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                      <span className="font-bold text-white text-sm tracking-wider">{stage}</span>
+                      <span className="font-bold text-white text-sm tracking-wider">
+                        {stage === 'TOFU' ? 'Reach New People' : stage === 'MOFU' ? 'Build Interest & Trust' : stage === 'BOFU' ? 'Drive Action' : stage}
+                      </span>
                       <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-semibold">
                         Allocation: {stageData?.recommendedAllocation || 0}%
                       </span>
@@ -599,7 +609,7 @@ export default function StrategyClient({ brandId, brandName, userRole }: Strateg
                       <td className="py-4 px-4">
                         <p className="text-gray-300 max-w-xs truncate" title={p.objective}>{p.objective}</p>
                         <p className="text-[10px] text-gray-500 mt-0.5">Role: {p.role}</p>
-                        <p className="text-[10px] text-emerald-400 mt-0.5">KPI: {p.primaryKPI}</p>
+                        <p className="text-[10px] text-emerald-400 mt-0.5">Goal: {p.primaryKPI}</p>
                       </td>
                       <td className="py-4 px-4 text-gray-300">{p.audienceFit}</td>
                       <td className="py-4 px-4">

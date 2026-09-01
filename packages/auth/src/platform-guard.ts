@@ -35,7 +35,7 @@ export async function getCurrentPlatformSession(): Promise<PlatformAuthenticated
 export async function requirePlatformAuth(): Promise<PlatformAuthenticatedContext> {
   const session = await getCurrentPlatformSession();
   if (!session) {
-    redirect('/login');
+    redirect('/admin/login');
   }
   return session;
 }

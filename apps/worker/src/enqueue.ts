@@ -9,7 +9,10 @@ async function main() {
   if (!brand) return console.log('No brand found');
 
   const dnaQueue = new Queue('brand-dna', {
-    connection: { host: 'localhost', port: 6379 }
+    connection: { 
+      host: process.env.REDIS_HOST || 'localhost', 
+      port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379 
+    }
   });
 
   await dnaQueue.add('generate', {

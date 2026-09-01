@@ -12,6 +12,7 @@ export const contentPlanWorker = new Worker(
   async (job) => {
     const { organizationId, brandId, strategyId, userId } = job.data;
     const requestId = randomUUID();
+    const startTimeMs = performance.now();
     console.log(`[${requestId}] Processing ContentPlan generation job ${job.id} for strategy: ${strategyId}`);
 
     // Fetch the content plan linked to this job if it was created
@@ -32,41 +33,42 @@ export const contentPlanWorker = new Worker(
     }
 
     try {
-      // 1. Fetch Strategy and make sure it is APPROVED
-      const strategy = await prisma.strategy.findFirst({
-        where: {
-          id: strategyId,
-          organizationId,
-          brandId,
-          approvalStatus: 'APPROVED',
-        },
-      });
-
-      if (!strategy) {
-        throw new Error('Strategy not found, not approved, or access denied');
-      }
-
-      // 2. Fetch active Brand DNA
-      const activeDna = await prisma.brandDNAVersion.findFirst({
-        where: {
-          brandId,
-          organizationId,
-          publicationStatus: 'ACTIVE',
-          status: 'COMPLETED',
-        },
-      });
-
-      // 3. Fetch products
-      const products = await prisma.brandProduct.findMany({
-        where: { brandId, organizationId },
-      });
-
-      // 4. Fetch competitor posts
-      const competitorPosts = await prisma.competitorPost.findMany({
-        where: { brandId, organizationId },
-        orderBy: { publishedAt: 'desc' },
-        take: 15,
-      });
+      const dbStartTime = performance.now();
+      const maxPosts = parseInt(process.env.COMPETITOR_AI_MAX_POSTS || '15', 10);
+      
+      const [
+        strategy,
+        activeDna,
+        products,
+        competitorPosts
+      ] = await Promise.all([
+        prisma.strategy.findFirst({
+          where: {
+            id: strategyId,
+            organizationId,
+            brandId,
+            approvalStatus: 'APPROVED',
+          },
+        }),
+        prisma.brandDNAVersion.findFirst({
+          where: {
+            brandId,
+            organizationId,
+            publicationStatus: 'ACTIVE',
+            status: 'COMPLETED',
+          },
+        }),
+        prisma.brandProduct.findMany({
+          where: { brandId, organizationId },
+        }),
+        prisma.competitorPost.findMany({
+          where: { brandId, organizationId },
+          orderBy: { publishedAt: 'desc' },
+          take: maxPosts,
+        })
+      ]);
+      const dbPrepTimeMs = Math.round(performance.now() - dbStartTime);
+      console.log(`[${requestId}] DB Prep took ${dbPrepTimeMs}ms`);
 
       // Build AI prompt contexts
       const brandDnaContext = activeDna ? {
@@ -77,6 +79,10 @@ export const contentPlanWorker = new Worker(
         audience: activeDna.audience,
         contentPillars: activeDna.contentPillars,
       } : 'No active Brand DNA found.';
+
+      if (!strategy) {
+        throw new Error('Strategy not found, not approved, or access denied');
+      }
 
       const strategyContext = {
         goal: strategy.goal,
@@ -95,10 +101,21 @@ export const contentPlanWorker = new Worker(
         description: p.description || '',
       }));
 
-      const competitorContext = competitorPosts.map((p) => ({
-        platform: p.platform,
-        captionText: p.captionText ? p.captionText.substring(0, 100) : '',
-      }));
+      const platformCounts: Record<string, number> = {};
+      competitorPosts.forEach(p => {
+        platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
+      });
+
+      const competitorContext = {
+        aggregateStats: {
+          postsSelected: competitorPosts.length,
+          platformDistribution: platformCounts,
+        },
+        posts: competitorPosts.map((p) => ({
+          platform: p.platform,
+          captionText: p.captionText ? p.captionText.substring(0, 100) : '',
+        }))
+      };
 
       const systemPrompt = `You are an expert Social Media Planner. Generate a detailed 14-day content calendar allocation (exactly 14 items) for the brand.
 You MUST align the calendar items strictly with the approved Strategy's guidelines:
@@ -110,15 +127,19 @@ You MUST align the calendar items strictly with the approved Strategy's guidelin
 
 IMPORTANT:
 - Historical performance analytics are completely UNAVAILABLE. Do not fabricate or invent any historical performance data.
-- The dates must be sequential YYYY-MM-DD starting from tomorrow.
+- The dates must be within the CURRENT MONTH of the provided Current Date. Do NOT schedule any items in the next month.
+- If there are fewer than 14 days left in the current month, you MUST schedule multiple items on the same day to reach exactly 14 items.
 - Output the result strictly adhering to the requested JSON schema.`;
 
       const userPrompt = `
+Current Date: ${new Date().toISOString().split('T')[0]}
+
 Approved Strategy parameters:
 ${JSON.stringify(strategyContext, null, 2)}
 
 Active Brand DNA:
 ${JSON.stringify(brandDnaContext, null, 2)}
+
 
 Products/Services:
 ${JSON.stringify(productsContext, null, 2)}
@@ -217,7 +238,8 @@ UNAVAILABLE. No historical performance analytics are available for this brand.
         });
       });
 
-      console.log(`[${requestId}] Content plan generation completed successfully. Generated ${result.data.items.length} items.`);
+      const totalDurationMs = Math.round(performance.now() - startTimeMs);
+      console.log(`[${requestId}] Content plan generation completed successfully in ${totalDurationMs}ms. Generated ${result.data.items.length} items.`);
 
     } catch (error: any) {
       console.error(`[${requestId}] Content plan generation failed:`, error);
@@ -260,6 +282,16 @@ UNAVAILABLE. No historical performance analytics are available for this brand.
   }
 );
 
-contentPlanWorker.on('failed', (job, err) => {
+contentPlanWorker.on('failed', async (job, err) => {
   console.error(`ContentPlan Job ${job?.id} failed:`, err.message);
+  if (job?.data?.strategyId) {
+    try {
+      await prisma.contentPlan.updateMany({
+        where: { strategyId: job.data.strategyId, status: 'GENERATING' },
+        data: { status: 'FAILED' }
+      });
+    } catch (e) {
+      console.error('Failed to reset ContentPlan status on worker failure:', e);
+    }
+  }
 });

@@ -61,7 +61,7 @@ export async function getCompetitors(brandId: string) {
 }
 
 export async function createCompetitor(brandId: string, rawData: z.infer<typeof createCompetitorSchema>) {
-  const session = await requirePermission('manage_competitors');
+  const session = await requirePermission('competitor.create');
   
   // Zod validation
   const validated = createCompetitorSchema.parse(rawData);
@@ -135,7 +135,7 @@ export async function createCompetitor(brandId: string, rawData: z.infer<typeof 
 }
 
 export async function updateCompetitor(competitorId: string, brandId: string, rawData: z.infer<typeof updateCompetitorSchema>) {
-  const session = await requirePermission('manage_competitors');
+  const session = await requirePermission('competitor.create');
   
   // Zod validation
   const validated = updateCompetitorSchema.parse(rawData);
@@ -161,7 +161,7 @@ export async function updateCompetitor(competitorId: string, brandId: string, ra
 }
 
 export async function deleteCompetitor(competitorId: string, brandId: string) {
-  const session = await requirePermission('manage_competitors');
+  const session = await requirePermission('competitor.create');
   const repo = new TenantRepository(session);
 
   const competitor = await repo.deleteBrandCompetitorScoped(competitorId, brandId);

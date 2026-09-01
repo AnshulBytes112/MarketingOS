@@ -21,6 +21,16 @@ export const BrandDNASchema = z.object({
     color: z.string(),
     textColor: z.string()
   })).describe("5 content pillars summing to 100%"),
+  demographics: z.array(z.object({
+    range: z.string(),
+    percentage: z.number(),
+    color: z.string(),
+    textColor: z.string()
+  })).describe("Demographic breakdown by age/type summing to 100%"),
+  inferredIndustry: z.string().describe("Inferred industry of the brand"),
+  inferredGeography: z.string().describe("Inferred primary geography or market"),
+  inferredPriceSegment: z.string().describe("Inferred price segment (e.g. Premium, Value)"),
+  inferredWebsiteUrl: z.string().describe("Inferred or extracted website URL"),
   language: z.string().describe("Language characteristics"),
   ctaPreferences: z.string().describe("Call to action style"),
   avoidList: z.array(z.string()).describe("List of things to avoid"),

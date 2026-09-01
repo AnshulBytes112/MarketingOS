@@ -16,9 +16,11 @@ const BrandDNAStatus = {
 export const brandDnaWorker = new Worker('brand-dna', async (job) => {
   const { organizationId, brandId, userId } = job.data;
   const requestId = randomUUID();
+  const startTimeMs = performance.now();
   console.log(`[${requestId}] Processing Brand DNA for brand: ${brandId} by user: ${userId || 'SYSTEM'}`);
 
   // Fetch all necessary data
+  const dbStartTime = performance.now();
   const [brand, products, competitors, assets, previousVersions] = await Promise.all([
     prisma.brand.findUnique({ where: { id: brandId, organizationId } }),
     prisma.brandProduct.findMany({ where: { brandId, organizationId } }),
@@ -29,6 +31,8 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       orderBy: { version: 'desc' }
     })
   ]);
+  const dbPrepTimeMs = Math.round(performance.now() - dbStartTime);
+  console.log(`[${requestId}] DB Prep took ${dbPrepTimeMs}ms`);
 
   if (!brand) {
     throw new Error('Brand not found or unauthorized');
@@ -83,8 +87,41 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       "ctaPreferences": "string",
       "avoidList": ["string"],
       "claims": ["string"],
-      "constraints": ["string"]
+      "constraints": ["string"],
+      "demographics": [{"range": "string", "percentage": 30, "color": "bg-purple-500", "textColor": "text-purple-400"}],
+      "inferredIndustry": "string",
+      "inferredGeography": "string",
+      "inferredPriceSegment": "string",
+      "inferredWebsiteUrl": "string"
     }`;
+      // Deterministic Chunk Selection instead of crude truncation
+      const promptStartTime = performance.now();
+      const maxChars = 20000;
+      let optimizedTextData = extractedTextData;
+      if (extractedTextData.length > maxChars) {
+         // Score paragraphs based on relevance to Brand DNA
+         const keywords = ['brand', 'mission', 'vision', 'audience', 'customer', 'tone', 'voice', 'value', 'positioning', 'strategy', 'goal', 'competitor'];
+         const paragraphs = extractedTextData.split(/\n\s*\n/);
+         const scored = paragraphs.map((p, index) => {
+            const lowerP = p.toLowerCase();
+            const score = keywords.reduce((s, k) => s + (lowerP.includes(k) ? 1 : 0), 0) + (index === 0 || index === paragraphs.length - 1 ? 2 : 0);
+            return { text: p, score, index };
+         });
+         scored.sort((a, b) => b.score - a.score);
+         
+         let currentLen = 0;
+         const selected = [];
+         for (const p of scored) {
+            if (currentLen + p.text.length > maxChars) break;
+            selected.push(p);
+            currentLen += p.text.length;
+         }
+         // Reorder by original position to maintain flow
+         selected.sort((a, b) => a.index - b.index);
+         optimizedTextData = selected.map(p => p.text).join('\n\n') + '\n\n...[TRUNCATED LESS RELEVANT SECTIONS]';
+      }
+      console.log(`[${requestId}] Prompt optimization took ${Math.round(performance.now() - promptStartTime)}ms`);
+
     const userPrompt = `
       Brand Name: ${brand.name}
       Industry: ${brand.industry || 'Unknown'}
@@ -97,7 +134,7 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       Competitors: ${competitors.map((c: any) => c.name).join(', ')}
       
       Extracted Documents Context:
-      ${extractedTextData.length > 20000 ? extractedTextData.substring(0, 20000) + '...[TRUNCATED]' : extractedTextData}
+      ${optimizedTextData}
     `;
 
     const result = await gateway.generateStructured(
@@ -150,13 +187,22 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
         avoidList: result.data.avoidList,
         claims: result.data.claims,
         constraints: result.data.constraints,
+        demographics: result.data.demographics,
       }
     });
 
-    // Update Brand status
+    // Update Brand status and inferred fields
     await prisma.brand.update({
       where: { id: brandId },
-      data: { onboardingStatus: 'ACTIVE' }
+      data: { 
+        onboardingStatus: 'ACTIVE',
+        industry: brand.industry || result.data.inferredIndustry,
+        geography: brand.geography || result.data.inferredGeography,
+        priceSegment: brand.priceSegment || result.data.inferredPriceSegment,
+        websiteUrl: brand.websiteUrl || result.data.inferredWebsiteUrl,
+        targetAudience: brand.targetAudience || result.data.audience,
+        positioning: brand.positioning || result.data.positioning,
+      }
     });
 
     // Create AuditLog if user triggered
@@ -177,7 +223,8 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
       });
     }
 
-    console.log(`[${requestId}] Brand DNA generation complete for brand: ${brandId}`);
+    const totalDurationMs = Math.round(performance.now() - startTimeMs);
+    console.log(`[${requestId}] Brand DNA generation complete for brand: ${brandId} in ${totalDurationMs}ms`);
 
   } catch (error: any) {
     console.error(`[${requestId}] Brand DNA generation failed:`, error);
@@ -203,8 +250,18 @@ export const brandDnaWorker = new Worker('brand-dna', async (job) => {
   }
 });
 
-brandDnaWorker.on('failed', (job, err) => {
+brandDnaWorker.on('failed', async (job, err) => {
   console.error(`Job ${job?.id} failed:`, err.message);
+  if (job?.data?.brandId) {
+    try {
+      await prisma.brandDNAVersion.updateMany({
+        where: { brandId: job.data.brandId, status: 'GENERATING' },
+        data: { status: 'FAILED' }
+      });
+    } catch (e) {
+      console.error('Failed to reset Brand DNA status on worker failure:', e);
+    }
+  }
 });
 
 brandDnaWorker.on('error', err => {

@@ -188,6 +188,8 @@ const RecommendationsListSchema = z.object({
 export async function generateCompetitorAnalysis(competitorId: string, brandId: string) {
   const session = await requirePermission('manage_competitors');
 
+  const startTimeMs = performance.now();
+  
   // Verify competitor scope and ownership
   const competitor = await prisma.brandCompetitor.findFirst({
     where: {
@@ -203,8 +205,14 @@ export async function generateCompetitorAnalysis(competitorId: string, brandId: 
 
   const repo = new TenantRepository(session);
 
-  // 1. Fetch active Brand DNA
-  const activeDna = await repo.getActiveBrandDna(brandId);
+  const dbStartTime = performance.now();
+  const [activeDna, allPosts] = await Promise.all([
+    repo.getActiveBrandDna(brandId),
+    repo.getCompetitorPosts(competitorId)
+  ]);
+  const dbPrepTimeMs = Math.round(performance.now() - dbStartTime);
+  console.log(`[generateCompetitorAnalysis] DB Prep took ${dbPrepTimeMs}ms`);
+
   if (!activeDna) {
     return {
       success: false,
@@ -213,15 +221,16 @@ export async function generateCompetitorAnalysis(competitorId: string, brandId: 
     };
   }
 
-  // 2. Fetch competitor posts
-  const posts = await repo.getCompetitorPosts(competitorId);
-  if (posts.length === 0) {
+  if (allPosts.length === 0) {
     return {
       success: false,
       code: 'INSUFFICIENT_DATA',
       error: 'No competitor data available. Please manually ingest a post or run website sync first.',
     };
   }
+  
+  const maxPosts = parseInt(process.env.COMPETITOR_AI_MAX_POSTS || '20', 10);
+  const posts = allPosts.slice(0, maxPosts); // only send up to maxPosts for context
 
   // 3. Calculate database-backed numerical observations to prevent AI hallucination
   const totalPosts = posts.length;
@@ -229,7 +238,7 @@ export async function generateCompetitorAnalysis(competitorId: string, brandId: 
   let totalLikes = 0;
   let totalComments = 0;
 
-  for (const post of posts) {
+  for (const post of allPosts) {
     platformCounts[post.platform] = (platformCounts[post.platform] || 0) + 1;
     totalLikes += post.likeCount || 0;
     totalComments += post.commentCount || 0;
@@ -240,9 +249,10 @@ export async function generateCompetitorAnalysis(competitorId: string, brandId: 
 
   const observationsContext = `
 Numerical Database Observations:
-- Total analyzed competitor posts: ${totalPosts}
-- Distribution by platform: ${JSON.stringify(platformCounts)}
-- Average engagement metrics: ${averageLikes} average likes, ${averageComments} average comments.
+- Total available competitor posts: ${totalPosts}
+- Posts selected for AI analysis: ${posts.length}
+- Distribution by platform (all posts): ${JSON.stringify(platformCounts)}
+- Average engagement metrics (all posts): ${averageLikes} average likes, ${averageComments} average comments.
 `;
 
   // 4. Initialize Gateway and generate recommendations
@@ -345,6 +355,10 @@ ${posts.map(p => `- [${p.platform}] URL: ${p.url || 'No URL'}, Published: ${p.pu
     }
 
     revalidatePath(`/competitors/${competitorId}`);
+    
+    const totalDurationMs = Math.round(performance.now() - startTimeMs);
+    console.log(`[generateCompetitorAnalysis] Generation completed in ${totalDurationMs}ms`);
+    
     return { success: true, recommendations: savedRecs };
 
   } catch (err: any) {

@@ -45,5 +45,10 @@ export default async function BrandIntelligencePage() {
     targetAudience: brand.targetAudience || '',
   };
 
-  return <BrandIntelligenceClient brand={brandData} />;
+  const permissions = {
+    canView: session.effectivePermissions.includes('brand_dna.view'),
+    canEdit: session.effectivePermissions.includes('brand_dna.edit'),
+  };
+
+  return <BrandIntelligenceClient brand={brandData} organizationId={session.organizationId} permissions={permissions} />;
 }

@@ -89,3 +89,204 @@ export async function enqueueContentPlanGeneration(params: {
     },
   });
 }
+
+let _textGenerationQueue: Queue | null = null;
+export const getTextGenerationQueue = () => {
+  if (!_textGenerationQueue) {
+    _textGenerationQueue = new Queue('text-generation', { connection: redisConnection });
+  }
+  return _textGenerationQueue;
+};
+
+export async function enqueueTextGeneration(params: {
+  generationId: string;
+  organizationId: string;
+  brandId: string;
+  contentItemId: string;
+}) {
+  return getTextGenerationQueue().add(`text-${params.generationId}`, params, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+  });
+}
+
+let _imageGenerationQueue: Queue | null = null;
+export const getImageGenerationQueue = () => {
+  if (!_imageGenerationQueue) {
+    _imageGenerationQueue = new Queue('image-generation', { connection: redisConnection });
+  }
+  return _imageGenerationQueue;
+};
+
+export async function enqueueImageGeneration(params: {
+  generationId: string;
+  organizationId: string;
+  brandId: string;
+  contentItemId: string;
+}) {
+  return getImageGenerationQueue().add(`image-${params.generationId}`, params, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+  });
+}
+
+let _videoGenerationQueue: Queue | null = null;
+export const getVideoGenerationQueue = () => {
+  if (!_videoGenerationQueue) {
+    _videoGenerationQueue = new Queue('video-generation', { connection: redisConnection });
+  }
+  return _videoGenerationQueue;
+};
+
+export async function enqueueVideoGeneration(params: {
+  generationId: string;
+  organizationId: string;
+  brandId: string;
+  contentItemId: string;
+}) {
+  return getVideoGenerationQueue().add(`video-${params.generationId}`, params, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+  });
+}
+
+let _qualityScoringQueue: Queue | null = null;
+export const getQualityScoringQueue = () => {
+  if (!_qualityScoringQueue) {
+    _qualityScoringQueue = new Queue('quality-scoring', { connection: redisConnection });
+  }
+  return _qualityScoringQueue;
+};
+
+export async function enqueueQualityScoring(params: {
+  generationId: string;
+  organizationId: string;
+  brandId: string;
+  contentVersionId: string;
+}) {
+  return getQualityScoringQueue().add(`quality-score-${params.contentVersionId}`, params, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+    jobId: `quality-score-${params.contentVersionId}` // Deterministic jobId for idempotency
+  });
+}
+
+let _publishingQueue: Queue | null = null;
+export const getPublishingQueue = () => {
+  if (!_publishingQueue) {
+    _publishingQueue = new Queue('publishing', { connection: redisConnection });
+  }
+  return _publishingQueue;
+};
+
+export async function enqueuePublishingJob(params: {
+  publishingJobId: string;
+}, delay?: number) {
+  const options: any = {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+    jobId: `publish-${params.publishingJobId}` // Deterministic
+  };
+  
+  if (delay) {
+    options.delay = delay;
+  }
+  
+  return getPublishingQueue().add(`publish`, params, options);
+}
+
+let _campaignPlanningQueue: Queue | null = null;
+export const getCampaignPlanningQueue = () => {
+  if (!_campaignPlanningQueue) {
+    _campaignPlanningQueue = new Queue('campaign-planning', { connection: redisConnection });
+  }
+  return _campaignPlanningQueue;
+};
+
+export async function enqueueCampaignPlanning(params: {
+  campaignId: string;
+  organizationId: string;
+  brandId: string;
+  userId?: string;
+}) {
+  return getCampaignPlanningQueue().add('campaign-planning.generate', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000,
+    },
+  });
+}
+
+let _analyticsSyncQueue: Queue | null = null;
+export const getAnalyticsSyncQueue = () => {
+  if (!_analyticsSyncQueue) {
+    _analyticsSyncQueue = new Queue('analytics-sync', { connection: redisConnection });
+  }
+  return _analyticsSyncQueue;
+};
+
+export async function enqueueAnalyticsSync(params: {
+  organizationId: string;
+  contentChannelId?: string; // Optional: sync a specific channel, or all for org
+  dateRange?: { from: Date; to: Date }; // Optional: specific date range
+  userId?: string;
+}) {
+  return getAnalyticsSyncQueue().add('analytics-sync.run', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 5000,
+    },
+  });
+}
+
+let _seoAnalysisQueue: Queue | null = null;
+export const getSeoAnalysisQueue = () => {
+  if (!_seoAnalysisQueue) {
+    _seoAnalysisQueue = new Queue('seo-analysis', { connection: redisConnection });
+  }
+  return _seoAnalysisQueue;
+};
+
+export async function enqueueSeoAnalysis(params: {
+  organizationId: string;
+  brandId: string;
+  contentVersionId: string;
+  contentItemId: string;
+  userId?: string;
+  analysisId?: string;
+}) {
+  return getSeoAnalysisQueue().add('seo-analysis.run', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000,
+    },
+    jobId: `seo-analysis-${params.contentVersionId}` // Deterministic jobId for idempotency
+  });
+}
+
+let _marketIntelligenceQueue: Queue | null = null;
+export const getMarketIntelligenceQueue = () => {
+  if (!_marketIntelligenceQueue) {
+    _marketIntelligenceQueue = new Queue('market-intelligence', { connection: redisConnection });
+  }
+  return _marketIntelligenceQueue;
+};
+
+export async function enqueueMarketIntelligence(params: {
+  organizationId: string;
+  brandId: string;
+  userId?: string;
+  runId: string;
+}) {
+  return getMarketIntelligenceQueue().add('market-intelligence.run', params, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000,
+    },
+    jobId: `market-intel-run-${params.runId}`
+  });
+}

@@ -45,15 +45,27 @@ interface AssetData {
   createdAt: Date;
 }
 
-export default function BrandIntelligenceClient({ brand }: { brand: BrandData }) {
+export default function BrandIntelligenceClient({ 
+  brand, 
+  organizationId,
+  permissions 
+}: { 
+  brand: BrandData;
+  organizationId: string;
+  permissions: {
+    canView: boolean;
+    canEdit: boolean;
+  };
+}) {
   const [activeTab, setActiveTab] = useState<'dna' | 'voice' | 'audience' | 'assets' | 'guidelines' | 'history'>('dna');
   const [page, setPage] = useState(1);
   const [assetTypeFilter, setAssetTypeFilter] = useState('');
   
+  const isViewer = !permissions.canEdit;
   const queryClient = useQueryClient();
   
   const { data: brandDna, isLoading: isLoadingDna } = useQuery({
-    queryKey: ['brand-dna', brand.id],
+    queryKey: ['brand-dna', organizationId, brand.id],
     queryFn: () => getBrandDna(brand.id),
     refetchInterval: (query) => {
       // Poll every 3 seconds if GENERATING
@@ -62,7 +74,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   });
 
   const { data: versionsData } = useQuery({
-    queryKey: ['brand-dna-versions', brand.id],
+    queryKey: ['brand-dna-versions', organizationId, brand.id],
     queryFn: () => getBrandDnaVersions(brand.id),
     refetchInterval: (query) => {
       // Poll every 3 seconds if any version is currently GENERATING
@@ -79,8 +91,8 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   const regenerateMutation = useMutation({
     mutationFn: () => regenerateBrandDna(brand.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['brand-dna', brand.id] });
-      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna', organizationId, brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', organizationId, brand.id] });
       console.log('Regeneration started');
     },
     onError: () => console.error('Failed to start regeneration'),
@@ -95,8 +107,8 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   const publishMutation = useMutation({
     mutationFn: (versionId: string) => publishBrandDnaVersionAction(brand.id, versionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['brand-dna', brand.id] });
-      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna', organizationId, brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', organizationId, brand.id] });
     },
     onError: () => console.error('Failed to publish version'),
   });
@@ -104,14 +116,14 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   const restoreMutation = useMutation({
     mutationFn: (versionId: string) => restoreBrandDnaVersionAction(brand.id, versionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['brand-dna', brand.id] });
-      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna', organizationId, brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-dna-versions', organizationId, brand.id] });
     },
     onError: () => console.error('Failed to restore version'),
   });
 
   const { data: assetsData, isLoading: isLoadingAssets } = useQuery({
-    queryKey: ['brand-assets', brand.id, page, assetTypeFilter],
+    queryKey: ['brand-assets', organizationId, brand.id, page, assetTypeFilter],
     queryFn: () => getAssets(brand.id, page, 10, assetTypeFilter || undefined),
     enabled: activeTab === 'assets',
   });
@@ -119,10 +131,10 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   const deleteAssetMutation = useMutation({
     mutationFn: (assetId: string) => deleteAssetAction(assetId),
     onMutate: async (assetId) => {
-      await queryClient.cancelQueries({ queryKey: ['brand-assets', brand.id] });
-      const previousAssets = queryClient.getQueryData(['brand-assets', brand.id, page, assetTypeFilter]);
+      await queryClient.cancelQueries({ queryKey: ['brand-assets', organizationId, brand.id] });
+      const previousAssets = queryClient.getQueryData(['brand-assets', organizationId, brand.id, page, assetTypeFilter]);
       
-      queryClient.setQueryData(['brand-assets', brand.id, page, assetTypeFilter], (old: any) => {
+      queryClient.setQueryData(['brand-assets', organizationId, brand.id, page, assetTypeFilter], (old: any) => {
         if (!old) return old;
         return {
           ...old,
@@ -136,7 +148,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
       console.error('Failed to delete asset');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['brand-assets', brand.id] });
+      queryClient.invalidateQueries({ queryKey: ['brand-assets', organizationId, brand.id] });
     },
   });
 
@@ -187,7 +199,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         await enqueueAssetExtraction(asset.id, brand.id);
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['brand-assets', brand.id] });
+      await queryClient.invalidateQueries({ queryKey: ['brand-assets', organizationId, brand.id] });
       console.log(replaceId ? 'Asset replaced successfully' : 'Asset uploaded successfully');
       
     } catch (err) {
@@ -214,12 +226,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
   const personalityTags = rawPersonality.split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
 
   // Audience demographics
-  const audienceDemographics = [
-    { range: 'Age 25-34', percentage: 48, color: 'bg-purple-500', textColor: 'text-purple-400' },
-    { range: 'Age 35-44', percentage: 32, color: 'bg-blue-500', textColor: 'text-blue-400' },
-    { range: 'Age 18-24', percentage: 12, color: 'bg-emerald-500', textColor: 'text-emerald-400' },
-    { range: 'Age 45+', percentage: 8, color: 'bg-amber-500', textColor: 'text-amber-400' },
-  ];
+  const audienceDemographics: any[] = brandDna?.demographics as any[] || [];
 
   return (
     <div className="space-y-6 pb-12">
@@ -238,41 +245,45 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         </div>
 
         <div className="flex items-center gap-3">
-          <input 
-            type="file" 
-            id="asset-upload-input" 
-            className="hidden" 
-            onChange={(e) => handleFileChange(e)} 
-          />
-          <input 
-            type="file" 
-            id="asset-replace-input" 
-            className="hidden" 
-            onChange={(e) => {
-              const replaceId = (e.target as any).dataset.replaceId;
-              handleFileChange(e, replaceId);
-            }} 
-          />
-          <button 
-            onClick={handleUploadClick}
-            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white transition-all flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4 text-gray-400" />
-            <span>Upload Asset</span>
-          </button>
+          {!isViewer && (
+            <>
+              <input 
+                type="file" 
+                id="asset-upload-input" 
+                className="hidden" 
+                onChange={(e) => handleFileChange(e)} 
+              />
+              <input 
+                type="file" 
+                id="asset-replace-input" 
+                className="hidden" 
+                onChange={(e) => {
+                  const replaceId = (e.target as any).dataset.replaceId;
+                  handleFileChange(e, replaceId);
+                }} 
+              />
+              <button 
+                onClick={handleUploadClick}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white transition-all flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4 text-gray-400" />
+                <span>Upload Asset</span>
+              </button>
 
-          <button 
-            onClick={handleRegenerate}
-            disabled={brandDna?.status === 'GENERATING' || regenerateMutation.isPending}
-            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-medium text-white transition-all flex items-center gap-2 shadow-lg shadow-purple-600/30"
-          >
-            {brandDna?.status === 'GENERATING' || regenerateMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
-            <span>{brandDna?.status === 'GENERATING' ? 'Generating...' : 'Regenerate DNA'}</span>
-          </button>
+              <button 
+                onClick={handleRegenerate}
+                disabled={brandDna?.status === 'GENERATING' || regenerateMutation.isPending}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-medium text-white transition-all flex items-center gap-2 shadow-lg shadow-purple-600/30"
+              >
+                {brandDna?.status === 'GENERATING' || regenerateMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                <span>{brandDna?.status === 'GENERATING' ? 'Generating...' : 'Regenerate DNA'}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -314,7 +325,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
         {[
           { key: 'dna', label: 'Brand DNA' },
           { key: 'voice', label: 'Voice & Tone' },
-          { key: 'audience', label: 'Audience' },
+          { key: 'audience', label: 'Customers' },
           { key: 'assets', label: 'Assets' },
           { key: 'guidelines', label: 'Guidelines' },
           { key: 'history', label: 'History & Diff' },
@@ -616,7 +627,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
 
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  CTA Preferences
+                  What Action to Drive
                 </h4>
                 <EditableField
                   versionId={brandDna?.id || ''}
@@ -640,13 +651,13 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
           <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-5">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-purple-400" />
-              <h3 className="text-base font-semibold text-white">Target Audience</h3>
+              <h3 className="text-base font-semibold text-white">Target Customers</h3>
             </div>
 
             <div className="space-y-4 pt-1">
               <div>
                 <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  AI Analyzed Audience Profile
+                  AI Analyzed Customer Profile
                 </h4>
                 <EditableField
                   versionId={brandDna?.id || ''}
@@ -691,7 +702,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
 
           {/* Audience Demographics */}
           <div className="bg-[#12111A]/90 border border-white/5 rounded-2xl p-6 space-y-6">
-            <h3 className="text-base font-semibold text-white">Audience Demographics</h3>
+            <h3 className="text-base font-semibold text-white">Customer Demographics</h3>
 
             <div className="space-y-4 pt-2">
               {audienceDemographics.map((demo: any, i) => (
@@ -709,7 +720,7 @@ export default function BrandIntelligenceClient({ brand }: { brand: BrandData })
                 </div>
               ))}
               {audienceDemographics.length === 0 && (
-                <p className="text-xs text-gray-500 italic">No content pillar breakdown available.</p>
+                <p className="text-xs text-gray-500 italic">Demographic analysis will be generated automatically after competitor data ingestion.</p>
               )}
             </div>
           </div>

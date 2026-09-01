@@ -284,92 +284,87 @@ html:not(.dark) [class*="bg-[#12111A]"] {
   box-shadow: var(--card-shadow) !important;
 }
 
-html:not(.dark) [class*="bg-[#12111A]"] .text-white,
-html:not(.dark) [class*="bg-[#12111A]"] h3.text-white,
-html:not(.dark) [class*="bg-[#12111A]"] h4.text-white,
-html:not(.dark) [class*="bg-[#12111A]"] p.text-white,
-html:not(.dark) [class*="bg-[#12111A]"] span.text-white,
-html:not(.dark) [class*="bg-[#12111A]"] div.text-white {
-  color: var(--text-primary) !important;
-}
-
-html:not(.dark) [class*="bg-[#12111A]"] .text-gray-100,
-html:not(.dark) [class*="bg-[#12111A]"] .text-slate-100,
-html:not(.dark) [class*="bg-[#12111A]"] .text-zinc-100 {
-  color: var(--text-primary) !important;
-}
-
-html:not(.dark) [class*="bg-[#12111A]"] .text-gray-200,
-html:not(.dark) [class*="bg-[#12111A]"] .text-slate-200,
-html:not(.dark) [class*="bg-[#12111A]"] .text-zinc-200 {
-  color: var(--text-soft) !important;
-}
-
-html:not(.dark) [class*="bg-[#12111A]"] .text-gray-300,
-html:not(.dark) [class*="bg-[#12111A]"] .text-slate-300,
-html:not(.dark) [class*="bg-[#12111A]"] .text-zinc-300 {
-  color: var(--text-secondary) !important;
-}
-
-html:not(.dark) [class*="bg-[#12111A]"] .text-gray-400,
-html:not(.dark) [class*="bg-[#12111A]"] .text-slate-400,
-html:not(.dark) [class*="bg-[#12111A]"] .text-zinc-400 {
-  color: var(--text-muted) !important;
-}
-
-html:not(.dark) [class*="bg-[#12111A]"] .bg-white\/5,
-html:not(.dark) [class*="bg-[#12111A]"] .bg-white\/10 {
-  background-color: var(--surface) !important;
-  color: var(--text-primary) !important;
-}
-
-html:not(.dark) [class*="bg-[#12111A]"] .border-white\/5,
-html:not(.dark) [class*="bg-[#12111A]"] .border-white\/10 {
+html:not(.dark) [class*="bg-[#16151A]"] {
+  background-color: var(--bg-solid) !important;
   border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--card-shadow) !important;
 }
 
-html:not(.dark) [class*="bg-[#12111A]"] .text-purple-300 {
-  color: #6d28d9 !important;
-}
-html:not(.dark) [class*="bg-[#12111A]"] .bg-purple-500\/10 {
-  background-color: rgba(124, 58, 237, 0.08) !important;
-}
-html:not(.dark) [class*="bg-[#12111A]"] .bg-purple-500\/20 {
-  background-color: rgba(124, 58, 237, 0.15) !important;
-}
-html:not(.dark) [class*="bg-[#12111A]"] .text-emerald-300 {
-  color: #047857 !important;
-}
-html:not(.dark) [class*="bg-[#12111A]"] .text-emerald-400 {
-  color: #047857 !important;
-}
-html:not(.dark) [class*="bg-[#12111A]"] .text-amber-300 {
-  color: #b45309 !important;
-}
-html:not(.dark) [class*="bg-[#12111A]"] .text-blue-300 {
-  color: #1d4ed8 !important;
-}
-html:not(.dark) [class*="bg-[#12111A]"] .text-indigo-300 {
-  color: #4338ca !important;
-}
-html:not(.dark) [class*="bg-[#12111A]"] .text-pink-300 {
-  color: #be185d !important;
-}
-
-/* Overrides for nested boxes inside cards (#181624) */
 html:not(.dark) [class*="bg-[#181624]"] {
   background-color: var(--surface) !important;
   border-color: var(--border) !important;
   color: var(--text-primary) !important;
 }
 
-html:not(.dark) [class*="bg-[#181624]"] .text-gray-200,
-html:not(.dark) [class*="bg-[#181624]"] .text-slate-200,
-html:not(.dark) [class*="bg-[#181624]"] .text-zinc-200 {
+html:not(.dark) [class*="bg-[#1a1924]"] {
+  background-color: var(--surface-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+html:not(.dark) [class*="bg-[#0B0A11]"] {
+  background-color: var(--bg-base) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+html:not(.dark) [class*="bg-[#1C1A2B]"] {
+  background-color: var(--surface-2) !important;
+}
+
+/* Consolidated selectors for nested text/border classes inside ALL light-overridden containers */
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-white, h3.text-white, h4.text-white, p.text-white, span.text-white, div.text-white, .text-gray-100, .text-slate-100, .text-zinc-100) {
+  color: var(--text-primary) !important;
+}
+
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-gray-200, .text-slate-200, .text-zinc-200) {
   color: var(--text-soft) !important;
 }
 
-/* Overrides for progress bar tracks and placeholders (#1C1A2B) */
-html:not(.dark) [class*="bg-[#1C1A2B]"] {
-  background-color: var(--surface-2) !important;
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-gray-300, .text-slate-300, .text-zinc-300) {
+  color: var(--text-secondary) !important;
+}
+
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-gray-400, .text-slate-400, .text-zinc-400) {
+  color: var(--text-muted) !important;
+}
+
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-gray-500, .text-slate-500, .text-zinc-500) {
+  color: var(--text-muted) !important;
+}
+
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.bg-white\/5, .bg-white\/10) {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.border-white\/5, .border-white\/10) {
+  border-color: var(--border) !important;
+}
+
+/* Color indicators and brand badges mapping */
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-purple-300) {
+  color: #6d28d9 !important;
+}
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.bg-purple-500\/10) {
+  background-color: rgba(124, 58, 237, 0.08) !important;
+}
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.bg-purple-500\/20) {
+  background-color: rgba(124, 58, 237, 0.15) !important;
+}
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-emerald-300, .text-emerald-400) {
+  color: #047857 !important;
+}
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-amber-300) {
+  color: #b45309 !important;
+}
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-blue-300) {
+  color: #1d4ed8 !important;
+}
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-indigo-300) {
+  color: #4338ca !important;
+}
+html:not(.dark) :is([class*="bg-[#12111A]"], [class*="bg-[#16151A]"], [class*="bg-[#181624]"], [class*="bg-[#1a1924]"], [class*="bg-[#0B0A11]"], [class*="bg-[#1C1A2B]"]) :is(.text-pink-300) {
+  color: #be185d !important;
 }

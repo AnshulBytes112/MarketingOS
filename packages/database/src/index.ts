@@ -19,5 +19,8 @@ export {
   StrategyApprovalStatus,
   ContentPlanStatus,
   ContentItemStatus,
-  StrategyPublicationStatus
+  StrategyPublicationStatus,
+  MarketInsightType,
+  InsightConfidence,
+  MarketIntelligenceStatus
 } from '@prisma/client';
