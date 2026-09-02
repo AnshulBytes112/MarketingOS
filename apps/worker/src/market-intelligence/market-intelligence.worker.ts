@@ -98,7 +98,8 @@ CRITICAL DATA HONESTY RULES:
 
 CRITICAL SCHEMA ENFORCEMENT RULES:
 1. The \`type\` field MUST BE EXACTLY ONE OF: "TREND", "INDUSTRY_SIGNAL", "COMPETITOR_MOVEMENT", "AUDIENCE_SIGNAL", "OPPORTUNITY", "RISK", "CONTENT_OPPORTUNITY". Do not use custom strings.
-2. The \`confidence\` field MUST BE EXACTLY ONE OF: "HIGH", "MEDIUM", "LOW" (all uppercase).`;
+2. The \`confidence\` field MUST BE EXACTLY ONE OF: "HIGH", "MEDIUM", "LOW" (all uppercase).
+3. The \`relevanceScore\` field MUST be an integer between 1 and 100. Do not use decimals or floats.`;
 
     const userPrompt = `BRAND CONTEXT & SIGNALS:
 ${compiledContext.contextString}
